@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>관계도 — STELLAR 0.7</title>
+<title>그룹사주 — STELLAR 0.7</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pretendard/1.3.9/static/pretendard.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -219,6 +219,48 @@
     background:transparent;color:#ff9a86;font-size:var(--fs-md);font-weight:600;cursor:pointer;font-family:inherit}
   .sheetnote{font-size:var(--fs-sm);color:var(--mut);margin-top:10px;text-align:center;line-height:1.5}
   #dim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:7;opacity:0;pointer-events:none;transition:opacity .25s}
+
+  /* ═══ 첫 화면(자기 등록) [2026-08-28] ═══
+     인물이 0명일 때만 뜬다. **닫는 수단이 없다** — 나 없이는 은하가 성립하지 않고
+     (layoutGroupOrbits가 me.el을 읽는다), 지금 UI에는 이미 만든 사람을 "나"로 바꾸는
+     경로가 없어서 한 번 빠져나가면 돌아올 길이 없다. z-index는 시트(8)보다 위. */
+  #onboard{position:fixed;inset:0;z-index:12;display:none;
+    align-items:center;justify-content:center;padding:16px;
+    background:radial-gradient(ellipse at center,rgba(8,9,16,.62),rgba(5,6,12,.9))}
+  #onboard.on{display:flex}
+  .obcard{background:var(--card);backdrop-filter:blur(16px);border:1px solid var(--line);
+    border-radius:16px;padding:24px 22px;width:min(520px,calc(100vw - 28px));
+    max-height:calc(100vh - 32px);overflow-y:auto;box-shadow:0 28px 80px rgba(0,0,0,.7)}
+  .obcard .brand{font-family:'Space Mono',monospace;font-size:var(--fs-xs);letter-spacing:.22em;
+    color:var(--gold);margin-bottom:10px}
+  .obcard h2{font-size:var(--fs-xl);font-weight:800;line-height:1.35;margin-bottom:8px}
+  /* "왜 나부터인가"를 한 줄로 — 이유를 알면 생년월일을 넣는 부담이 준다(사용자 지시) */
+  .obwhy{font-size:var(--fs-md);color:var(--mut);line-height:1.6;margin-bottom:18px}
+  .obwhy b{color:var(--ink);font-weight:600}
+  .obcard .primary{margin-top:4px}
+
+  /* 성별 — 라디오 대신 칩 셋. **기본값이 없다**(아래 renderSex 주석 참고) */
+  .sexrow{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .sexchip{padding:11px 6px;border-radius:6px;border:1px solid var(--line);
+    background:rgba(255,255,255,.05);color:var(--ink);font-size:var(--fs-md);
+    font-weight:600;cursor:pointer;text-align:center}
+  .sexchip.on{background:var(--ink);color:#101018;border-color:var(--ink)}
+  /* "왜 묻는가"를 밝힌다 — 이유 없이 성별을 물으면 거부감이 생긴다(사용자 지시) */
+  .fieldwhy{font-size:var(--fs-sm);color:var(--mut);margin-top:7px;line-height:1.5}
+
+  /* ═══ 다음 할 일 카드 — 나 혼자일 때 좌측 패널에 [2026-08-28] ═══
+     빈 은하와 "나 혼자"는 둘 다 **무엇을 해야 할지 모르는** 상태다. 화면이 비어서가 아니라
+     다음 행동이 안 보여서다. 인물이 2명 이상이 되면 사라진다. */
+  #nextstep{margin:14px 0 4px;padding:14px;border-radius:10px;
+    border:1px dashed var(--line);background:rgba(255,255,255,.035)}
+  #nextstep b{display:block;font-size:var(--fs-base);font-weight:700;margin-bottom:6px}
+  #nextstep p{font-size:var(--fs-sm);color:var(--mut);line-height:1.6;margin-bottom:11px}
+  #nextstep button{width:100%;padding:11px;border-radius:8px;border:1px solid var(--ink);
+    background:var(--ink);color:#101018;font-size:var(--fs-md);font-weight:700;cursor:pointer}
+  /* ＋ 버튼 첫 1회 강조 — 두 번째 사람을 추가하면 멈춘다 */
+  @keyframes fabpulse{0%,100%{box-shadow:0 0 0 0 rgba(212,175,90,.55)}
+    70%{box-shadow:0 0 0 14px rgba(212,175,90,0)}}
+  #fab.hint{animation:fabpulse 2.1s ease-out infinite}
   #dim.on{opacity:1;pointer-events:auto}
   /* [E, 2026-08-26] ~~.chipsrow~~ 통합. 두 클래스의 CSS가 `display:flex;flex-wrap:wrap;gap:7px`로
      **완전히 동일**했다 — 같은 컴포넌트가 이름만 둘이었다(사람 시트의 그룹 선택 / 그룹 시트의
@@ -451,8 +493,8 @@
 <body>
 <canvas id="scene"></canvas>
 <header>
-  <div class="eyebrow">RELATION SAJU · STELLAR 0.7</div>
-  <h1>관계도</h1>
+  <div class="eyebrow">GROUP SAJU · STELLAR 0.7</div>
+  <h1>그룹사주</h1>
 </header>
 <!-- [UI재검토 6] +/− 두 칸 → ⌖ 하나. 연속 줌은 휠·핀치가 이미 담당한다(canvas wheel / touchmove) -->
 <div id="zoomctl">
@@ -470,6 +512,35 @@
 <button id="panelopen">☰ 그룹</button>
 <div id="tagbar"></div>
 <div id="dim"></div>
+
+<!-- ═══ 첫 화면(자기 등록) [2026-08-28] ═══ 인물 0명일 때만 뜬다. 닫기 버튼이 없다. -->
+<div id="onboard"><div class="obcard">
+  <div class="brand">GROUP SAJU</div>
+  <h2>먼저 당신을 등록해 주세요</h2>
+  <div class="obwhy"><b>모든 관계는 당신을 기준으로 계산됩니다.</b><br>
+    당신이 이 은하의 유일한 항성이 되고, 등록하는 사람들이 당신을 도는 행성이 됩니다.</div>
+
+  <div class="field"><label>이름</label>
+    <input id="ob-name" type="text" placeholder="예: 김OO, 또는 부르고 싶은 이름" maxlength="20"></div>
+
+  <div class="field"><label>태어난 날 (양력)</label>
+    <div class="row3"><select id="ob-y"></select><select id="ob-m"></select><select id="ob-d"></select></div></div>
+
+  <div class="field"><label>태어난 시각</label>
+    <div class="sijingrid" id="ob-sijin"></div>
+    <button type="button" class="sijin unknown" id="ob-sijin-unknown">시간 모름</button></div>
+
+  <div class="field"><label>태어난 도시</label><select id="ob-city"></select>
+    <input id="ob-city-custom" type="text" placeholder="도시 이름 (예: 도쿄, 로스앤젤레스)"
+      maxlength="24" style="display:none;margin-top:7px"></div>
+
+  <div class="field"><label>성별</label>
+    <div class="sexrow" id="ob-sex"></div>
+    <div class="fieldwhy">운의 흐름 방향(대운)을 계산하는 데 쓰입니다. 지금은 저장만 하고, 만세력 엔진이 붙으면 사용합니다.</div></div>
+
+  <button class="primary" id="ob-start">시작하기</button>
+  <div class="sheetnote">일간은 실계산됩니다 · 시각·도시는 정밀 엔진(진태양시 보정) 연결 시 사용</div>
+</div></div>
 
 <!-- 사람 추가/수정 시트 -->
 <!-- [2026-08-27] 생성 모달 하나 — 사람/그룹 탭 -->
@@ -509,6 +580,11 @@
         <!-- [2026-08-27] 해외 출생자 등 목록에 없는 곳. 선택했을 때만 나타난다 -->
         <input id="f-city-custom" type="text" placeholder="도시 이름 (예: 도쿄, 로스앤젤레스)"
           maxlength="24" style="display:none;margin-top:7px"></div>
+      <!-- [2026-08-28] 성별 — 대운 방향이 성별과 연간 음양으로 정해져 만세력(L2)이 요구한다.
+           지금 안 받으면 그때 전원에게 다시 물어야 하는데 사실상 불가능하다(경도와 같은 논리). -->
+      <div class="field"><label>성별</label>
+        <div class="sexrow" id="f-sex"></div>
+        <div class="fieldwhy">운의 흐름 방향(대운) 계산에 쓰입니다. 비워 둬도 저장됩니다.</div></div>
       <div class="sheetnote">일간은 실계산됩니다 · 시·도시는 정밀 엔진(진태양시 보정) 연결 시 사용 · 음력 변환은 엔진 연결 후 지원</div>
     </div>
   </details>
@@ -561,7 +637,8 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 <!-- [사람 데이터는 이 저장소에 없다, 2026-08-28]
      인물 정보(이름·생년월일·출생시각·출생지·성별)는 **한 글자도 이 파일에 두지 않는다.**
-     `my-data.js`가 `window.SEED`를 놓으면 그걸 읽고, **없으면 빈 은하로 시작한다.**
+     `my-data.js`가 `window.SEED`를 놓으면 그걸 읽고, **없으면 사람 0명으로 시작해
+     첫 화면(#onboard)이 뜼다.**
      그 파일은 `.gitignore`에 있어 저장소에 안 올라간다 — clone한 사람에게는 404가 나는 게 정상이다.
      [왜 조건부가 아니라 삭제인가] 예전엔 가공 데이터를 담은 demo-data.js를 함께 올렸는데,
      **파일을 여는 사람에게는 "가공"이라는 표시가 안 보인다.** 실제 데이터로 오해할 여지가 있고,
@@ -3589,11 +3666,12 @@ function showVirtualSlot(){
    **사람 정보의 형태를 띤 것을 공개 파일에 두지 않는다**는 규칙에 어긋난다.
    인물 0명은 실측으로 안전을 확인했다: 렌더·카메라·레이아웃 전부 통과하고 크래시가 없다.
    (크래시가 나는 건 "나 없이 타인만 있는" 경우뿐인데, 그건 위 가드가 막는다.)
-   첫 실행 등록 화면은 다음 작업이다. */
+   [2026-08-28] 첫 실행 등록 화면(#onboard)을 넣었다 — 여기서 빈 Map을 돌려주면
+   maybeOnboard()가 그 화면을 띄운다(파일 맨 끝). */
 function applySeed(seed){
   if(!seed||!Array.isArray(seed.people)||!seed.people.length){
-    console.info('[시드] 사람 데이터가 없다 — 빈 은하로 시작한다. '
-      +'내 데이터로 보려면 my-data.js를 만들 것(README 참고)');
+    console.info('[시드] 사람 데이터가 없다 — 첫 화면(자기 등록)으로 시작한다. '
+      +'내 데이터로 바로 보려면 my-data.js를 만들 것(README 참고)');
     return new Map();}
   /* isMe는 정확히 하나여야 한다 — 은하의 유일한 항성이다(§2.1) */
   const mine=seed.people.filter(p=>p.isMe);
@@ -4608,9 +4686,13 @@ function showNode(n,groupContext,targetMesh){
   deselect();selected=n;selectedMesh=targetMesh||n.mesh;
   if(!n.isMe)selectedMesh.scale.setScalar(V2_TUNABLES.PLANET_SCALE*1.18);
   const ctx=groupContext||activeGroup;
+  /* [2026-08-28] 나는 은하의 유일한 항성(§2.1)인데, 그룹 밖에서 내 카드를 열면
+     "불타는 행성"으로 찍혔다 — 화면에는 항성으로 그려 놓고 글자만 반대로 말하던 셈이다.
+     첫 화면에서 사용자가 **가장 먼저 보는 카드**가 바로 이것이라 더 눈에 띄었다. */
   const roleTag=ctx&&ctx.analysis
     ?(n===ctx.analysis.sun?`<span class="tag sun">☀ 이 그룹의 중심축</span>`:`<span class="tag">행성 · ${EL_INFO[n.el].planet}</span>`)
-    :`<span class="tag">${EL_INFO[n.el].planet}</span>`;
+    :(n.isMe?`<span class="tag sun">☀ 나 · 이 은하의 항성</span>`
+            :`<span class="tag">${EL_INFO[n.el].planet}</span>`);
   /* [2026-08-24] 입력과 같은 위계로 시간 우선 표기. 겸사겸사 "모름시"도 고친다 —
      구 코드가 `${SIJIN[i][0]}시`로 무조건 "시"를 붙여 sijin=12(모름)일 때 "모름시"가 찍혔다. */
   const sj=n.birth?SIJIN[n.birth.sijin]:null;
@@ -4641,7 +4723,8 @@ function showNode(n,groupContext,targetMesh){
   if(rb)rb.onclick=()=>openRelSheet(n);
   document.getElementById('vstoggle').onclick=()=>{
     if(virtualMembers.some(c=>c.ref===n))removeFromVirtualSlot(n);else addToVirtualSlot(n);
-    showNode(n);};} /* 담기/빼기 직후 패널을 다시 그려 버튼 문구가 바로 바뀌게 */
+    showNode(n);};
+  renderNextStep();} /* 담기/빼기 직후 패널을 다시 그려 버튼 문구가 바로 바뀌게 */
 function showEdge(e){
   activeVirtual=false; /* [§5.5] 다른 패널로 넘어감 */
   const r=e.rich;
@@ -4741,6 +4824,28 @@ const selY=document.getElementById('f-y'),selM=document.getElementById('f-m'),se
   selCity.onchange=()=>{syncCityCustom();updMoreSummary();};
   const cc=document.getElementById('f-city-custom');
   if(cc)cc.oninput=()=>updMoreSummary();})();
+/* ═══ 성별 [2026-08-28] ═══
+   [왜 지금 받나] 명리의 **대운 방향**은 성별과 연간(年干)의 음양으로 정해진다(양남음녀 순행,
+   음남양녀 역행). 만세력(L2)이 붙는 순간 필수가 되는데, 그때 이미 등록된 사람들에게 다시
+   묻는 건 사실상 불가능하다 — 경도(`lon`)를 미리 저장해 둔 것과 같은 논리다.
+   [기본값이 없는 이유] 하나를 미리 켜 두면 **안 보고 넘긴 사람의 값이 그 값으로 굳는다.**
+   "안 밝힘"도 명시적으로 골라야 의미가 있다. 안 고르면 `sex: null`로 저장하고,
+   L2가 그때 "대운은 성별이 있어야 계산됩니다"라고 안내하면 된다.
+   [왜 묻는지 화면에 밝힌다] 이유 없이 성별을 물으면 거부감이 생긴다 — .fieldwhy 참고. */
+const SEX_OPTS=[['남','남'],['여','여'],[null,'안 밝힘']];
+/* 미선택 = `undefined`, "안 밝힘"을 **고른 것** = `null`. 화면에서만 갈린다 —
+   저장할 때는 둘 다 `sex:null`이 된다(L2에게는 똑같이 "값 없음"이므로). */
+function renderSex(elId,cur,onPick){
+  const el=document.getElementById(elId);
+  if(!el)return;
+  el.innerHTML=SEX_OPTS.map((o,i)=>
+    `<button type="button" class="sexchip${o[0]===cur?' on':''}" data-i="${i}">${o[1]}</button>`).join('');
+  el.querySelectorAll('.sexchip').forEach(b=>b.onclick=()=>{
+    const v=SEX_OPTS[+b.dataset.i][0];
+    onPick(v);
+    renderSex(elId,v,onPick);});}
+let fSex;   // 인물 시트의 현재 성별 값 — undefined = 아직 안 고름
+
 /* 직접 입력 칸은 그 항목을 골랐을 때만 보인다 */
 function syncCityCustom(){
   const cc=document.getElementById('f-city-custom');
@@ -4757,6 +4862,7 @@ function refreshDays(){
   const cur=+selD.value||1;
   let dh='';for(let d=1;d<=dim_;d++)dh+=`<option value="${d}">${d}일</option>`;
   selD.innerHTML=dh;selD.value=Math.min(cur,dim_);}
+function renderFSex(){renderSex('f-sex',fSex,v=>{fSex=v;updMoreSummary();});updMoreSummary();}
 function renderSijin(){
   const el=document.getElementById('f-sijin');
   el.innerHTML=SIJIN_ORDER.map(i=>{const s=SIJIN[i];
@@ -4773,7 +4879,8 @@ function updMoreSummary(){
   const el=document.getElementById('f-moresum');
   if(!el)return;
   const s=SIJIN[fSijin];
-  el.textContent=`${s&&s[1]?s[1].replace('-','–')+'시':'시간 모름'} · ${currentCity()}`;}
+  el.textContent=`${s&&s[1]?s[1].replace('-','–')+'시':'시간 모름'} · ${currentCity()}`
+    +` · ${fSex===undefined?'성별 미입력':fSex===null?'성별 안 밝힘':fSex}`;}
 function updGrpMoreSummary(){
   const el=document.getElementById('g-moresum'),ps=document.getElementById('g-parent');
   if(!el||!ps)return;
@@ -4842,6 +4949,12 @@ function openAddSheet(node){
   else{selY.value='1990';selM.value='1';refreshDays();selD.value='1';fSijin=12;
     selCity.value='서울';
     const cc1=document.getElementById('f-city-custom');if(cc1)cc1.value='';}
+  /* [2026-08-28] 성별 — **새 사람**은 `undefined`(아무것도 안 골린 상태)로 열고, 기존 인물은
+     저장된 값을 그대로 보여준다. 저장된 값은 '남'/'여'/null 셋 중 하나라 null이면
+     "안 밝힘"에 불이 들어온다 — 데이터상 "미입력"과 "안 밝힘"은 같은 값이다.
+     구분이 의미가 있는 순간은 처음 입력할 때뿐이고, 거기서만 undefined로 갈라롯다. */
+  fSex=(node&&node.birth)?node.birth.sex:undefined;
+  renderFSex();
   syncCityCustom();
   /* [E] 열 때마다 접힘을 닫힌 상태로 되돌린다 — 한 번 펼쳤다고 다음 사람을 추가할 때도
      펼쳐져 있으면 컴팩트화가 무의미해진다. 값 요약은 헤더가 계속 보여준다. */
@@ -4864,6 +4977,103 @@ function openAddSheet(node){
    바깥 클릭으로 닫기: document 클릭을 듣되 FAB·메뉴 자신의 클릭은 stopPropagation으로
    막는다. 별도 백드롭(#dim)을 쓰지 않은 이유는 #dim이 시트 전용이고 z-index 7이라
    FAB(6)를 덮어버리기 때문 — 메뉴만 열자고 z-index 규칙을 흔들 이유가 없다. */
+
+/* ═════════ 첫 화면(자기 등록) + 다음 할 일 안내 [2026-08-28] ═════════
+   [왜 필요한가 — 실측] 빈 은하에서 앱의 추가 경로로 사람을 넣어 보니
+   `{이름:'홍길동', isMe:false}` 하나가 생기고 **"나"가 없는 채로 남았다.** 항성이 없고
+   궤도도 안 잡히며(layoutGroupOrbits가 가드에 걸려 반환), UI에는 "나"로 바꿀 방법이 없다.
+   즉 빈 상태에서 시작한 사용자는 **정상 상태에 도달할 수 없었다.** 첫 화면은 편의가 아니라
+   필수다.
+   [건너뛰기를 안 두는 이유] 나 없이는 은하가 성립하지 않는다. 대신 **왜 필요한지**를
+   한 줄로 밝힌다 — 이유를 알면 생년월일을 넣는 부담이 준다(사용자 지시). */
+let obSijin=12, obSex;   // obSex: undefined = 아직 안 고름
+const obY=document.getElementById('ob-y'),obM=document.getElementById('ob-m'),
+      obD=document.getElementById('ob-d'),obCity=document.getElementById('ob-city');
+
+function obRefreshDays(){
+  const dim_=new Date(+obY.value,+obM.value,0).getDate();
+  const cur=+obD.value||1;
+  let h='';for(let d=1;d<=dim_;d++)h+=`<option value="${d}">${d}일</option>`;
+  obD.innerHTML=h;obD.value=Math.min(cur,dim_);}
+
+function obRenderSijin(){
+  const el=document.getElementById('ob-sijin');
+  el.innerHTML=SIJIN_ORDER.map(i=>{const t=SIJIN[i];
+    return`<button type="button" class="sijin${i===obSijin?' on':''}" data-i="${i}">${t[1].replace('-','–')}시<small>${t[0]}(${t[2]})</small></button>`;}).join('');
+  el.querySelectorAll('.sijin').forEach(b=>b.onclick=()=>{obSijin=+b.dataset.i;obRenderSijin();});
+  const un=document.getElementById('ob-sijin-unknown');
+  un.classList.toggle('on',obSijin===12);
+  un.onclick=()=>{obSijin=12;obRenderSijin();};}
+
+(function initOnboardFields(){
+  let yh='';for(let y=2026;y>=1930;y--)yh+=`<option value="${y}">${y}년</option>`;
+  obY.innerHTML=yh;obY.value='1990';
+  let mh='';for(let m=1;m<=12;m++)mh+=`<option value="${m}">${m}월</option>`;
+  obM.innerHTML=mh;obM.value='1';
+  obRefreshDays();
+  obY.onchange=obRefreshDays;obM.onchange=obRefreshDays;
+  /* 도시 목록은 인물 시트와 같은 출처(CITY_GROUPS)를 쓴다 — 두 벌로 갈라지면 한쪽만
+     고쳤을 때 조용히 어긋난다 */
+  obCity.innerHTML=CITY_GROUPS.map(g=>
+      `<optgroup label="${g.region}">`+
+      g.list.map(([c])=>`<option value="${c}">${c}</option>`).join('')+`</optgroup>`).join('')
+    +`<optgroup label="그 밖"><option value="${CITY_CUSTOM}">${CITY_CUSTOM}</option>`
+    +`<option value="${CITY_UNKNOWN}">${CITY_UNKNOWN}</option></optgroup>`;
+  obCity.value='서울';
+  const occ=document.getElementById('ob-city-custom');
+  obCity.onchange=()=>{if(occ)occ.style.display=(obCity.value===CITY_CUSTOM)?'block':'none';};
+  obRenderSijin();
+  renderSex('ob-sex',obSex,v=>{obSex=v;});})();
+
+/* 인물이 0명이면 띄우고, 있으면 닫는다. **여기가 유일한 판정 지점이다** —
+   삭제·시드 로드 등 인물 수가 바뀌는 모든 경로가 이 함수를 부른다. */
+function maybeOnboard(){
+  const on=nodes.length===0;
+  document.getElementById('onboard').classList.toggle('on',on);
+  if(on)setTimeout(()=>{const el=document.getElementById('ob-name');if(el)el.focus();},60);}
+
+document.getElementById('ob-start').onclick=()=>{
+  const name=document.getElementById('ob-name').value.trim();
+  if(!name){alert('이름을 입력해주세요');document.getElementById('ob-name').focus();return;}
+  let city=obCity.value;
+  if(city===CITY_CUSTOM){
+    const occ=document.getElementById('ob-city-custom');
+    city=(occ&&occ.value.trim())||CITY_UNKNOWN;}
+  const birth={y:+obY.value,m:+obM.value,d:+obD.value,sijin:obSijin,
+    city,lon:CITY_LON[city]!==undefined?CITY_LON[city]:null,
+    sex:obSex===undefined?null:obSex};
+  /* ★ 이 경로만이 "나"를 만든다. 이 화면의 정의가 "당신"이므로 묻지 않는다. */
+  const me=addNode({name,stemIdx:dayStem(birth.y,birth.m,birth.d),birth,isMe:true});
+  document.getElementById('onboard').classList.remove('on');
+  layoutGalaxy();rebuildRings();renderNav();
+  selectGroup(null);showNode(me);fitGalaxy(false);
+  renderNextStep();};
+
+/* ═══ 다음 할 일 카드 ═══
+   빈 은하와 "나 혼자"는 둘 다 **다음 행동이 안 보이는** 상태다. 화면이 비어서가 아니다.
+   인물이 2명 이상이 되면 카드도 ＋ 버튼 강조도 사라진다. */
+function renderNextStep(){
+  const body=document.getElementById('panelbody');
+  const fab=document.getElementById('fab');
+  const old=document.getElementById('nextstep');
+  if(old)old.remove();
+  const alone=nodes.length===1&&nodes[0].isMe;
+  if(fab)fab.classList.toggle('hint',alone);
+  if(!alone){if(innerWidth<768)panel.classList.remove('tall');return;}   /* 둘이 되면 높은 상태도 푸다 */
+  if(!body)return;
+  const d=document.createElement('div');
+  d.id='nextstep';
+  d.innerHTML='<b>아직 당신뿐입니다</b>'
+    +'<p>가족이나 친구를 추가해 보세요. 그 사람이 당신 주위를 도는 행성이 되고, '
+    +'둘 사이의 관계가 자동으로 계산됩니다.</p>'
+    +'<button type="button">사람 추가</button>';
+  d.querySelector('button').onclick=()=>openAddSheet(null);
+  body.appendChild(d);
+  /* [2026-08-28] 모바일은 패널이 하단 시트라 기본 높이에서는 이 카드가 **접힌 아래로
+     밀려 안 보인다**(390x844 실측). 혼자일 때만 시트를 높이기로 열어 안내를 보이게 한다 —
+     둘이 되는 순간 카드가 사라지므로 높은 상태도 같이 풀린다. */
+  if(innerWidth<768)panel.classList.add('open','tall');}
+
 (function(){
   const fab=document.getElementById('fab'), menu=document.getElementById('fabmenu');
   let open=false;
@@ -4942,14 +5152,22 @@ document.getElementById('addbtn').onclick=()=>{
      목록 밖 도시(직접 입력)와 "모름"은 경도가 null이고, L2는 그때 보정을 건너뛰면 된다. */
   const cityName=currentCity();
   const birth={y:+selY.value,m:+selM.value,d:+selD.value,sijin:fSijin,
-    city:cityName,lon:CITY_LON[cityName]!==undefined?CITY_LON[cityName]:null};
+    city:cityName,lon:CITY_LON[cityName]!==undefined?CITY_LON[cityName]:null,
+    sex:fSex===undefined?null:fSex};   /* [2026-08-28] null = 값 없음 — L2가 대운을 건너뛴다 */
   let n;
   if(editTarget){
     n=editTarget;n.name=name;n.birth=birth;
     updateNodeIdentity(n);
   }else{
     const si=dayStem(birth.y,birth.m,birth.d);
-    n=addNode({name,stemIdx:si,birth});
+    /* [★ isMe, 2026-08-28] **이 경로는 절대 "나"를 만들지 않는다.**
+       예전엔 isMe를 아예 안 넘겨서 결과적으로 false였는데, 그건 의도가 아니라 누락이었다 —
+       빈 은하에서 이 경로로 첫 사람을 넣으면 **"나"가 영영 안 생기고**(항성 없음, 궤도 없음,
+       바꿀 UI도 없음) 정상 상태로 갈 길이 사라진다. 실측으로 확인한 버그다.
+       "나"는 첫 화면(#onboard)만이 만든다. 여기서는 명시적으로 false를 넘겨 의도를 못박는다.
+       [왜 "이 사람이 당신인가요?"를 안 묻나] 두 번째부터는 답이 늘 "아니오"다. 내 정보를
+       고치는 경로는 이미 있다(내 카드 → 정보 수정). */
+    n=addNode({name,stemIdx:si,birth,isMe:false});
     nodes.forEach(o=>{if(o!==n)addEdge(n,o);});}
   /* 그룹 멤버십 동기화 (이동 포함) */
   groups.forEach(g=>{
@@ -4971,7 +5189,8 @@ document.getElementById('addbtn').onclick=()=>{
   layoutGalaxy();rebuildRings();renderNav();closeSheets();
   if(activeGroup){showGroup(activeGroup);fitGroup(activeGroup);}
   else{selectGroup(null);showNode(n);focusNode(n);}
-  editTarget=null;};
+  editTarget=null;
+  renderNextStep();};   /* 둘째가 들어오면 안내 카드와 ＋ 강조가 여기서 꺼진다 */
 
 document.getElementById('delbtn').onclick=()=>{
   if(!editTarget)return;
@@ -4994,7 +5213,8 @@ document.getElementById('delbtn').onclick=()=>{
   layoutGalaxy();rebuildRings();renderNav();closeSheets();
   panel.classList.remove('open','tall');
   editTarget=null;
-  selectGroup(activeGroup);};
+  selectGroup(activeGroup);
+  maybeOnboard();renderNextStep();};
 
 /* ═════════ [§7.2 가드] 나 없는 그룹 금지 ═════════
    §7.2가 "폐지"로 정해뒀지만 실제로 막는 코드가 없어(2026-08-23 확인) 3인 이상 그룹에서는
@@ -5112,6 +5332,9 @@ scene.environment=buildEnvironment(); /* [F-5] 반사용 환경 — 데모 데�
   항성 색을 읽을 수 있어 여기서 부른다 */
 fitGalaxy(true); /* [2026-08-27] 구 fitAll()/fitStart() — 은하 조망은 이제 한 가지뿐이다(항성 30px) */
 composer=makeComposer(); /* [블룸] scene·camera·canvas가 다 준비된 뒤라야 한다 */
+/* [2026-08-28] 첫 화면 판정은 여기서 한 번. 이 아래로는 인물 수가 바뀌는 곳(추가·삭제)에서만
+   다시 부른다. 파일 맨 끝이라 위 선언들이 전부 초기화된 뒤다(CLAUDE.md 전역 선언 순서 규칙). */
+maybeOnboard();renderNextStep();
 (function loop(){
   requestAnimationFrame(loop);
   t+=.016;
