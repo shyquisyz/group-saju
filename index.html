@@ -574,6 +574,21 @@
     color:var(--gold);font-size:var(--fs-sm);font-weight:700;white-space:nowrap}
   body.demo #ob-fold:hover{background:rgba(212,175,90,.22)}
   body.demo #ob-fold:active{opacity:.8}
+  /* ═══ 사주 표 [2026-08-29] ═══ 인물 패널 안. 생년월일 줄 바로 아래에 온다 */
+  .sajubox{margin:12px 0 16px;padding:12px 10px 10px;border-radius:10px;
+    border:1px solid var(--line);background:rgba(255,255,255,.03)}
+  .sjgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+  .sjhead{font-size:var(--fs-xs);color:var(--mut);letter-spacing:.06em;margin-bottom:5px}
+  .sjch{font-size:var(--fs-xl);font-weight:700;line-height:1.15}
+  .sjunk{font-size:var(--fs-md);color:var(--mut);opacity:.6;padding:8px 0 14px}
+  .sjels{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;
+    margin-top:10px;padding-top:9px;border-top:1px solid var(--line);
+    font-size:var(--fs-sm);font-weight:600}
+  .sjel.zero{color:var(--mut);opacity:.45;font-weight:400}
+  .sjnote{margin-top:9px;padding:8px 10px;border-radius:7px;
+    border:1px dashed rgba(212,175,90,.4);background:rgba(212,175,90,.07);
+    font-size:var(--fs-sm);color:var(--mut);line-height:1.55}
+  .sjnote b{color:var(--gold)}
   .obpeek{margin:0 0 14px;padding:9px 11px;border-radius:8px;
     border:1px dashed rgba(212,175,90,.45);background:rgba(212,175,90,.07);
     text-align:center;font-size:var(--fs-sm);color:var(--mut)}
@@ -1455,13 +1470,28 @@ function sajuJieList(y){
       out.push({ms:t[i],branch:(i/2+1)%12,sajuYear:(i===0?yy-1:yy),term:i,termYear:yy});}
   return out.sort(function(a,b){return a.ms-b.ms;});}
 
-/** 사주 계산. birth = {y,m,d,hour,min,lon}. hour가 정수가 아니면 "시각 모름".
-    반환 기둥은 [천간index, 지지index]. 시각을 모르면 hour는 null. */
+/** 사주 계산. birth = {y,m,d,hour,min,sijin,lon}.
+    [시각 세 모드 — 입력 UI와 같다]
+      · 정확(hour가 정수)   — 진태양시로 시지까지 계산한다
+      · 대략(sijin 0~11만)  — **사용자가 고른 시지를 그대로 쓴다.**
+        [★ 2026-08-29] 이걸 "모름"과 같이 다뤄 시주를 비웠더니, 시간대만 고른 사람의 시주가
+        전부 미상으로 나왔다(실사용 9명 중 8명). 사용자가 준 정보는 **시각이 아니라 시지**다 —
+        보정은 시각에 하는 것이라 시지에는 할 것이 없고, 그대로 쓰는 것이 정보를 안 버린다.
+        연·월주 판정에 쓸 순간은 그 시간대의 **중앙**(자시 00시, 축시 02시 …)으로 잡는다.
+        정오로 뭉개면 그날 절입이 있을 때 월주가 틀린다.
+      · 모름                — 세 기둥만. 정오를 가정하지 않는다
+    반환 기둥은 [천간index, 지지index]. 시주를 못 내면 hour는 null.
+    `timeMode`로 셋을 구분해 돌려준다 — 화면이 "대략"임을 표시해야 하기 때문이다. */
 function sajuOf(b){
   if(!b||!Number.isInteger(b.y)||!Number.isInteger(b.m)||!Number.isInteger(b.d))return null;
   const hasTime=Number.isInteger(b.hour);
+  const hasRange=!hasTime&&Number.isInteger(b.sijin)&&b.sijin>=0&&b.sijin<12;
+  const timeMode=hasTime?'exact':(hasRange?'range':'none');
   const lon=(typeof b.lon==='number'&&isFinite(b.lon))?b.lon:SAJU_LON_DEFAULT;
-  const wall=Date.UTC(b.y,b.m-1,b.d,hasTime?b.hour:12,hasTime?(b.min||0):0);
+  /* 대략이면 그 시간대의 중앙 시각. 시지 s의 시계 구간은 (2s-1)~(2s+1)시라 중앙은 2s시다
+     (자시 23~01 → 00시, 사시 09~11 → 10시). */
+  const wall=Date.UTC(b.y,b.m-1,b.d,
+    hasTime?b.hour:(hasRange?b.sijin*2:12), hasTime?(b.min||0):0);
   const utcMs=sajuUtcFromWall(wall);
   const apparentMs=utcMs+(lon*4+sajuEot(utcMs))*60000;
 
@@ -1475,8 +1505,9 @@ function sajuOf(b){
      丁壬은 壬寅, 戊癸는 甲寅에서 시작한다 */
   const mStem=(((yStem%5)*2+2)+(((cur.branch-2)%12+12)%12))%10;
 
-  /* 일주 — 시각을 모르면 진태양시를 적용할 수 없으므로 날짜 그대로 본다.
-     (자정을 되넘길지 판단할 근거가 없다. 추정으로 하루를 옮기지 않는다) */
+  /* 일주 — 시각을 정확히 모르면 진태양시를 적용할 수 없으므로 날짜 그대로 본다.
+     (자정을 되넘길지 판단할 근거가 없다. 추정으로 하루를 옮기지 않는다)
+     대략도 마찬가지다 — 두 시간 폭 안에서 자정이 어느 쪽인지 알 수 없다. */
   const dayIdx=hasTime?Math.floor(apparentMs/86400000)
                       :Math.floor(Date.UTC(b.y,b.m-1,b.d)/86400000);
   const dStem=((dayIdx+7)%10+10)%10, dBranch=((dayIdx+5)%12+12)%12;
@@ -1489,16 +1520,31 @@ function sajuOf(b){
     const hBranch=Math.floor(((aHour+1)%24)/2);
     const baseStem=(((aHour>=23?dayIdx+1:dayIdx)+7)%10+10)%10;
     hPil=[(((baseStem%5)*2)+hBranch)%10,hBranch];}
+  else if(hasRange){
+    /* 고른 시지를 그대로 쓰고 천간만 시두법으로 유도한다. 자시(23~01)를 골랐으면 전반(23시대)
+       인지 후반(00시대)인지 알 수 없는데, 조자시 방식에서 **일주는 어느 쪽이든 당일**이므로
+       천간도 당일 일간을 기준으로 잡는다. 화면이 "대략"이라고 밝힌다. */
+    hPil=[(((dStem%5)*2)+b.sijin)%10,b.sijin];}
 
   const nextMs=jl[k+1]?jl[k+1].ms:null;
   return {year:[yStem,yBranch],month:[mStem,cur.branch],day:[dStem,dBranch],hour:hPil,
-    hasTime:hasTime,lon:lon,utcMs:utcMs,apparentMs:apparentMs,apparentHour:aHour,
+    hasTime:hasTime,timeMode:timeMode,lon:lon,utcMs:utcMs,apparentMs:apparentMs,apparentHour:aHour,
     jieMs:cur.ms,jieTerm:cur.term,jieTermYear:cur.termYear,nextJieMs:nextMs,
     minSinceJie:(utcMs-cur.ms)/60000,
     minToNextJie:nextMs==null?null:(nextMs-utcMs)/60000};}
 
 /** 기둥 -> "甲子". 시각 모름이면 null이 들어오므로 호출부가 '미상'을 붙인다 */
 function pillarStr(p){return p?STEMS[p[0]]+BRANCHES[p[1]]:null;}
+/** 인물의 일간(천간 index). **앱 전체가 이 값을 쓴다** — 행성 표면·해설·관계선이 전부 여기서 나온다.
+    [2026-08-29] `dayStem(y,m,d)`(날짜만 봄) → `sajuOf`(진태양시·야자시 반영)로 바꿨다.
+    달라지는 사람은 **자정~새벽 1시에 태어났다고 정확히 입력한 경우뿐**이다(실측: 그 외 전
+    시간대 0%, 시각 모름 0%). 표 범위 밖(1900 이전 등)이면 옛 계산으로 물러난다. */
+function stemOfBirth(b){
+  if(!b)return 0;
+  const r=sajuOf({y:b.y,m:b.m,d:b.d,
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,sijin:b.sijin,lon:b.lon});
+  return r?r.day[0]:dayStem(b.y,b.m,b.d);}
+
 /** 여덟 글자의 오행 개수. 해석이 아니라 계산 결과 표시다(사용자 결정). */
 function sajuElements(r){
   const c={mok:0,hwa:0,to:0,geum:0,su:0};
@@ -4541,7 +4587,11 @@ function applySeed(seed){
     /* 저장본에는 시각이 들어 있고 `my-data.js`에는 없다 — 없으면 null 그대로 둔다 */
     const n=addNode({key:p.key,name:p.name,isMe:!!p.isMe,rich:p.rich||null,
       createdAt:p.createdAt||null,updatedAt:p.updatedAt||null,
-      stemIdx:dayStem(p.birth.y,p.birth.m,p.birth.d),
+      /* [2026-08-29] birth를 **먼저** 만들고 그걸로 일간을 구한다 — sajuOf가 경도·시각을
+         보기 때문이다. 예전엔 날짜만 넘겨 lon이 없어도 됐다. */
+      stemIdx:stemOfBirth(Object.assign({hour:null,min:null},p.birth,
+        {lon:p.birth.lon!==undefined?p.birth.lon
+          :(CITY_LON[p.birth.city]!==undefined?CITY_LON[p.birth.city]:null)})),
       pos:p.pos?new THREE.Vector3(p.pos[0],p.pos[1],p.pos[2]):undefined,
       birth:Object.assign({hour:null,min:null},p.birth,
         {lon:p.birth.lon!==undefined?p.birth.lon
@@ -6457,6 +6507,64 @@ function egoRelLine(node){
     :sp.why==='many'?`고리 3개 · 소속 항성계 ${tc}곳 — 관계 표식보다 우선 표시됩니다`
     :`고리 ${sp.count}개 · ${sp.why==='saeng'?'나를 생':'나를 극'}`;
   return`<div class="egorel">나와의 관계 ${txt}<span class="k">${ring}</span></div>`;}
+/* ═══ 사주 표 [2026-08-29, L2 4단계] ═══
+   여덟 글자를 계산해 놓고 일간 하나만 보여주고 있었다(사용자 지적). 네 기둥을 전부 낸다.
+
+   [순서] **년 → 시**. 전통 만세력은 시일월년(오른쪽부터)으로 적지만, 이 앱은 명리 사용자가
+   아니라 일반 사용자를 본다 — 왼쪽부터 읽는 순서가 그대로 시간 순서인 편이 낫다.
+   [색] 글자마다 그 오행 색. 앱의 다른 곳(행성·태그·오행 바)과 같은 어휘를 쓴다.
+   [범위] 여덟 글자와 오행 개수까지. **해석 문장은 늘리지 않는다** — 십신이 있어야 근거가
+   생긴다(L3). 오행 개수는 해석이 아니라 계산 결과 표시라 범위 안이다(사용자 결정).
+   [경계] ±10분. ±15분은 하루에 두 시간 넘게 경고 구간이 돼 넓다는 판단(사용자 결정).
+   문구는 **확정하지 않고 알리는 정도**로만 둔다. 두 결과를 다 보여줄지는 나중에 판단한다. */
+function sajuTableHtml(n){
+  const b=n.birth; if(!b)return '';
+  const r=sajuOf({y:b.y,m:b.m,d:b.d,
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,sijin:b.sijin,lon:b.lon});
+  if(!r)return '';
+  const KEYS=['year','month','day','hour'], KO=['년주','월주','일주','시주'];
+  const cols=KEYS.map((k,i)=>{
+    const p=r[k];
+    if(!p)return `<div class="sjcol"><div class="sjhead">${KO[i]}</div>
+      <div class="sjunk">미상</div></div>`;
+    return `<div class="sjcol"><div class="sjhead">${KO[i]}</div>
+      <div class="sjch" style="color:${EL_INFO[STEM_EL[p[0]]].css}">${STEMS[p[0]]}</div>
+      <div class="sjch" style="color:${EL_INFO[BRANCH_EL[p[1]]].css}">${BRANCHES[p[1]]}</div></div>`;
+  }).join('');
+  const cnt=sajuElements(r);
+  const els=EL_ORDER.map(k=>`<span class="sjel${cnt[k]?'':' zero'}"${cnt[k]?` style="color:${EL_INFO[k].css}"`:''}>${EL_KO[k]} ${cnt[k]}</span>`).join('');
+
+  /* ── 안내 ── */
+  const notes=[];
+  if(r.timeMode==='none')
+    notes.push('출생 시각을 몰라 <b>세 기둥</b>만 나옵니다. 시각을 알면 더 정확해지고, 나중에 언제든 채울 수 있습니다.');
+  else if(r.timeMode==='range')
+    notes.push('시간대만 알고 있어 시주는 <b>고른 시간대</b>로 잡았습니다. 몇 시 몇 분까지 알면 더 정확해집니다.');
+  else {
+    /* 절입 경계 — 앞뒤 10분 */
+    const toPrev=r.minSinceJie, toNext=r.minToNextJie;
+    if(toPrev<=10||(toNext!=null&&toNext<=10)){
+      const near=(toNext!=null&&toNext<=10)?r.nextJieMs:r.jieMs;
+      notes.push('이 시각은 <b>절기가 바뀌는 경계</b>에 가깝습니다 — 절입은 '+
+        sajuKstStr(near)+'입니다. 태어난 시각이 몇 분만 달라도 월주(月柱)가 바뀝니다.');}
+    /* 시지 경계 — 진태양시 기준 홀수 시각(23·01·03…)에서 앞뒤 10분 */
+    const mins=((r.apparentMs%86400000)+86400000)%86400000/60000;
+    const off=((mins-60)%120+120)%120, toB=Math.min(off,120-off);
+    if(toB<=10){
+      const bi=r.hour?r.hour[1]:0;
+      const other=BRANCHES[(bi+(off<=10?11:1))%12];
+      notes.push('이 시각은 <b>시주 경계</b>에 가깝습니다 — '+BRANCHES[bi]+'시일 수도 '+
+        other+'시일 수도 있습니다.');}
+  }
+  const noteHtml=notes.map(t=>`<div class="sjnote">${t}</div>`).join('');
+  return `<div class="sajubox"><div class="sjgrid">${cols}</div>
+    <div class="sjels">${els}</div>${noteHtml}</div>`;}
+
+/* 절입 시각을 사람이 읽는 형태로. 표는 UTC ms이므로 KST로 옮겨 찍는다 */
+function sajuKstStr(ms){
+  const d=new Date(ms+9*3600000), z=x=>String(x).padStart(2,'0');
+  return `${d.getUTCFullYear()}.${d.getUTCMonth()+1}.${d.getUTCDate()} ${z(d.getUTCHours())}:${z(d.getUTCMinutes())}`;}
+
 function showNode(n,groupContext,targetMesh){
   activeVirtual=false; /* [§5.5] 다른 패널로 넘어감 */
   deselect();selected=n;selectedMesh=targetMesh||n.mesh;
@@ -6491,10 +6599,11 @@ function showNode(n,groupContext,targetMesh){
       <span class="dot" style="background:${EL_INFO[o.el].css};color:${EL_INFO[o.el].css}"></span>${o.name}
       <span class="k">${e.label} · ${e.kind==='geuk'?'극':e.kind==='bi'?'비화':'생'}</span></div>`;}).join('');
   const r=n.rich;
+  /* [2026-08-29] ~~"일간 기준 약식 — 만세력 엔진 연결 후 전체 분석 제공"~~ 삭제.
+     만세력이 붙어 네 기둥이 실제로 나오므로 그 문구는 이제 사실이 아니다. */
   const main=r
     ?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`
-    :`${STEM_BLURB[n.stemIdx].map(p=>`<p>${p}</p>`).join('')}
-      <div class="tip"><b>NOTE</b>일간 기준 약식 — 만세력 엔진 연결 후 전체 분석 제공</div>`;
+    :`${STEM_BLURB[n.stemIdx].map(p=>`<p>${p}</p>`).join('')}`;
   /* ═══ 뒤로 가기 [★ 2026-08-28] ═══
      그룹을 보다 그 안의 사람을 누르면 인물 카드로 넘어가는데, 그룹 정보로 돌아가려면
      그룹을 다시 눌러야 했다(사용자 지적).
@@ -6514,7 +6623,7 @@ function showNode(n,groupContext,targetMesh){
 
   pbody.innerHTML=`${backHtml}${roleTag}<span class="tag">${EL_INFO[n.el].name}</span>
     <h2>${r?r.title:`${n.name} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
-    ${birthLine}${egoRelLine(n)}${main}<div class="rel-list">${rels}</div>
+    ${birthLine}${sajuTableHtml(n)}${egoRelLine(n)}${main}<div class="rel-list">${rels}</div>
     <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">관계 보기</button></div>
     <div class="panelbtns"><button class="pbtn" id="vstoggle">${virtualMembers.some(c=>c.ref===n)?'가상 성계에서 빼기':'가상 성계에 담기'}</button></div>`;
   /* 뒤로 가기 — 그룹이면 그 그룹으로, 아니면 은하 전체로. selectGroup이 카메라·패널·트리
@@ -6550,7 +6659,7 @@ function showEdge(e){
       ${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`
     :`<span class="tag ${rel.kind==='geuk'?'warn':''}">${rel.label}</span><h2>${e.a.name} ↔ ${e.b.name}</h2>
       <p>${pairPhrase(giver,receiver,rel.kind,'long')}</p>
-      <div class="tip"><b>NOTE</b>일간 기준 약식 — 엔진 연결 후 전체 궁합 분석 제공</div>`;
+      <div class="tip"><b>NOTE</b>일간 기준 약식 — 십신·합충 분석은 다음 단계</div>`;
   panel.classList.add('open');}
 /* [4번 1단계] 두 사람의 관계 패널을 여는 단일 진입점. edges[]에 저장된 쌍이면 그 객체를 그대로
    써서 수기 해설(RICH_E)이 나오게 하고, 없으면 즉석 계산 객체를 넘긴다(§5.4와 같은 패턴). */
@@ -7223,8 +7332,11 @@ function ptPaint(row){
     }else{if(b)b.remove();c.removeAttribute('title');}});
   ['남','여'].forEach(v2=>{
     const b=row._cells['sex_'+v2];if(b)b.classList.toggle('on',m.sex===v2);});
-  /* 일간 — 날짜가 읽히면 바로 보여준다. 줄 전체가 오류여도 날짜만 맞으면 보인다 */
-  row._cells.stem.textContent=(v.y&&!v.errs.date)?STEMS[dayStem(v.y,v.m,v.d)]:'';}
+  /* 일간 — 날짜가 읽히면 바로 보여준다. 줄 전체가 오류여도 날짜만 맞으면 보인다.
+     [2026-08-29] 저장 시점과 같은 계산을 쓴다 — 여기만 dayStem으로 두면 미리보기와 저장 결과가
+     자정 근처 출생에서 갈린다(그 줄에 시각·도시가 이미 들어와 있을 수 있다). */
+  row._cells.stem.textContent=(v.y&&!v.errs.date)
+    ?STEMS[stemOfBirth({y:v.y,m:v.m,d:v.d,hour:v.hour,min:v.min,sijin:v.sijin,lon:v.lon})]:'';}
 
 /* 마지막 줄에 뭔가 들어가면 다음 줄이 저절로 생긴다 — **빈 줄을 미리 깔지 않는다.**
    한 명만 넣는 사람은 한 줄만 보고, 여러 명은 "+ 줄 추가"를 찾을 필요가 없다. */
@@ -7462,7 +7574,8 @@ function ptSave(){
 
   const made=[];
   usable.forEach(({v})=>{
-    const n=addNode({name:v.name,stemIdx:dayStem(v.y,v.m,v.d),isMe:false,
+    const n=addNode({name:v.name,
+      stemIdx:stemOfBirth({y:v.y,m:v.m,d:v.d,hour:v.hour,min:v.min,sijin:v.sijin,lon:v.lon}),isMe:false,
       createdAt:t0,updatedAt:t0,
       birth:{y:v.y,m:v.m,d:v.d,sijin:v.sijin,hour:v.hour,min:v.min,city:v.city,lon:v.lon,
         sex:v.sex===undefined?null:v.sex}});
@@ -7701,7 +7814,7 @@ document.getElementById('ob-start').onclick=()=>{
   clearDemo();
   /* ★ 이 경로만이 "나"를 만든다. 이 화면의 정의가 "당신"이므로 묻지 않는다. */
   const t0=nowISO();
-  const me=addNode({name,stemIdx:dayStem(birth.y,birth.m,birth.d),birth,isMe:true,
+  const me=addNode({name,stemIdx:stemOfBirth(birth),birth,isMe:true,
     createdAt:t0,updatedAt:t0});
   document.getElementById('onboard').classList.remove('on');
   layoutGalaxy();rebuildRings();renderNav();
@@ -7751,8 +7864,8 @@ function renderNextStep(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&open)setOpen(false);});
 })();
 
-function updateNodeIdentity(n){ /* 생일 변경 시 오행/텍스처/라벨 갱신 */
-  const si=dayStem(n.birth.y,n.birth.m,n.birth.d);
+function updateNodeIdentity(n){ /* 생일·시각·출생지 변경 시 오행/텍스처/라벨 갱신 */
+  const si=stemOfBirth(n.birth);
   if(si!==n.stemIdx){
     n.stemIdx=si;n.el=STEM_EL[si];
     const info=EL_INFO[n.el];
@@ -7826,7 +7939,7 @@ function savePerson(){
     n.updatedAt=nowISO();   /* [시각 필드] 수정 때는 이쪽만 바뀐다 */
     updateNodeIdentity(n);
   }else{
-    const si=dayStem(birth.y,birth.m,birth.d);
+    const si=stemOfBirth(birth);
     /* [★ isMe, 2026-08-28] **이 경로는 절대 "나"를 만들지 않는다.**
        예전엔 isMe를 아예 안 넘겨서 결과적으로 false였는데, 그건 의도가 아니라 누락이었다 —
        빈 은하에서 이 경로로 첫 사람을 넣으면 **"나"가 영영 안 생기고**(항성 없음, 궤도 없음,
