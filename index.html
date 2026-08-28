@@ -215,6 +215,21 @@
   .primary{width:100%;padding:14px;margin-top:6px;border:0;border-radius:6px;background:var(--ink);
     color:#101018;font-size:var(--fs-base);font-weight:700;cursor:pointer;font-family:inherit}
   .primary:active{opacity:.85}
+  /* ═══ 연속 입력 [2026-08-28] ═══ "저장" 옆에 "저장하고 계속".
+     두 번째는 **부차 버튼**이라 채우지 않는다 — 한 명만 넣는 사람이 대다수이므로 주 동작이
+     흐려지면 안 된다. 좁은 화면에서는 세로로 접힌다(모바일 하단 시트 폭 기준). */
+  .btnrow{display:flex;gap:7px;margin-top:6px;flex-wrap:wrap}
+  .btnrow .primary{margin-top:0;flex:1 1 46%;min-width:132px}
+  .primary.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:600}
+  .primary.ghost:hover{background:rgba(255,255,255,.07)}
+  /* 방금 저장됐다는 신호. **시트가 안 닫히므로 화면이 아무것도 안 변한다** — 이 줄이 없으면
+     저장이 됐는지 알 수 없어 같은 사람을 두 번 넣게 된다. */
+  .savedwith{margin-top:10px;padding:9px 11px;border-radius:7px;
+    border:1px solid rgba(212,175,90,.35);background:rgba(212,175,90,.08);
+    font-size:var(--fs-sm);color:var(--ink);line-height:1.5}
+  .savedwith b{color:var(--gold);font-weight:700}
+  /* 멤버 격자 안의 "+ 새 사람" 칸 — 사람 시트의 "＋ 새 그룹" 칩과 대칭 */
+  .memrow.newp{border-style:dashed;color:var(--gold);justify-content:center;font-weight:600}
   .danger-full{width:100%;padding:12px;margin-top:8px;border:1px solid #7a3a30;border-radius:6px;
     background:transparent;color:#ff9a86;font-size:var(--fs-md);font-weight:600;cursor:pointer;font-family:inherit}
   .sheetnote{font-size:var(--fs-sm);color:var(--mut);margin-top:10px;text-align:center;line-height:1.5}
@@ -242,9 +257,63 @@
   #note .notex{background:none;border:0;color:var(--mut);font-size:var(--fs-md);
     cursor:pointer;line-height:1;padding:0 2px}
 
+  /* ═══ 내보내기 · 불러오기 [2026-08-28] ═══
+     **첫 화면(12) 위에 떠야 하므로 시트(8)보다 높다.** 기기를 옮긴 사람이 첫 화면에서
+     곧바로 불러올 수 있어야 한다(사용자 지시). 알림 바(14)보다는 아래 — 저장이 막혔다는
+     사실은 이 시트가 떠 있어도 보여야 한다. */
+  #backupsheet{z-index:13}
+  .bk-sec{padding:14px 0;border-top:1px solid var(--line)}
+  .bk-sec:first-child{border-top:0;padding-top:0}
+  .bk-h{font-family:'Space Mono',monospace;font-size:var(--fs-xs);letter-spacing:.12em;
+    color:var(--mut);margin-bottom:9px}
+  .bk-cnt{font-size:var(--fs-md);color:var(--ink);font-weight:600;margin-bottom:10px}
+  .bk-btns{display:flex;gap:7px;flex-wrap:wrap}
+  .bk-btns .pbtn{flex:1;min-width:120px;padding:11px 8px;border-radius:7px;
+    border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);
+    font-size:var(--fs-md);font-weight:600;cursor:pointer;font-family:inherit}
+  .bk-btns .pbtn:hover{background:rgba(255,255,255,.11)}
+  .bk-note{font-size:var(--fs-sm);color:var(--mut);line-height:1.6;margin-top:10px}
+  .bk-note b{color:var(--ink);font-weight:600}
+  .bk-or{font-size:var(--fs-xs);color:var(--mut);margin:11px 0 6px}
+  #bk-paste{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;
+    background:rgba(255,255,255,.04);color:var(--ink);font-size:var(--fs-xs);
+    font-family:'Space Mono',monospace;resize:vertical;margin-bottom:8px}
+  .bk-err{margin-top:10px;padding:10px 12px;border-radius:8px;
+    border:1px solid rgba(255,138,106,.45);background:rgba(255,138,106,.09);
+    font-size:var(--fs-sm);color:var(--ink);line-height:1.6}
+  /* 확인 단계 — 무엇이 사라지고 무엇이 들어오는지를 수로 보여준다(모두 지우기와 같은 원칙) */
+  .bk-cmp{margin-bottom:14px}
+  .bk-row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;
+    border-bottom:1px solid var(--line);font-size:var(--fs-sm)}
+  .bk-row span:first-child{color:var(--mut)}
+  .bk-row span:last-child{color:var(--ink);font-weight:600;text-align:right}
+  .bk-choice{display:block;width:100%;text-align:left;padding:12px 13px;border-radius:8px;
+    border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);
+    cursor:pointer;margin-bottom:8px;font-family:inherit}
+  .bk-choice:hover{background:rgba(255,255,255,.1)}
+  .bk-choice b{display:block;font-size:var(--fs-md);font-weight:700;margin-bottom:4px}
+  .bk-choice small{display:block;font-size:var(--fs-sm);color:var(--mut);line-height:1.55}
+  .bk-choice.wipe-first{border-color:rgba(255,138,106,.4)}
+  .bk-cancel{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);
+    background:none;color:var(--mut);font-size:var(--fs-sm);cursor:pointer;font-family:inherit}
+  /* 첫 화면의 두 번째 선택지 — **주 흐름을 가리지 않게** 작게 둔다(사용자 지시).
+     자리는 폼 위(설명 바로 아래)다 — 아래에 두면 카드가 길어 스크롤해야 보인다(실측). */
+  .obalt{margin:-8px 0 18px;padding:9px 11px;border-radius:7px;
+    border:1px dashed var(--line);background:rgba(255,255,255,.025);
+    font-size:var(--fs-sm);color:var(--mut)}
+  .obalt button{background:none;border:0;padding:2px;color:var(--gold);cursor:pointer;
+    font-size:var(--fs-sm);font-family:inherit;text-decoration:underline;text-underline-offset:3px}
+
   /* ═══ 저장 내용 지우기 [2026-08-28] ═══ 그룹 트리 맨 아래.
      **일부러 눈에 안 띄게 한다** — 되돌릴 수 없는 동작이라 실수로 누르는 쪽이 더 위험하다.
      그래서 글자를 작게(--fs-xs) 하고 붉은색 같은 강조색을 안 쓴다(사용자 지시). */
+  /* 백업 진입점 — 지우기와 **위계가 반대다.** 찾을 수 있어야 하므로 보통 크기·테두리 있음 */
+  .bkentry{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .bkentry .bkbtn{width:100%;padding:10px;border-radius:7px;border:1px solid var(--line);
+    background:rgba(255,255,255,.06);color:var(--ink);font-size:var(--fs-sm);font-weight:600;
+    cursor:pointer;font-family:inherit}
+  .bkentry .bkbtn:hover{background:rgba(255,255,255,.11)}
+  .bkundo{margin-top:8px}
   .wipe{margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
   .wipe .wipebtn{background:none;border:0;padding:4px 2px;cursor:pointer;
     font-size:var(--fs-xs);color:var(--mut);text-decoration:underline;text-underline-offset:3px}
@@ -561,6 +630,12 @@
   <h2>먼저 당신을 등록해 주세요</h2>
   <div class="obwhy"><b>모든 관계는 당신을 기준으로 계산됩니다.</b><br>
     당신이 이 은하의 유일한 항성이 되고, 등록하는 사람들이 당신을 도는 행성이 됩니다.</div>
+  <!-- [★ 2026-08-28] 두 번째 선택지. **폼보다 위에 둔다** — 처음엔 "시작하기" 아래 뒀는데,
+       카드가 화면보다 길어 **스크롤해야만 보였다**(1501×812에서 실측). 기기를 옮긴 사람이
+       "이걸 다 다시 입력해야 하나"라고 느끼는 순간은 맨 위이고, 거기서 안 보이면 없는 것과
+       같다. 한 줄짜리라 주 흐름(이름→생일→…→시작하기)을 밀어내지 않는다. -->
+  <div class="obalt">이미 쓰던 데이터가 있으세요?
+    <button type="button" id="ob-import">내보낸 파일 불러오기</button></div>
 
   <div class="field"><label>이름</label>
     <input id="ob-name" type="text" placeholder="예: 김OO, 또는 부르고 싶은 이름" maxlength="20"></div>
@@ -584,7 +659,11 @@
        이걸 모르면 폰에서 열었다가 데이터가 없어진 줄 알고 놀란다(사용자 지시). -->
   <div class="privnote">입력하신 내용은 <b>지금 쓰고 계신 브라우저에만</b> 저장됩니다.
     서버로 보내지 않으므로 다른 기기나 다른 브라우저에서는 보이지 않고,
-    반대로 이 기기를 함께 쓰는 사람은 볼 수 있습니다.</div>
+    반대로 이 기기를 함께 쓰는 사람은 볼 수 있습니다.
+    <!-- [2026-08-28] 소실 조건까지 밝힌다. 다만 **여기서 행동을 요구하지 않는다** —
+         아직 사람이 0명이라 백업할 것이 없다. 알려만 두고 권유는 3명째에 한다. -->
+    <br>이 브라우저의 <b>방문 기록·쿠키를 지우면 함께 사라집니다</b> —
+    나중에 파일로 백업해 두실 수 있습니다.</div>
   <button class="primary" id="ob-start">시작하기</button>
   <div class="sheetnote">일간은 실계산됩니다 · 시각·도시는 정밀 엔진(진태양시 보정) 연결 시 사용</div>
 </div></div>
@@ -638,7 +717,14 @@
         <br>· 이분의 생년월일도 <b style="color:var(--ink)">이 브라우저 안에만</b> 남습니다 — 어디로도 전송되지 않습니다</div>
     </div>
   </details>
-  <button class="primary" id="addbtn">저장</button>
+  <!-- [연속 입력, 2026-08-28] 열 명을 넣으려면 시트를 열 번 열고 닫아야 했다.
+       "저장하고 계속"은 시트를 닫지 않고 **이름만 비운다** — 생년월일과 그룹 체크는 남는다.
+       수정 모드에서는 감춘다(연속으로 고칠 대상이 없다). -->
+  <div class="savedwith" id="as-added" style="display:none"></div>
+  <div class="btnrow">
+    <button class="primary" id="addbtn">저장</button>
+    <button class="primary ghost" id="addcontbtn">저장하고 계속</button>
+  </div>
   <button class="danger-full" id="delbtn" style="display:none">이 사람 삭제</button>
   <div class="guardnote" id="del-guard" style="display:none"><b>나</b>는 삭제할 수 없습니다 —
     내가 은하의 유일한 항성이라, 사라지면 모든 항성계의 중심이 빕니다.
@@ -650,6 +736,18 @@
   <!-- [E] 순서 통일 — **관계 필드를 두 시트 모두 2번째**에 둔다. 사람 시트는 "그룹 선택"이
        이미 2번째였는데 그룹 시트는 "멤버 선택"이 4번째였다. 이유 없는 차이였다. -->
   <div class="field"><label>멤버 선택 (2인 이상)</label><div class="memgrid" id="g-members"></div>
+    <!-- [★ 그룹 만들다 사람이 없을 때, 2026-08-28] 예전엔 시트를 닫아야 했고 **입력이 통째로
+         날아갔다.** 백로그는 "시트 위에 시트"를 전제해 어렵다고 봤는데(입력 보존·z-index·
+         자동 체크 셋이 필요), **한 줄로 푸니 셋 다 사라졌다** — 시트를 안 닫으니 보존할 것이
+         없고, 시트가 하나이니 겹칠 일이 없다.
+         **이름과 생년월일만 받는다** — dayStem(y,m,d)이 날짜만 쓰므로 시각·도시·성별은 지금
+         어떤 계산에도 안 들어간다(이 시트가 그 셋을 접어 둔 것과 같은 근거). 나머지는
+         나중에 그 사람 카드에서 채운다. -->
+    <div class="newgrp-row" id="g-newp-row" style="display:none">
+      <input id="g-newp-name" type="text" placeholder="새 사람 이름" maxlength="20">
+      <select id="g-newp-y"></select><select id="g-newp-m"></select><select id="g-newp-d"></select>
+      <button type="button" class="pbtn" id="g-newp-add">추가</button>
+    </div>
     <div class="guardnote" id="g-guard"><b>나</b>는 항상 포함됩니다 —
       내가 은하의 유일한 항성이라, 빠지면 그 항성계의 중심이 빕니다.
       <b>나 없는 조합은 가상 성계에서 볼 수 있습니다.</b></div></div>
@@ -660,7 +758,11 @@
       <div class="field"><label>상위 그룹 (선택)</label><select id="g-parent"></select></div>
     </div>
   </details>
-  <button class="primary" id="grpbtn">그룹 생성</button>
+  <div class="savedwith" id="gs-added" style="display:none"></div>
+  <div class="btnrow">
+    <button class="primary" id="grpbtn">그룹 생성</button>
+    <button class="primary ghost" id="grpcontbtn">저장하고 계속</button>
+  </div>
   <button class="danger-full" id="gdelbtn" style="display:none">이 그룹 삭제</button>
 </div>
 </div>
@@ -670,6 +772,40 @@
   <h3>관계 보기 — 상대 선택</h3>
   <div class="field"><label>누구와의 관계를 볼까요 (1명 이상)</label><div class="memgrid" id="rel-members"></div></div>
   <button class="primary" id="relbtn">관계 보기</button>
+</div>
+
+<!-- ═══ 내보내기 · 불러오기 [2026-08-28] ═══
+     z-index가 다른 시트(8)보다 높은 13이다 — **첫 화면(12) 위에 떠야** 하기 때문이다.
+     기기를 옮긴 사람은 첫 화면에서 곧바로 불러와야 하고, 거기서 온보딩을 다시 시키면
+     이 기능의 주 사용처가 막힌다(사용자 지시). -->
+<div class="sheet" id="backupsheet">
+  <h3>내보내기 · 불러오기</h3>
+  <div id="bk-main">
+    <div class="bk-sec" id="bk-outsec">
+      <div class="bk-h">내보내기</div>
+      <div class="bk-cnt" id="bk-now"></div>
+      <div class="bk-btns">
+        <button type="button" class="pbtn" id="bk-file">파일로 저장</button>
+        <button type="button" class="pbtn" id="bk-copy">텍스트 복사</button>
+      </div>
+      <!-- 카톡으로 보내라고 권하는 이상, 그 파일이 어디에 남는지 밝히지 않으면 안 된다 -->
+      <div class="bk-note">카톡으로 자기에게 보내 두면 <b>다른 기기에서도 불러올 수 있습니다.</b><br>
+        이 파일에는 등록하신 분들의 <b>생년월일이 그대로</b> 들어 있습니다 —
+        카톡으로 보내면 <b>카톡 서버에도 남습니다.</b></div>
+    </div>
+
+    <div class="bk-sec">
+      <div class="bk-h">불러오기</div>
+      <input type="file" id="bk-input" accept=".json,application/json" style="display:none">
+      <div class="bk-btns"><button type="button" class="pbtn" id="bk-pick">파일 고르기</button></div>
+      <div class="bk-or">또는 내보낸 텍스트를 붙여넣기</div>
+      <textarea id="bk-paste" rows="3" placeholder='{"app":"group-saju", …'></textarea>
+      <div class="bk-btns"><button type="button" class="pbtn" id="bk-load">붙여넣은 내용 불러오기</button></div>
+      <div class="bk-err" id="bk-err" style="display:none"></div>
+    </div>
+  </div>
+  <!-- 확인 단계는 같은 시트 안에서 자리를 바꿔 뜬다(모두 지우기와 같은 패턴) -->
+  <div id="bk-confirm" style="display:none"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -4073,9 +4209,23 @@ function renderTree(){
   /* [★ 모두 지우기, 2026-08-28] 새 화면을 만들지 않고 그룹 트리 맨 아래에 붙인다.
      **일부러 작고 흐리게 둔다**(.wipe CSS 참고) — 되돌릴 수 없는 동작이라 못 찾는 것보다
      실수로 누르는 쪽이 훨씬 위험하다. 사람이 하나도 없으면(첫 화면) 지울 것도 없으므로 감춘다. */
+  /* [★ 백업 진입점, 2026-08-28] **모두 지우기와 위계를 반대로 둔다.**
+     지우기는 되돌릴 수 없어 못 찾는 편이 안전하지만, 백업은 **찾을 수 있어야** 한다 —
+     못 찾으면 기능이 없는 것과 같다. 그래서 보통 크기로 위에 놓고, 지우기는 그 아래
+     작고 흐린 채로 남긴다. 사람이 0명이어도 보여준다(불러오기가 필요한 상태이므로). */
+  h+=`<div class="bkentry"><button type="button" class="bkbtn" id="treebackup">내보내기 · 불러오기</button></div>`;
+  /* 되돌리기는 **있을 때만** 뜬다. 실수를 깨닫는 건 대개 몇 분 뒤라 알림 바만으로는 늦다. */
+  if(hasUndo())
+    h+=`<div class="bkundo"><button type="button" class="wipebtn" id="treeundo">불러오기 전으로 되돌리기</button></div>`;
   if(nodes.length)
     h+=`<div class="wipe" id="wipe"><button type="button" class="wipebtn">저장된 내용 모두 지우기</button></div>`;
   el.innerHTML=h;
+  const bke=el.querySelector('#treebackup');if(bke)bke.onclick=openBackup;
+  const bku=el.querySelector('#treeundo');if(bku)bku.onclick=()=>{
+    /* 되돌리기도 한 번 묻는다 — 지금 화면의 내용이 사라지는 동작이다 */
+    showNote('불러오기 <b>직전 상태</b>로 되돌립니다. 지금 화면의 내용은 사라집니다.',
+      [['되돌립니다',undoBackupLoad],
+       ['취소',()=>document.getElementById('note').classList.remove('on')]]);};
   wireWipe();
   el.querySelectorAll('.tw[data-t]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();
     const id=b.dataset.t;collapsedG.has(id)?collapsedG.delete(id):collapsedG.add(id);renderTree();});
@@ -4149,7 +4299,10 @@ function renderTagbar(){
      선택만 바뀌어도 한 번 더 쓰이지만 내용은 같고 7.7KB라 비용이 없다.
      부팅 중에는 saveSuspended가 막는다 — 안 그러면 복원 도중의 절반짜리 상태가
      저장본을 덮어쓴다. */
-  saveState();}
+  saveState();
+  /* [2026-08-28] 백업 권유도 같은 통로에 둔다 — 사람이 느는 경로가 전부 여기를 지나므로
+     "3명째"를 빠뜨릴 수 없다. 안에서 한 번만 뜨도록 스스로 막는다. */
+  maybeBackupHint();}
 
 /* ═════════ 그룹 — [1단계, 2026-08-27] 시드로 옮겼다 ═════════
    ~~여기서 createGroup을 직접 불렀다~~ → `applySeed`가 `my-data.js`를 읽어 만든다.
@@ -4193,11 +4346,74 @@ function renderTagbar(){
    때문이다 — 거기서는 첫 저장부터 예외가 난다. */
 const SAVE_KEY='groupsaju:save';
 const SAVE_KEY_BAD='groupsaju:save:corrupt';  /* 못 읽은 원본을 옮겨 두는 자리 — 지우지 않는다 */
+const SAVE_KEY_PREV='groupsaju:save:prev'; /* [백업] 불러오기 직전 상태 — 되돌리기용 */
+const HINT_BACKUP_KEY='groupsaju:hint:backup'; /* 백업 권유를 이미 띄웠는가 */
+const JUSTLOADED_KEY='groupsaju:justloaded';   /* 새로고침 너머로 넘기는 한 줄(sessionStorage) */
+/* ═══ 백업 파일 [2026-08-28] ═══
+   봉투는 `app`·`v`·`exportedAt` 셋뿐이고 알맹이는 **저장본 형식 그대로**다(= 시드 형식).
+   · `app` — 잘못된 파일을 가려내는 유일한 표식. 저장본 판정("people 배열이 있는가")만으로는
+     남의 JSON이 통과한다. 백업 파일은 **밖에서 오므로** 저장본보다 검증이 엄격해야 한다.
+   · **개수를 봉투에 안 적는다.** 적으면 진실이 두 벌이 되고, 미리보기가 봉투를 믿으면
+     거짓말하는 파일에 속는다. 화면에 띄우는 수는 **파싱 결과의 배열 길이**로 센다. */
+const BACKUP_APP='group-saju';
+const BACKUP_MAX_CHARS=2*1024*1024; /* 실측 저장 한계 5,177,344바이트 대비 여유(30인=7,931바이트) */
+const BACKUP_MAX_PEOPLE=1000;       /* 폭주 방지. 30인 7.9KB이므로 1000인도 260KB 안팎이다 */
 const SAVE_VER=1;
-/* [마이그레이션] 키 '1'이 v1→v2 변환이다. 구조를 바꾸는 사람이 여기에 함수를 더하고
-   SAVE_VER을 올린다. **옛 저장본을 조용히 버리지 말 것** — 변환 함수가 없으면 아래
-   loadSave가 "못 읽음"으로 처리해 원본을 백업 칸에 남긴다. */
-const MIGRATIONS={};
+/* ═════ 마이그레이션 [틀 정비 2026-08-28] ═════
+   키 'N'이 **vN → v(N+1)** 변환이다. 구조를 바꾸는 사람이 함수를 더하고 SAVE_VER을 올린다.
+   규칙 전문은 CLAUDE.md "저장 형식을 바꿀 때는 변환을 함께 넣는다".
+
+   [왜 v0 항목이 있나 — 한 번도 돌아본 적 없는 코드를 남기지 않으려고]
+   첫 배포가 v1이라 v0 저장본은 세상에 없다. 그런데 키가 하나도 없으면 아래 migrate()의
+   루프가 **0바퀴** 돌고, 첫 변환을 쓰는 사람은 이 경로가 실제로 도는지 모르는 채로 쓴다.
+   '0'을 채워 두면 콘솔에서 v0 저장본을 심어 **체인을 실제로 태워 볼 수 있다**:
+     localStorage.setItem('groupsaju:save',JSON.stringify({v:0,people:[…]})) → 새로고침
+   내용은 항등이 아니라 **방어적**이다 — v0을 "버전 필드가 없던 시절"로 정의하고 그 뒤에
+   생긴 필드(createdAt/updatedAt/lon/sex)를 **명시적으로 null**로 채운다.
+   이게 규칙의 본보기다: **필드를 더하기만 해도 변환이 필요하다.** 없는 필드를 읽는 코드가
+   undefined로 조용히 도는 것이 더 나쁘다("없다"와 "모른다"를 구분해 둔 이유).
+
+   [입력을 고치지 않는다] 각 함수는 **새 객체를 돌려준다.** 체인 중간에서 실패했을 때
+   원본이 성해야 loadSave가 'migfail'로 원본을 보존할 수 있다. */
+const MIGRATIONS={
+  '0':d=>({v:1,savedAt:d.savedAt||null,
+    people:(d.people||[]).map(p=>{
+      const b=p.birth||{};
+      const city=typeof b.city==='string'&&b.city?b.city:CITY_UNKNOWN;
+      return {key:p.key,name:p.name,isMe:!!p.isMe,
+        createdAt:p.createdAt||null,updatedAt:p.updatedAt||null,
+        birth:{y:b.y,m:b.m,d:b.d,
+          sijin:Number.isInteger(b.sijin)?b.sijin:12,city,
+          /* [★ 실측으로 잡은 함정, 2026-08-28] 여기서 lon을 그냥 null로 채우면 **경도가
+             영영 빈다.** applySeed는 `lon!==undefined`일 때만 파일의 값을 쓰고 아니면 도시
+             목록을 조회하는데, null은 undefined가 아니라 조회를 건너뛴다 —
+             city가 '서울'인데 lon이 null인 채로 굳는다(L2 진태양시 보정이 쓸 값이다).
+             빠진 필드를 채울 때는 **"없음"이 아니라 알 수 있는 값**을 넣어야 한다. */
+          lon:CITY_LON[city]!==undefined?CITY_LON[city]
+            :(typeof b.lon==='number'&&isFinite(b.lon)?b.lon:null),
+          sex:(b.sex==='남'||b.sex==='여')?b.sex:null}};}),
+    links:(d.links||[]).slice(),
+    groups:(d.groups||[]).map(g=>({key:g.key,name:g.name,type:g.type,
+      parent:g.parent||null,members:(g.members||[]).slice(),
+      createdAt:g.createdAt||null}))})};
+
+/* 저장본·백업 파일을 현재 형식으로 올린다.
+   **loadSave와 백업 불러오기가 같은 이 함수를 탄다** — 두 벌로 갈라지면 한쪽만 고쳤을 때
+   조용히 어긋난다(도시 목록에 이미 적용한 원칙). 반년 전에 내보낸 백업 파일이 오늘 앱에서
+   열려야 하므로 이 공유가 필수다.
+   돌려주는 것: {ok:true,data} | {ok:false,why[,newerVer]} — **던지지 않는다.** */
+function migrate(d){
+  if(!Number.isInteger(d.v))return {ok:false,why:'버전(v)이 없다'};
+  /* 미래 버전은 손대지 않는다. 옛 코드가 새 형식을 덮어쓰면 되돌릴 수 없다. */
+  if(d.v>SAVE_VER)return {ok:false,why:'newer',newerVer:d.v};
+  let cur=d;
+  for(let v=d.v;v<SAVE_VER;v++){
+    const fn=MIGRATIONS[String(v)];
+    if(typeof fn!=='function')
+      return {ok:false,why:'v'+v+'→v'+(v+1)+' 변환 함수가 없다'};
+    try{cur=fn(cur);}
+    catch(e){return {ok:false,why:'v'+v+' 변환 중 오류: '+e};}}
+  return {ok:true,data:cur};}
 let saveOn=true;      /* false면 절대 쓰지 않는다 — 미래 버전 저장본을 만났을 때의 보호 */
 let saveSuspended=true; /* 부팅이 끝날 때까지 쓰기 금지(아래 renderNav 훅 주석 참고) */
 /* 저장본이 있었는데 못 읽었을 때의 사유(기록용 — 콘솔에서 확인할 때 쓴다).
@@ -4242,9 +4458,16 @@ function saveState(){
         +'(비공개 모드일 수 있습니다). <b>화면을 닫으면 입력한 내용이 사라집니다.</b>');}
     console.warn('[저장] 쓰기 실패',e);}}
 
-/* 돌려주는 것: {status:'ok'|'none'|'corrupt'|'newer'|'blocked', …}
+/* 돌려주는 것: {status:'ok'|'none'|'corrupt'|'newer'|'migfail'|'blocked', …}
    **읽기 실패를 'none'과 절대 섞지 않는다** — 섞으면 첫 화면이 떠서 사용자는 데이터가
-   날아간 줄 안다. 그게 이 함수에서 가장 중요한 구분이다. */
+   날아간 줄 안다. 그게 이 함수에서 가장 중요한 구분이다.
+
+   [★ 2026-08-28] 'migfail'을 'corrupt'에서 갈랐다. 원인이 다르기 때문이다 —
+   corrupt는 **파일이 깨진 것**이고(우리 잘못이 아닐 수 있다), migfail은 **우리가 규칙을
+   어긴 것**이다(항목을 늘리면서 변환을 안 넣었다). 처리도 달라야 한다:
+   corrupt는 원본을 :corrupt로 옮기지만, **migfail은 원본을 옮기지 않고 저장만 끈다.**
+   옮겨 버리면 나중에 앱을 고쳐도 SAVE_KEY가 비어 있어 자동으로 못 연다 — 읽을 수는 있는
+   형식이므로 원본이 유효하다. 즉 'newer'와 같은 처리가 맞다. */
 function loadSave(){
   let raw;
   try{raw=localStorage.getItem(SAVE_KEY);}
@@ -4257,22 +4480,456 @@ function loadSave(){
     return {status:'corrupt',raw,why:'people 배열이 없다'};
   if(!Number.isInteger(d.v))
     return {status:'corrupt',raw,why:'버전(v)이 없다'};
-  /* 미래 버전은 **손대지 않는다.** 옛 코드가 새 저장본을 덮어쓰면 되돌릴 수 없다. */
-  if(d.v>SAVE_VER)return {status:'newer',ver:d.v};
-  let cur=d;
-  for(let v=d.v;v<SAVE_VER;v++){
-    const fn=MIGRATIONS[String(v)];
-    if(typeof fn!=='function')
-      return {status:'corrupt',raw,why:'v'+v+'→v'+(v+1) +' 변환 함수가 없다'};
-    try{cur=fn(cur);}
-    catch(e){return {status:'corrupt',raw,why:'v'+v+' 변환 중 오류: '+e};}}
-  return {status:'ok',data:cur};}
+  const m=migrate(d);
+  if(!m.ok){
+    if(m.why==='newer')return {status:'newer',ver:m.newerVer};
+    return {status:'migfail',raw,why:m.why,ver:d.v};}
+  return {status:'ok',data:m.data};}
 
 /* 우리 키만 지운다. localStorage.clear()는 같은 주소의 다른 것까지 날린다.
-   못 읽은 백업(SAVE_KEY_BAD)도 함께 지운다 — 거기에도 생년월일이 들어 있다. */
+   못 읽은 백업(SAVE_KEY_BAD)과 불러오기 직전 상태(SAVE_KEY_PREV)도 함께 지운다 —
+   **거기에도 생년월일이 들어 있다.** */
 function clearSave(){
-  try{localStorage.removeItem(SAVE_KEY);localStorage.removeItem(SAVE_KEY_BAD);}
+  try{localStorage.removeItem(SAVE_KEY);localStorage.removeItem(SAVE_KEY_BAD);
+    localStorage.removeItem(SAVE_KEY_PREV);}
   catch(e){console.warn('[저장] 지우기 실패',e);}}
+
+/* ═════════════════ 백업 — 내보내기 · 불러오기 [2026-08-28] ═════════════════
+   [왜 필요한가] 브라우저 저장소는 **방문 기록·쿠키를 한 번 지우면 사라지고** 서버가 없어
+   백업 수단이 하나도 없었다. 열 명을 넣은 노동이 그 한 번에 날아간다.
+
+   [경로를 둘 둔다 — 파일이 주, 텍스트가 보조]
+   주 사용처가 "카톡으로 자기한테 보내두고 다른 기기에서 연다"인데, 카톡 → 다른 기기 브라우저로
+   **파일**을 넘기는 단계 수가 기기마다 다르다(iOS는 "다른 앱으로 열기 → 파일에 저장"이 한 단계
+   더 붙는다). 파일이 막히면 텍스트를 대화창에 붙여 보내고 반대편에서 복사해 넣는 길로 우회한다.
+   **둘은 같은 parseBackup() 하나를 탄다** — 두 벌로 갈라지면 한쪽만 고쳤을 때 조용히 어긋난다. */
+
+/* 내보낼 객체. serializeState()를 그대로 쓰고 봉투만 덧댄다 — 형식이 갈라지지 않는다. */
+function backupObject(){
+  const s=serializeState();
+  return {app:BACKUP_APP,v:s.v,exportedAt:nowISO(),
+    people:s.people,links:s.links,groups:s.groups};}
+/* 압축(들여쓰기 없음)으로 만든다. 사람이 읽을 파일이 아니고, 텍스트 경로에서는 **짧을수록**
+   메신저 한 통에 들어갈 확률이 높다. */
+function backupText(){return JSON.stringify(backupObject());}
+function backupFileName(){
+  const d=new Date(),p=n=>String(n).padStart(2,'0');
+  /* 파일명을 ASCII로 둔다 — 메신저·파일앱을 거치며 한글 이름이 깨지는 경로가 있다.
+     날짜가 들어가야 여러 개 쌓였을 때 최신을 고른다. */
+  return 'group-saju-backup-'+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'.json';}
+
+/* ── 검증: 순수 함수. **전역 상태(nodes/groups/edges/localStorage)를 읽지도 쓰지도 않는다.** ──
+   이 격리가 "잘못된 파일을 넣어도 지금 데이터가 안 망가진다"를 보장하는 첫 겹이다.
+   돌려주는 것: {ok:true,data,exportedAt} | {ok:false,why} */
+function bkBad(why){return {ok:false,why};}
+/* 실재하는 날짜인가. **dayStem은 이상한 값을 받아도 안 던지고 조용히 다른 일간을 낸다**(60일
+   주기라 눈으로 못 잡는다) — 그래서 여기서 막는 것이 유일한 기회다. */
+function validYMD(y,m,d){
+  if(!Number.isInteger(y)||!Number.isInteger(m)||!Number.isInteger(d))return false;
+  if(y<1800||y>2200||m<1||m>12||d<1||d>31)return false;
+  const dt=new Date(y,m-1,d);
+  return dt.getFullYear()===y&&dt.getMonth()===m-1&&dt.getDate()===d;}
+
+function parseBackup(text){
+  if(typeof text!=='string')return bkBad('파일을 글자로 읽지 못했습니다.');
+  const t=text.trim();
+  if(!t)return bkBad('내용이 비어 있습니다.');
+  if(t.length>BACKUP_MAX_CHARS)return bkBad('파일이 너무 큽니다 — 그룹사주 백업 파일이 아닌 것 같습니다.');
+  let d;
+  try{d=JSON.parse(t);}
+  catch(e){return bkBad('그룹사주 백업 파일이 아닙니다 — 내용이 JSON 형식이 아닙니다.');}
+  if(!d||typeof d!=='object'||Array.isArray(d))
+    return bkBad('그룹사주 백업 파일이 아닙니다.');
+  if(d.app!==BACKUP_APP)
+    return bkBad('그룹사주 백업 파일이 아닙니다'+(typeof d.app==='string'&&d.app
+      ?' — 다른 앱의 파일입니다('+d.app.slice(0,30)+').':' — 표시(app)가 없습니다.'));
+  /* **저장본과 같은 변환 체인을 탄다** — 반년 전 백업이 오늘 앱에서 열려야 한다. */
+  const m=migrate(d);
+  if(!m.ok){
+    if(m.why==='newer')
+      return bkBad('이 앱보다 <b>새 버전</b>(v'+m.newerVer+')에서 만든 파일입니다. '
+        +'앱을 새로 고친 뒤 불러오세요.');
+    return bkBad('예전 형식(v'+d.v+')을 새 형식으로 바꾸지 못했습니다 — '+m.why);}
+  const s=m.data;
+
+  if(!Array.isArray(s.people)||!s.people.length)return bkBad('사람 데이터가 들어 있지 않습니다.');
+  if(s.people.length>BACKUP_MAX_PEOPLE)
+    return bkBad('사람이 너무 많습니다('+s.people.length+'명). 최대 '+BACKUP_MAX_PEOPLE+'명입니다.');
+
+  /* [화이트리스트 재구성] 파일의 객체를 그대로 쓰지 않고 **아는 필드만 새 객체에 옮겨 담는다.**
+     applySeed가 birth를 Object.assign에 넘기므로, 파일에 든 이상한 키가 그리로 흘러드는
+     길을 원천 차단한다. */
+  const keys=new Set(),people=[];
+  for(let i=0;i<s.people.length;i++){
+    const p=s.people[i],at='사람 '+(i+1)+'번';
+    if(!p||typeof p!=='object')return bkBad(at+'의 자료가 비어 있습니다.');
+    if(typeof p.key!=='string'||!p.key)return bkBad(at+'의 구분자(key)가 없습니다.');
+    if(keys.has(p.key))return bkBad('사람 구분자가 겹칩니다 — '+p.key);
+    keys.add(p.key);
+    const name=typeof p.name==='string'?p.name.trim():'';
+    if(!name)return bkBad(at+'의 이름이 비어 있습니다.');
+    const b=p.birth;
+    if(!b||typeof b!=='object')return bkBad('"'+name+'"의 생년월일이 없습니다.');
+    if(!validYMD(b.y,b.m,b.d))
+      return bkBad('"'+name+'"의 생년월일이 실제 날짜가 아닙니다 ('+b.y+'-'+b.m+'-'+b.d+').');
+    const city=typeof b.city==='string'&&b.city?b.city:CITY_UNKNOWN;
+    people.push({key:p.key,name,isMe:!!p.isMe,
+      createdAt:typeof p.createdAt==='string'?p.createdAt:null,
+      updatedAt:typeof p.updatedAt==='string'?p.updatedAt:null,
+      birth:{y:b.y,m:b.m,d:b.d,
+        sijin:Number.isInteger(b.sijin)&&b.sijin>=0&&b.sijin<=12?b.sijin:12,
+        city,
+        /* 목록에 있는 도시면 우리 경도를 쓴다 — 파일의 값을 그대로 믿지 않는다 */
+        lon:CITY_LON[city]!==undefined?CITY_LON[city]
+          :(typeof b.lon==='number'&&isFinite(b.lon)?b.lon:null),
+        sex:(b.sex==='남'||b.sex==='여')?b.sex:null}});}
+
+  /* **isMe 폴백을 쓰지 않는다.** applySeed에는 "없으면 첫 사람을 나로"가 있지만 그건 우리가
+     만든 시드에 대한 관용이다. 외부 파일에 적용하면 **엉뚱한 사람이 나가 된다.** */
+  const meCnt=people.filter(p=>p.isMe).length;
+  if(meCnt!==1)
+    return bkBad('"나"로 표시된 사람이 '+meCnt+'명입니다 — 정확히 한 명이어야 합니다.');
+
+  const links=[],seenL=new Set();
+  const rawLinks=Array.isArray(s.links)?s.links:[];
+  for(let i=0;i<rawLinks.length;i++){
+    const L=rawLinks[i];
+    if(!Array.isArray(L)||L.length!==2)return bkBad('관계선 '+(i+1)+'번의 모양이 잘못됐습니다.');
+    if(!keys.has(L[0])||!keys.has(L[1]))
+      return bkBad('관계선 '+(i+1)+'번이 없는 사람을 가리킵니다.');
+    if(L[0]===L[1])continue;
+    const k=[L[0],L[1]].sort().join(' ');
+    if(seenL.has(k))continue;
+    seenL.add(k);links.push([L[0],L[1]]);}
+
+  const groups=[],gkeys=new Set();
+  const rawG=Array.isArray(s.groups)?s.groups:[];
+  for(let i=0;i<rawG.length;i++){
+    const g=rawG[i],at='그룹 '+(i+1)+'번';
+    if(!g||typeof g!=='object')return bkBad(at+'의 자료가 비어 있습니다.');
+    if(typeof g.key!=='string'||!g.key)return bkBad(at+'의 구분자(key)가 없습니다.');
+    if(gkeys.has(g.key))return bkBad('그룹 구분자가 겹칩니다 — '+g.key);
+    gkeys.add(g.key);
+    const gname=typeof g.name==='string'?g.name.trim():'';
+    if(!gname)return bkBad(at+'의 이름이 비어 있습니다.');
+    /* 유형은 고쳐서 넘기지 않고 **거부한다.** 우리가 만든 형식이므로 목록 밖 값이 들어 있다는
+       것은 손댄 파일이라는 뜻이고, 조용히 '기타'로 바꾸면 사용자는 바뀐 줄 모른다. */
+    if(GTYPES.indexOf(g.type)<0)
+      return bkBad('"'+gname+'"의 유형이 목록에 없습니다('+String(g.type).slice(0,20)+'). '
+        +'가능한 값: '+GTYPES.join('·'));
+    if(!Array.isArray(g.members))return bkBad('"'+gname+'"의 멤버 목록이 없습니다.');
+    for(const mk of g.members)
+      if(!keys.has(mk))return bkBad('"'+gname+'"이 없는 사람을 가리킵니다 — '+mk);
+    groups.push({key:g.key,name:gname,type:g.type,
+      parent:(typeof g.parent==='string'&&g.parent)?g.parent:null,
+      members:g.members.slice(),
+      createdAt:typeof g.createdAt==='string'?g.createdAt:null});}
+  /* 상위 그룹: 존재 + 고리 없음. applySeed에도 방어가 있지만 **거기 닿기 전에** 잡는다. */
+  const gmap=new Map(groups.map(g=>[g.key,g]));
+  for(const g of groups){
+    if(g.parent&&!gmap.has(g.parent))
+      return bkBad('"'+g.name+'"의 상위 그룹을 찾을 수 없습니다.');
+    const seen=new Set([g.key]);let cur=g,d2=0;
+    while(cur.parent){
+      const par=gmap.get(cur.parent);
+      if(!par)break;
+      if(seen.has(par.key)||++d2>MAX_GROUP_DEPTH)
+        return bkBad('그룹 상위 관계가 고리를 이룹니다 — "'+g.name+'" 근처');
+      seen.add(par.key);cur=par;}}
+
+  return {ok:true,exportedAt:typeof d.exportedAt==='string'?d.exportedAt:null,
+    data:{v:SAVE_VER,savedAt:s.savedAt||null,people,links,groups}};}
+
+/* ── 합치기 ──
+   [매칭 기준] **이름과 생년월일(년·월·일)이 모두 같으면 같은 사람으로 보고 건너뛴다**(사용자 결정).
+   화면에도 이 기준을 그대로 적는다 — 안 적으면 왜 어떤 사람은 안 들어왔는지 알 수 없다.
+   id로 맞추지 않는 이유: `n0`은 기기마다 독립으로 발급되므로 **다른 기기의 n0과 이 기기의 n0은
+   아무 관계가 없다.**
+
+   [파일의 "나" → 지금의 나] 파일의 isMe를 일반 인물로 강등하면 그 사람이 속한 그룹이 전부
+   §7.2("나 없는 그룹 금지")를 깬다. 두 파일 모두 에고센트릭 데이터이므로 **파일의 나 자리에
+   지금의 나를 대입한다.** 이름·생일이 다르면 그 사실을 화면에 알린다(조용히 합치지 않는다).
+
+   [열쇠를 전부 새로 매긴다] 양쪽 다 n0,n1…을 쓰므로 그대로 두면 **겹친다.** 합친 결과에
+   n0부터 다시 매겨 충돌 계열 자체를 없앤다. */
+function bkMatchKey(name,b){return String(name).trim()+'|'+b.y+'-'+b.m+'-'+b.d;}
+function mergeSeeds(cur,inc){
+  const out={v:SAVE_VER,savedAt:nowISO(),people:[],links:[],groups:[]};
+  const idOf=new Map(); /* 'cur:key' | 'inc:key' → 새 key */
+  const matchOf=new Map();
+  let n=0;
+  const put=(src,p,forceNotMe)=>{
+    const k='n'+(n++);
+    idOf.set(src+':'+p.key,k);
+    out.people.push({key:k,name:p.name,isMe:forceNotMe?false:!!p.isMe,birth:p.birth,
+      createdAt:p.createdAt||null,updatedAt:p.updatedAt||null});
+    matchOf.set(bkMatchKey(p.name,p.birth),k);
+    return k;};
+  cur.people.forEach(p=>put('cur',p,false));
+  const curMe=cur.people.find(p=>p.isMe);
+  const st={addedPeople:0,skippedPeople:0,addedGroups:0,skippedGroups:0,
+    addedLinks:0,meMismatch:null};
+  inc.people.forEach(p=>{
+    if(p.isMe&&curMe){
+      idOf.set('inc:'+p.key,idOf.get('cur:'+curMe.key));
+      if(bkMatchKey(p.name,p.birth)!==bkMatchKey(curMe.name,curMe.birth))
+        st.meMismatch={file:p.name,cur:curMe.name};
+      st.skippedPeople++;return;}
+    const hit=matchOf.get(bkMatchKey(p.name,p.birth));
+    if(hit!==undefined){idOf.set('inc:'+p.key,hit);st.skippedPeople++;return;}
+    put('inc',p,true);st.addedPeople++;});
+
+  const seenL=new Set();
+  const addLink=(a,b,count)=>{
+    if(!a||!b||a===b)return;
+    const k=[a,b].sort().join(' ');
+    if(seenL.has(k))return;
+    seenL.add(k);out.links.push([a,b]);if(count)st.addedLinks++;};
+  cur.links.forEach(L=>addLink(idOf.get('cur:'+L[0]),idOf.get('cur:'+L[1]),false));
+  inc.links.forEach(L=>addLink(idOf.get('inc:'+L[0]),idOf.get('inc:'+L[1]),true));
+
+  /* 그룹은 **이름이 같으면 건너뛴다.** 멤버까지 비교해 부분 병합하면 "어느 그룹이 어떻게
+     바뀌었는지"를 사용자가 추적할 수 없다 — 예측 가능한 쪽을 고른다. */
+  let gi=0;const gIdOf=new Map(),gnames=new Set();
+  const meKey=curMe?idOf.get('cur:'+curMe.key):null;
+  const putG=(src,g,members)=>{
+    const k='g'+(gi++);
+    gIdOf.set(src+':'+g.key,k);gnames.add(g.name);
+    out.groups.push({key:k,name:g.name,type:g.type,parent:null,
+      members,createdAt:g.createdAt||null});
+    return k;};
+  cur.groups.forEach(g=>putG('cur',g,g.members.map(mk=>idOf.get('cur:'+mk)).filter(Boolean)));
+  inc.groups.forEach(g=>{
+    if(gnames.has(g.name)){st.skippedGroups++;return;}
+    const ms=g.members.map(mk=>idOf.get('inc:'+mk)).filter(Boolean);
+    /* [§7.2] 나 없는 그룹은 만들지 않는다 — 파일의 나가 지금의 나로 바뀌었으므로 보통 이미
+       들어 있지만, 최종 방어선으로 한 번 더 확인한다. */
+    if(meKey&&ms.indexOf(meKey)<0)ms.push(meKey);
+    if(ms.length<2){st.skippedGroups++;return;}
+    putG('inc',g,ms);st.addedGroups++;});
+  /* 상위 관계는 양쪽 다 옮긴 뒤에 건다 — 부모가 건너뛰어졌으면 최상위로 올린다 */
+  cur.groups.forEach(g=>{if(!g.parent)return;
+    const me2=gIdOf.get('cur:'+g.key),pa=gIdOf.get('cur:'+g.parent);
+    if(me2&&pa){const t=out.groups.find(x=>x.key===me2);if(t)t.parent=pa;}});
+  inc.groups.forEach(g=>{if(!g.parent)return;
+    const me2=gIdOf.get('inc:'+g.key),pa=gIdOf.get('inc:'+g.parent);
+    if(me2&&pa){const t=out.groups.find(x=>x.key===me2);if(t)t.parent=pa;}});
+  return {seed:out,stats:st};}
+
+/* ── 적용: **저장소에 쓰고 새로 연다** ──
+   [왜 화면을 직접 안 고치나] applySeed 도중 예외가 나면 화면이 반쯤 지워진 채 남고, 그 상태가
+   renderNav → saveState를 타고 **저장본을 덮어쓴다.** 새로 여는 쪽은 부팅 경로를 그대로 타므로
+   불러오기 전용 복원 코드를 따로 만들 필요도 없다. wireWipe의 "지웁니다"가 쓰는 방식과 같다. */
+function applyBackupSeed(seed,noteLine){
+  let txt;
+  try{txt=JSON.stringify(seed);}
+  catch(e){showNote('불러온 내용을 저장 형식으로 바꾸지 못했습니다 — <b>지금 화면은 그대로입니다.</b>');
+    return false;}
+  let prevRaw=null;
+  try{prevRaw=localStorage.getItem(SAVE_KEY);}catch(e){}
+  try{
+    /* 되돌리기 자리를 **먼저** 채운다. 여기서 실패하면 SAVE_KEY를 건드리지 않고 멈춘다. */
+    if(prevRaw)localStorage.setItem(SAVE_KEY_PREV,prevRaw);
+    else localStorage.removeItem(SAVE_KEY_PREV);
+    localStorage.setItem(SAVE_KEY,txt);
+    /* [★ 실측으로 잡음, 2026-08-28] 백업 권유 플래그를 여기서 미리 세운다.
+       안 세우면 **"합쳤습니다" 알림을 백업 권유가 덮는다** — 다른 기기에서 처음 불러오는
+       경우가 정확히 그 조합이다(저장본 없음 → 불러오기 → 새로고침 → 3명 이상 → 권유 플래그
+       없음 → 부팅 끝 renderNav가 권유를 띄우며 결과 알림을 지운다).
+       겹침을 피하는 것 말고 근거가 하나 더 있다 — **방금 백업에서 되살린 사람에게
+       "백업해 두세요"는 할 말이 아니다.** 그 사람은 이미 백업 파일을 갖고 있다. */
+    localStorage.setItem(HINT_BACKUP_KEY,'1');}
+  catch(e){
+    console.warn('[백업] 쓰기 실패',e);
+    showNote('저장 공간에 쓰지 못했습니다(비공개 모드일 수 있습니다) — '
+      +'<b>불러오기를 취소했습니다. 지금 화면은 그대로입니다.</b>');
+    return false;}
+  try{sessionStorage.setItem(JUSTLOADED_KEY,noteLine);}catch(e){}
+  location.reload();
+  return true;}
+
+/* 되돌리기. 불러오기 직전 저장본을 되살린다 — 실수로 덮어썼을 때의 유일한 탈출구다. */
+function undoBackupLoad(){
+  let prev=null;
+  try{prev=localStorage.getItem(SAVE_KEY_PREV);}catch(e){}
+  if(!prev){showNote('되돌릴 내용이 없습니다.');return;}
+  try{localStorage.setItem(SAVE_KEY,prev);localStorage.removeItem(SAVE_KEY_PREV);}
+  catch(e){showNote('되돌리지 못했습니다 — 저장 공간에 쓸 수 없습니다.');return;}
+  location.reload();}
+function hasUndo(){try{return !!localStorage.getItem(SAVE_KEY_PREV);}catch(e){return false;}}
+
+/* ── 백업 화면 ──
+   검증을 통과한 결과를 여기 담아 두고 확인 단계에서 쓴다. **통과 전에는 null이므로**
+   확인 화면이 뜬다는 것 자체가 "파일이 온전하다"는 뜻이다. */
+let bkPending=null;
+function bkEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function bkFmtDate(iso){
+  if(!iso)return '알 수 없음';
+  const d=new Date(iso);
+  if(isNaN(d.getTime()))return '알 수 없음';
+  const p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())
+    +' '+p(d.getHours())+':'+p(d.getMinutes());}
+function bkCount(nP,nG){return '사람 '+nP+'명'+(nG?' · 그룹 '+nG+'개':'');}
+function bkShowErr(html){
+  const el=document.getElementById('bk-err');
+  if(!el)return;
+  el.innerHTML=html;el.style.display='block';}
+function bkClearErr(){const el=document.getElementById('bk-err');if(el)el.style.display='none';}
+
+function openBackup(){
+  const sh=document.getElementById('backupsheet');
+  if(!sh)return;
+  bkPending=null;
+  document.getElementById('bk-main').style.display='block';
+  document.getElementById('bk-confirm').style.display='none';
+  document.getElementById('bk-paste').value='';
+  bkClearErr();
+  /* 사람이 0명이면(첫 화면에서 열린 경우) **내보낼 것이 없다** — 구역째 감춘다.
+     비활성 버튼으로 남기면 "언젠간 눌린다"는 인상을 준다(삭제 버튼 가드와 같은 판단). */
+  const has=nodes.length>0;
+  document.getElementById('bk-outsec').style.display=has?'block':'none';
+  document.getElementById('bk-now').textContent='지금 담긴 것 — '+bkCount(nodes.length,groups.length);
+  wireBackup();
+  sh.classList.add('open');
+  /* 첫 화면 위에 뜰 때는 #dim(7)이 첫 화면(12)보다 아래라 아무것도 덮지 못한다 — 그때는 안 켠다 */
+  if(has)dim.classList.add('on');}
+
+function bkDownload(){
+  const fn=backupFileName();
+  try{
+    const blob=new Blob([backupText()],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=fn;a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{if(a.parentNode)a.parentNode.removeChild(a);URL.revokeObjectURL(url);},400);
+    showNote('내보냈습니다 — <b>'+fn+'</b><br>'
+      +'카톡으로 자기에게 보내 두시면 다른 기기에서 불러올 수 있습니다.');}
+  catch(e){
+    console.warn('[백업] 파일 저장 실패',e);
+    bkShowErr('파일로 저장하지 못했습니다 — <b>텍스트 복사</b>를 대신 써 주세요.');}}
+
+function bkCopy(){
+  const txt=backupText();
+  const done=()=>showNote('복사했습니다 — 카톡 대화창에 붙여넣어 <b>자기에게 보내 두세요.</b> '
+    +'다른 기기에서 그 글을 복사해 불러오면 됩니다.');
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(txt).then(done,()=>bkCopyFallback(txt));
+  else bkCopyFallback(txt);}
+/* 클립보드 접근이 막힌 환경. **"복사가 안 됩니다"로 끝내면 사용자가 할 수 있는 게 없다** —
+   아래 붙여넣기 칸에 내용을 채우고 선택까지 해 준다(그 칸에 자기 데이터가 들어가지만
+   같은 내용이라 불러와도 무해하다). */
+function bkCopyFallback(txt){
+  const ta=document.getElementById('bk-paste');
+  if(ta){ta.value=txt;ta.focus();ta.select();}
+  bkShowErr('자동 복사가 막혀 있습니다 — 아래 칸의 내용이 선택돼 있으니 '
+    +'<b>직접 복사</b>(Ctrl+C / 길게 눌러 복사)해 주세요.');}
+
+/* 파일이든 붙여넣기든 **이 하나를 지난다.** */
+function bkTryLoad(text){
+  bkClearErr();
+  const r=parseBackup(text);
+  if(!r.ok){
+    /* 실패 문구에 **"지금 화면은 그대로"**를 반드시 붙인다 — 이게 이 기능에서 사용자가 가장
+       무서워하는 지점이다(잘못된 파일을 넣어 지금 것까지 잃는 것). */
+    bkShowErr('<b>불러오지 못했습니다.</b><br>'+r.why
+      +'<br>지금 화면의 내용은 <b>그대로입니다.</b>');
+    return;}
+  bkPending=r;
+  bkConfirm();}
+
+function bkConfirm(){
+  const inc=bkPending.data;
+  /* 사람이 0명이면 잃을 것이 없다 — 확인을 건너뛴다. 다만 **무엇이 들어왔는지는 알린다.** */
+  if(!nodes.length){
+    applyBackupSeed(inc,'불러왔습니다 — '+bkCount(inc.people.length,inc.groups.length));
+    return;}
+  const cur=serializeState();
+  const mg=mergeSeeds(cur,inc);
+  const st=mg.stats;
+  const row=(a,b)=>'<div class="bk-row"><span>'+a+'</span><span>'+b+'</span></div>';
+  let h='<div class="bk-cmp">'
+    +row('지금 이 브라우저에 있는 것',bkCount(cur.people.length,cur.groups.length))
+    +row('불러올 파일에 든 것',bkCount(inc.people.length,inc.groups.length))
+    +row('파일을 만든 시각',bkFmtDate(bkPending.exportedAt))
+    +'</div>';
+  /* 파일의 "나"와 지금의 "나"가 다르면 **조용히 합치지 않는다.** 파일의 그룹이 지금의 나를
+     중심으로 붙게 되므로(§7.2) 그 사실을 먼저 말한다. */
+  if(st.meMismatch)
+    h+='<div class="bk-err" style="display:block;margin-bottom:12px">'
+      +'파일의 “나”는 <b>'+bkEsc(st.meMismatch.file)+'</b>인데 지금의 “나”는 '
+      +'<b>'+bkEsc(st.meMismatch.cur)+'</b>입니다. 합치면 파일의 그룹이 '
+      +'<b>지금의 당신</b>을 중심으로 붙습니다.</div>';
+  h+='<button type="button" class="bk-choice" data-m="merge"><b>합치기 — 지금 것에 더합니다</b>'
+    +'<small>사람 '+st.addedPeople+'명'+(st.addedGroups?' · 그룹 '+st.addedGroups+'개':'')
+    +'이 늘어납니다. 지금 있는 것은 <b>사라지지 않습니다.</b><br>'
+    +'<b>이름과 생년월일이 모두 같으면 같은 사람으로 보고 건너뜁니다</b>'
+    +(st.skippedPeople?' — '+st.skippedPeople+'명 건너뜀':'')
+    +(st.skippedGroups?' · 이름이 같은 그룹 '+st.skippedGroups+'개도 건너뜁니다':'')
+    +'</small></button>';
+  h+='<button type="button" class="bk-choice wipe-first" data-m="replace">'
+    +'<b>지우고 불러오기 — 파일 내용만 남깁니다</b>'
+    +'<small>지금 있는 '+bkCount(cur.people.length,cur.groups.length)
+    +'가 <b>사라집니다.</b> 불러온 뒤 한 번은 되돌릴 수 있습니다.</small></button>';
+  h+='<button type="button" class="bk-cancel">취소</button>';
+  const box=document.getElementById('bk-confirm');
+  box.innerHTML=h;
+  document.getElementById('bk-main').style.display='none';
+  box.style.display='block';
+  document.getElementById('backupsheet').scrollTop=0;
+  box.querySelectorAll('.bk-choice').forEach(b=>b.onclick=()=>{
+    if(b.dataset.m==='merge')
+      applyBackupSeed(mg.seed,'합쳤습니다 — 사람 '+st.addedPeople+'명'
+        +(st.addedGroups?' · 그룹 '+st.addedGroups+'개':'')+'이 늘었습니다'
+        +(st.skippedPeople?' (같은 사람 '+st.skippedPeople+'명은 건너뜀)':''));
+    else
+      applyBackupSeed(inc,'불러왔습니다 — '+bkCount(inc.people.length,inc.groups.length));});
+  box.querySelector('.bk-cancel').onclick=()=>{
+    bkPending=null;box.style.display='none';
+    document.getElementById('bk-main').style.display='block';};}
+
+/* 열 때마다 붙인다 — 파일 맨 끝에서 한 번만 묶으면 이 시트가 부팅 중에 열릴 수 있는 경로
+   (첫 화면의 두 번째 선택지)와 순서가 얽힌다. 재할당이라 중복도 안 쌓인다. */
+function wireBackup(){
+  document.getElementById('bk-file').onclick=bkDownload;
+  document.getElementById('bk-copy').onclick=bkCopy;
+  const inp=document.getElementById('bk-input');
+  document.getElementById('bk-pick').onclick=()=>inp.click();
+  inp.onchange=ev=>{
+    const f=ev.target.files&&ev.target.files[0];
+    ev.target.value=''; /* 같은 파일을 다시 골라도 change가 뜨게 비운다 */
+    if(!f)return;
+    if(f.size>BACKUP_MAX_CHARS){
+      bkShowErr('파일이 너무 큽니다 — 그룹사주 백업 파일이 아닌 것 같습니다.');return;}
+    const rd=new FileReader();
+    rd.onload=()=>bkTryLoad(String(rd.result));
+    rd.onerror=()=>bkShowErr('파일을 읽지 못했습니다.');
+    rd.readAsText(f);};
+  document.getElementById('bk-load').onclick=()=>
+    bkTryLoad(document.getElementById('bk-paste').value);}
+
+/* 백업 권유 — **잃을 것이 실제로 쌓였을 때 한 번만.**
+   기준을 3명으로 잡은 이유: 1명은 첫 화면 직후라 이미 안내가 많고, 2명은 "다음 할 일" 카드가
+   사라지는 시점이라 겹친다. 3명이면 사용자가 이 도구를 쓰기로 마음먹었고 다시 넣기 아까운
+   노동이 쌓여 있다. 임의로 정한 값이다.
+
+   [★ 실측으로 의도를 정정, 2026-08-28] 설계안에는 "부팅 중에는 안 뜬다"고 적었는데, 실제로는
+   **부팅 끝의 renderNav()에서 한 번 뜬다**(그 줄 바로 위에서 saveSuspended가 false로 풀린다).
+   코드를 고치지 않고 의도를 이쪽으로 바꿨다 — 이미 3명 넘게 쌓아 둔 기존 사용자는
+   "3명째가 되는 순간"이 이미 지나서, 부팅을 막으면 **영영 안내를 못 받는다.** 그들이야말로
+   잃을 것이 가장 많다. 사람이 0명인 첫 화면에서는 3명 미만이라 뜨지 않는다.
+   saveSuspended 검사는 남긴다 — 복원 **도중**(그룹을 하나씩 만드는 중)에 뜨는 것은 여전히
+   막아야 하고 그 사이 renderNav가 여러 번 돌기 때문이다. */
+function maybeBackupHint(){
+  if(saveSuspended||nodes.length<3)return;
+  try{
+    if(localStorage.getItem(HINT_BACKUP_KEY))return;
+    localStorage.setItem(HINT_BACKUP_KEY,'1');}
+  catch(e){return;} /* 저장소를 못 쓰면 플래그도 못 남긴다 — 매번 뜨느니 안 띄운다 */
+  showNote('이제 <b>'+nodes.length+'명</b>입니다. 이 내용은 <b>이 브라우저에만</b> 있어서 '
+    +'방문 기록·쿠키를 지우면 함께 사라집니다 — 파일로 백업해 두세요.',
+    [['지금 내보내기',()=>{document.getElementById('note').classList.remove('on');openBackup();}]]);}
 
 /* 저장본을 화면 상태로 되돌린다. 형식이 시드와 같아 applySeed를 그대로 쓴다.
    [★ 아이디 재발급 방지] addNode는 key가 없으면 'n'+(seq++)로 이름을 짓는다. 복원한
@@ -4355,10 +5012,35 @@ if(boot.status==='ok'){
     showNote('이 앱보다 <b>새 버전</b>에서 저장한 내용입니다(v'+boot.ver+'). '
       +'덮어써서 잃는 일이 없도록 <b>저장을 꺼 두었습니다</b> — 둘러보실 수는 있지만 '
       +'이번에 바꾼 것은 남지 않습니다.');
+  }else if(boot.status==='migfail'){
+    /* [2026-08-28] **원본을 옮기지 않는다.** 형식은 읽혔고 변환만 실패했으므로 원본이
+       유효하다 — 옮기면 앱을 고친 뒤에도 SAVE_KEY가 비어 자동으로 못 연다.
+       덮어쓰기만 막는다('newer'와 같은 처리). 이 상태가 뜬다는 것은 **누군가 저장 항목을
+       바꾸면서 변환을 안 넣었다**는 뜻이다(CLAUDE.md 규칙 위반). */
+    saveOn=false;
+    loadFailed='migfail(v'+boot.ver+'): '+boot.why;
+    console.warn('[저장] 옛 저장본을 새 형식으로 바꾸지 못했다 —',boot.why);
+    showNote('예전에 저장한 내용(v'+boot.ver+')을 <b>새 형식으로 바꾸지 못했습니다.</b> '
+      +'<b>원본은 그대로 남아 있습니다</b> — 지우지 않았으니 앱이 고쳐지면 다시 열립니다. '
+      +'그동안 덮어쓰지 않도록 저장을 꺼 두었습니다.');
   }else if(boot.status==='blocked'){
     saveOn=false;
     showNote('이 브라우저에서는 저장 공간을 쓸 수 없습니다(비공개 모드일 수 있습니다). '
       +'<b>둘러볼 수는 있지만 새로고침하면 사라집니다.</b>');}}
+
+/* [백업 2026-08-28] 불러오기는 저장소에 쓰고 새로 열기 때문에, "무엇이 들어왔는지"를
+   **새로고침 너머로** 넘겨야 한다(sessionStorage). 다른 알림보다 뒤에 두어 이 줄이 이긴다 —
+   방금 한 동작의 결과가 가장 먼저 읽혀야 한다.
+   되돌리기 버튼을 여기 다는 이유: 잘못 덮어썼다는 걸 깨닫는 건 대개 몇 분 뒤지만, 그때
+   그룹 트리의 되돌리기 줄을 못 찾을 수 있다. 알림과 트리 양쪽에 둔다. */
+(function(){
+  let line=null;
+  try{line=sessionStorage.getItem(JUSTLOADED_KEY);
+    if(line)sessionStorage.removeItem(JUSTLOADED_KEY);}
+  catch(e){}
+  if(!line)return;
+  showNote(line,hasUndo()?[['이전 데이터로 되돌리기',undoBackupLoad]]:null);})();
+
 rebuildRings();layoutGalaxy();
 
 /* v2 8단계: 비멤버 opacity 은닉(구 on?1:.08 패턴)을 제거했다. HANDOFF §0 "그룹 뷰:
@@ -5044,7 +5726,12 @@ if(innerWidth>=768)panel.classList.add('open'); /* 데스크톱은 트리 패널
    두 시트를 한 창에 합치라는 지시. 내부 마크업·id는 그대로라 기존 핸들러가 전부 살아 있고,
    바뀐 것은 **껍데기와 여닫기 경로**뿐이다. */
 const createsheet=document.getElementById('createsheet'),relsheet=document.getElementById('relsheet'),dim=document.getElementById('dim');
-function closeSheets(){createsheet.classList.remove('open');relsheet.classList.remove('open');dim.classList.remove('on');}
+function closeSheets(){createsheet.classList.remove('open');relsheet.classList.remove('open');
+  /* [2026-08-28] 백업 시트도 같은 통로로 닫는다 — #dim 클릭·다른 시트 열기가 전부 여기를 지난다.
+     빼먹으면 첫 화면 위에 뜬 시트가 닫히지 않고 남는다. */
+  const bs=document.getElementById('backupsheet');
+  if(bs)bs.classList.remove('open');
+  dim.classList.remove('on');}
 /* which: 'person' | 'group'. editing이 참이면 탭 줄을 감추고 그 탭의 제목만 남긴다 —
    무언가를 고치는 중에 다른 탭으로 넘어가면 입력이 그대로 날아가기 때문이다. */
 function setCreateTab(which,editing){
@@ -5229,6 +5916,12 @@ function openAddSheet(node){
     ngType.innerHTML=GTYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
     ngType.value='가족';}
   renderSijin();renderFGroups();
+  /* [연속 입력, 2026-08-28] 지난 세션의 "추가됐습니다" 줄을 지우고, 수정 모드에서는
+     "저장하고 계속"을 감춘다 — 연속으로 고칠 대상이 없다(다음 사람이 무엇인지 정의되지 않는다). */
+  const addedBox=document.getElementById('as-added');
+  if(addedBox){addedBox.style.display='none';addedBox.innerHTML='';}
+  const contBtn=document.getElementById('addcontbtn');
+  if(contBtn)contBtn.style.display=node?'none':'block';
   setCreateTab('person',!!node); /* [2026-08-27] 수정 모드면 탭을 감추고 제목만 */
   createsheet.classList.add('open');dim.classList.add('on');}
 /* [UI재검토 6, 2026-08-25] 생성 통합 FAB.
@@ -5284,7 +5977,11 @@ function obRenderSijin(){
   const occ=document.getElementById('ob-city-custom');
   obCity.onchange=()=>{if(occ)occ.style.display=(obCity.value===CITY_CUSTOM)?'block':'none';};
   obRenderSijin();
-  renderSex('ob-sex',obSex,v=>{obSex=v;});})();
+  renderSex('ob-sex',obSex,v=>{obSex=v;});
+  /* [2026-08-28] 두 번째 선택지 — 백업에서 되살리기. 백업 시트는 z-index 13이라 첫 화면(12)
+     위에 뜬다. 사람이 0명이므로 openBackup이 내보내기 구역을 스스로 감춘다. */
+  const obImp=document.getElementById('ob-import');
+  if(obImp)obImp.onclick=()=>openBackup();})();
 
 /* 인물이 0명이면 띄우고, 있으면 닫는다. **여기가 유일한 판정 지점이다** —
    삭제·시드 로드 등 인물 수가 바뀌는 모든 경로가 이 함수를 부른다. */
@@ -5407,7 +6104,19 @@ document.getElementById('f-newgrp-add').onclick=commitNewGroupRow;
 document.getElementById('f-newgrp-name').addEventListener('keydown',e=>{
   if(e.key==='Enter'){e.preventDefault();commitNewGroupRow();}});
 
-document.getElementById('addbtn').onclick=()=>{
+/* ═══ 사람 저장 [연속 입력, 2026-08-28] ═══
+   `keepOpen`이 참이면 시트를 닫지 않고 **다음 사람을 받을 상태**로 되돌린다.
+   무엇을 비우고 무엇을 남기는지가 이 기능의 전부다:
+   · **이름은 비운다** — 유일하게 반드시 다른 값
+   · **생년월일은 남긴다** — 바꿀 확률보다 비슷할 확률이 높고(가족은 연대가 몰린다)
+     셀렉트라 값이 화면에 그대로 보인다. 틀린 채로 지나갈 위험이 낮다
+   · **그룹 체크는 남긴다** — "이 그룹에 다섯 명 넣기"가 정확히 이 흐름이고, 여기가 가장 큰 이득이다
+   · **성별은 비운다** — 사람마다 다르고, "기본값을 두지 않는다"(§5.6 문제 4)가 여기서도 유효하다.
+     앞사람 값이 남으면 안 보고 넘긴 사람의 값이 그리로 굳는다
+   · **시각·도시 접힘은 건드리지 않는다** — 열어 뒀으면 열린 채 둔다. 시트를 새로 열 때
+     접는 규칙(openAddSheet)은 "다음에 열 때"의 규칙이지 연속 입력 중의 규칙이 아니다
+   카메라도 움직이지 않는다 — 매번 날아가면 시트에 가려 보이지도 않으면서 어지럽기만 하다. */
+function savePerson(keepOpen){
   const name=document.getElementById('f-name').value.trim();
   if(!name){alert('이름을 입력해주세요');return;}
   /* [2026-08-27] 경도를 함께 저장한다. 지금은 아무 계산에도 안 쓰이지만, L2(만세력 엔진)의
@@ -5451,11 +6160,28 @@ document.getElementById('addbtn').onclick=()=>{
   /* 2인 미만이 된 그룹 제거 (하위 그룹 포함 유효 멤버 기준, 자식은 재부모화) */
   for(let i=groups.length-1;i>=0;i--){
     if(effectiveMembers(groups[i]).length<2)removeGroupAt(i);}
-  layoutGalaxy();rebuildRings();renderNav();closeSheets();
+  layoutGalaxy();rebuildRings();renderNav();
+  if(keepOpen&&!editTarget){
+    /* 다음 사람을 받는 상태로. **시트는 그대로 열려 있다.** */
+    const added=n.name;
+    document.getElementById('f-name').value='';
+    fSex=undefined;renderFSex();   /* renderFSex가 접힘 요약(updMoreSummary)까지 갱신한다 */
+    renderFGroups();               /* 새로 만든 그룹이 있으면 칩 목록에 반영된다 */
+    /* **방금 저장됐다는 신호가 없으면 같은 사람을 두 번 넣는다** — 시트가 안 닫혀 화면이
+       아무것도 안 변하기 때문이다. 누적 인원까지 함께 보여 진행 상황을 알린다. */
+    const box=document.getElementById('as-added');
+    if(box){box.innerHTML='<b>'+bkEsc(added)+'</b> 추가됐습니다 · 지금까지 '+nodes.length+'명';
+      box.style.display='block';}
+    const nm=document.getElementById('f-name');if(nm)nm.focus();
+    renderNextStep();
+    return;}
+  closeSheets();
   if(activeGroup){showGroup(activeGroup);fitGroup(activeGroup);}
   else{selectGroup(null);showNode(n);focusNode(n);}
   editTarget=null;
-  renderNextStep();};   /* 둘째가 들어오면 안내 카드와 ＋ 강조가 여기서 꺼진다 */
+  renderNextStep();}   /* 둘째가 들어오면 안내 카드와 ＋ 강조가 여기서 꺼진다 */
+document.getElementById('addbtn').onclick=()=>savePerson(false);
+document.getElementById('addcontbtn').onclick=()=>savePerson(true);
 
 document.getElementById('delbtn').onclick=()=>{
   if(!editTarget)return;
@@ -5534,20 +6260,98 @@ function openGrpSheet(presetIds,editTarget){
   ps.onchange=()=>updGrpMoreSummary();
   const gm=document.getElementById('g-more');if(gm)gm.open=false;
   updGrpMoreSummary();
+  renderGMembers();
+  /* [연속 입력, 2026-08-28] 사람 시트와 같은 처리 — 지난 안내를 지우고 수정 모드에서는 감춘다 */
+  const gAdded=document.getElementById('gs-added');
+  if(gAdded){gAdded.style.display='none';gAdded.innerHTML='';}
+  const gCont=document.getElementById('grpcontbtn');
+  if(gCont)gCont.style.display=editGroup?'none':'block';
+  /* [+ 새 사람] 줄은 접은 채로 연다 — 지난 입력이 남아 있으면 안 된다 */
+  const npRow=document.getElementById('g-newp-row');
+  if(npRow){npRow.style.display='none';document.getElementById('g-newp-name').value='';}
+  initNewPersonRow();
+  setCreateTab('group',!!editGroup); /* [2026-08-27] */
+  createsheet.classList.add('open');dim.classList.add('on');}
+
+/* 멤버 격자. **다시 그릴 일이 생겨 함수로 뽑았다** — "+ 새 사람"으로 사람이 늘면 그 자리에서
+   목록을 갱신해야 하고, 안 그러면 방금 만든 사람이 안 보인다. */
+function renderGMembers(){
   const mg=document.getElementById('g-members');
+  const meG=meNode();
   mg.innerHTML=nodes.map(n=>{const lk=!!meG&&n===meG; /* [§7.2 가드] 나만 잠금 */
     return `<div class="memrow${pickedMembers.has(n.id)?' on':''}${lk?' locked':''}" data-id="${n.id}"${lk?' data-lock="1"':''}>
     <span class="dot" style="background:${EL_INFO[n.el].css};color:${EL_INFO[n.el].css}"></span>${n.name}${lk?'<span class="lockbadge">고정</span>':''}
-    <span class="st">${STEMS[n.stemIdx]} ${EL_KO[n.el]}</span><span class="chk">${pickedMembers.has(n.id)?'✓':''}</span></div>`;}).join('');
+    <span class="st">${STEMS[n.stemIdx]} ${EL_KO[n.el]}</span><span class="chk">${pickedMembers.has(n.id)?'✓':''}</span></div>`;}).join('')
+    /* 사람 시트의 "＋ 새 그룹" 칩과 대칭 위치 — 목록 끝에 둔다 */
+    +`<div class="memrow newp" id="g-newp-open">＋ 새 사람</div>`;
   mg.querySelectorAll('.memrow').forEach(row=>row.onclick=()=>{
+    if(row.id==='g-newp-open'){
+      const r=document.getElementById('g-newp-row');
+      r.style.display=r.style.display==='none'?'flex':'none';
+      if(r.style.display==='flex')document.getElementById('g-newp-name').focus();
+      return;}
     const id=row.dataset.id;
     /* [§7.2 가드] 나를 누르면 해제하지 않고 이유 문구를 깜빡인다(문구는 상시 노출) */
     if(row.dataset.lock){flashGuard(document.getElementById('g-guard'));return;}
     if(pickedMembers.has(id)){pickedMembers.delete(id);row.classList.remove('on');row.querySelector('.chk').textContent='';}
-    else{pickedMembers.add(id);row.classList.add('on');row.querySelector('.chk').textContent='✓';}});
-  setCreateTab('group',!!editGroup); /* [2026-08-27] */
-  createsheet.classList.add('open');dim.classList.add('on');}
-document.getElementById('grpbtn').onclick=()=>{
+    else{pickedMembers.add(id);row.classList.add('on');row.querySelector('.chk').textContent='✓';}});}
+
+/* 년·월·일 셀렉트를 한 번만 채운다(사람 시트와 같은 범위). 매번 채우면 사용자가 고른 값이
+   초기화돼 연속 추가에서 생년월일을 매번 다시 골라야 한다. */
+let gNewPersonReady=false;
+function initNewPersonRow(){
+  if(gNewPersonReady)return;
+  const y=document.getElementById('g-newp-y'),m=document.getElementById('g-newp-m'),
+        d=document.getElementById('g-newp-d');
+  if(!y||!m||!d)return;
+  let yh='';for(let v=2026;v>=1930;v--)yh+=`<option value="${v}">${v}년</option>`;
+  y.innerHTML=yh;y.value='1990';
+  let mh='';for(let v=1;v<=12;v++)mh+=`<option value="${v}">${v}월</option>`;
+  m.innerHTML=mh;m.value='1';
+  const days=()=>{
+    const dim_=new Date(+y.value,+m.value,0).getDate();
+    const cur=+d.value||1;
+    let h='';for(let v=1;v<=dim_;v++)h+=`<option value="${v}">${v}일</option>`;
+    d.innerHTML=h;d.value=Math.min(cur,dim_);};
+  days();y.onchange=days;m.onchange=days;
+  document.getElementById('g-newp-add').onclick=addNewPersonInline;
+  document.getElementById('g-newp-name').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();addNewPersonInline();}});
+  gNewPersonReady=true;}
+
+/* 그 자리에서 사람을 만들고 **자동으로 체크한다.**
+   [왜 즉시 만드나 — 사람 시트의 새 그룹과 반대다] 그쪽은 이름·유형 두 값뿐이라 저장까지
+   대기시킬 수 있었지만, 사람은 만들자마자 3D 천체·라벨·관계선이 붙는 실체다. 대기 목록으로
+   들고 있으면 "저장 안 된 사람"이라는 상태가 새로 생긴다. 즉시 만들면 그룹 만들기를 취소해도
+   사람은 남는데, **그게 맞다** — 사용자가 하려던 일이 "이 사람을 등록하는 것"이었다. */
+function addNewPersonInline(){
+  const el=document.getElementById('g-newp-name');
+  const name=el.value.trim();
+  if(!name){el.focus();return;}
+  const y=+document.getElementById('g-newp-y').value,
+        m=+document.getElementById('g-newp-m').value,
+        d=+document.getElementById('g-newp-d').value;
+  const t0=nowISO();
+  /* 시각·도시·성별은 안 받는다 — dayStem(y,m,d)이 날짜만 쓰므로 지금 계산에 안 들어간다.
+     "모름"과 null로 두면 나중에 그 사람 카드에서 채울 수 있다(빈 값과 지어낸 값의 구분). */
+  const n=addNode({name,stemIdx:dayStem(y,m,d),isMe:false,createdAt:t0,updatedAt:t0,
+    birth:{y,m,d,sijin:12,city:CITY_UNKNOWN,lon:null,sex:null}});
+  nodes.forEach(o=>{if(o!==n)addEdge(n,o);});
+  pickedMembers.add(n.id);          /* ★ 자동 체크 — 이걸 하려고 이 줄을 만들었다 */
+  layoutGalaxy();rebuildRings();renderNav();
+  el.value='';renderGMembers();     /* 목록을 다시 그려야 방금 만든 사람이 보인다 */
+  const box=document.getElementById('gs-added');
+  /* [2026-08-28] 조사를 하드코딩하지 않는다 — 받침 없는 이름에 "…을(를)"이 붙어 어긋난다.
+     코드베이스에 이미 있는 josa()를 쓴다(EL_PAIR 카피가 쓰는 것과 같은 함수). */
+  if(box){box.innerHTML='<b>'+bkEsc(name)+'</b>'+particle(name,'을를')
+      +' 추가하고 멤버로 넣었습니다 · 전체 '+nodes.length+'명';
+    box.style.display='block';}
+  el.focus();
+  renderNextStep();}
+/* [연속 입력, 2026-08-28] 사람 시트와 대칭. 그룹은 보통 두세 개라 이득이 사람만큼 크지는
+   않지만, **유형을 남긴다**는 점이 실질적이다 — "친구" 그룹을 여럿 만드는 흐름이 흔하다.
+   멤버 체크는 비운다(그룹마다 다른 것이 당연하고, 남기면 앞 그룹 멤버가 딸려 들어간다). */
+function saveGroup(keepOpen){
   const name=document.getElementById('g-name').value.trim();
   if(!name){alert('그룹 이름을 입력해주세요');return;}
   /* [§7.2 가드] 최종 방어선 — 시트 UI가 이미 막지만, 2인 검사보다 먼저 합류시켜야
@@ -5571,7 +6375,19 @@ document.getElementById('grpbtn').onclick=()=>{
     return;}
   const g=createGroup(name,pickedType,members,parentId);
   document.getElementById('g-name').value='';
-  closeSheets();selectGroup(g);};
+  if(keepOpen){
+    /* 다음 그룹을 받는 상태로. 이름·멤버는 비우고 **유형과 상위 그룹은 남긴다.** */
+    pickedMembers.clear();
+    const meG3=meNode();if(meG3)pickedMembers.add(meG3.id); /* [§7.2] 나는 항상 체크된 채로 */
+    renderGMembers();
+    const box=document.getElementById('gs-added');
+    if(box){box.innerHTML='<b>'+bkEsc(name)+'</b> 그룹을 만들었습니다 · 전체 '+groups.length+'개';
+      box.style.display='block';}
+    const nm=document.getElementById('g-name');if(nm)nm.focus();
+    return;}
+  closeSheets();selectGroup(g);}
+document.getElementById('grpbtn').onclick=()=>saveGroup(false);
+document.getElementById('grpcontbtn').onclick=()=>saveGroup(true);
 
 /* [2026-08-24] 그룹 삭제 — 유일한 사용자 경로. 그전까지 removeGroupAt은 "유효 멤버 2인 미만
    자동 삭제"에서만 불렸다.
