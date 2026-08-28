@@ -4310,7 +4310,9 @@ function wireWipe(){
   btn.onclick=()=>{
     const gN=groups.length;
     box.innerHTML=`<div class="wipeask"><b>정말 지우시겠습니까?</b>`
-      +`사람 ${nodes.length}명${gN?` · 그룹 ${gN}개`:''}가 이 브라우저에서 사라집니다. `
+      /* [2026-08-28] 조사를 붙이지 않는다 — 그룹이 없으면 "사람 2명**가**"가 된다.
+         받침 유무를 따지는 대신 목록을 줄표로 끊어 수와 서술을 분리했다(배포본에서 발견). */
+      +`사람 ${nodes.length}명${gN?` · 그룹 ${gN}개`:''} — 이 브라우저에서 사라집니다. `
       +`되돌릴 수 없습니다.</div>`
       +`<div class="wipebtns"><button type="button" class="no">취소</button>`
       +`<button type="button" class="go">지웁니다</button></div>`;
