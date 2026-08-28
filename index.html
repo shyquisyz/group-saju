@@ -81,7 +81,10 @@
     font-size:var(--fs-md);font-weight:600;cursor:pointer;white-space:nowrap;
     box-shadow:0 6px 24px rgba(0,0,0,.5)}
   #fabmenu button:active{background:rgba(255,255,255,.12)}
-  #panel{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--card);
+  /* [2026-08-28] 세로 flex — #wipehost가 `margin-top:auto`로 **바닥에 붙으려면** 필요하다.
+     내용이 짧아도 지우기 버튼이 본문 바로 밑에 따라붙지 않고 맨 아래에 남는다. */
+  #panel{display:flex;flex-direction:column;
+    position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--card);
     backdrop-filter:blur(14px);border-top:1px solid var(--line);border-radius:14px 14px 0 0;
     padding:16px 20px 24px;max-height:52vh;overflow-y:auto;transform:translateY(105%);
     transition:transform .28s cubic-bezier(.2,.8,.2,1),max-height .25s;box-shadow:0 -8px 40px rgba(0,0,0,.5)}
@@ -450,8 +453,30 @@
     cursor:pointer;font-family:inherit}
   .bkentry .bkbtn:hover{background:rgba(255,255,255,.11)}
   .bkundo{margin-top:8px}
+  /* [2026-08-28] 그룹 목록 접기 — 제목 줄 자체가 버튼이다 */
+  .gtoggle{display:flex;align-items:center;gap:6px;width:100%;padding:6px 4px;margin-bottom:6px;
+    border:0;background:none;color:var(--mut);font-family:inherit;cursor:pointer;text-align:left}
+  .gtoggle:hover{color:var(--ink)}
+  .gtoggle .tw{width:16px;text-align:center;font-size:var(--fs-xs);flex-shrink:0}
+  .gtoggle .eyebrow{margin:0}
+  /* 접었을 때만 채워진다 — 접힌 채로도 "지금 어디를 보고 있는지"는 남아야 한다 */
+  .gtoggle .gcur{font-size:var(--fs-sm);font-weight:600;color:var(--ink);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gtoggle .cnt{font-family:'Space Mono',monospace;font-size:var(--fs-xs);
+    color:var(--mut);margin-left:auto;flex-shrink:0}
+
+  /* [2026-08-28] 인물 패널 뒤로 가기. 카드 맨 위, 태그 줄보다 앞이다 */
+  .pback{display:inline-flex;align-items:center;margin:0 0 10px;padding:5px 10px 5px 8px;
+    border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04);
+    color:var(--mut);font-family:inherit;font-size:var(--fs-xs);font-weight:600;cursor:pointer;
+    max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pback:hover{color:var(--ink);border-color:rgba(255,255,255,.25)}
+
+  /* [2026-08-28] 패널 맨 아래. 위 내용과 확실히 떨어뜨리되 더 작고 흐리게 —
+     되돌릴 수 없는 동작이라 못 찾는 것보다 실수로 누르는 쪽이 훨씬 위험하다. */
+  #wipehost{margin-top:auto;padding-top:18px}
   .wipe{margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
-  .wipe .wipebtn{background:none;border:0;padding:4px 2px;cursor:pointer;
+  .wipe .wipebtn{background:none;border:0;padding:3px 2px;cursor:pointer;opacity:.75;
     font-size:var(--fs-xs);color:var(--mut);text-decoration:underline;text-underline-offset:3px}
   .wipe .wipebtn:hover{color:var(--ink)}
   .wipe .wipeask{font-size:var(--fs-xs);color:var(--mut);line-height:1.55}
@@ -755,7 +780,10 @@
   <button type="button" id="fm-bulk" role="menuitem">여러 명 추가</button>
   <button type="button" id="fm-person" role="menuitem">사람 추가</button>
 </div>
-<div id="panel"><button id="panelclose" aria-label="패널 닫기">✕</button><div class="draghandle" id="draghandle"><div class="grip"></div></div><div id="grouptree"></div><div id="panelbody"></div></div>
+<!-- [2026-08-28] #wipehost — "저장된 내용 모두 지우기"가 사는 자리. **패널 맨 아래**다.
+     그룹 트리 끝에 있던 것을 옮겼다: 트리가 패널 위쪽이라 사람을 고르면 그 아래로 인물 카드가
+     붙어 지우기 버튼이 화면 한가운데에 놓였다. -->
+<div id="panel"><button id="panelclose" aria-label="패널 닫기">✕</button><div class="draghandle" id="draghandle"><div class="grip"></div></div><div id="grouptree"></div><div id="panelbody"></div><div id="wipehost"></div></div>
 <button id="panelopen">☰ 그룹</button>
 <div id="tagbar"></div>
 <div id="dim"></div>
@@ -3364,6 +3392,49 @@ function addEdge(a,b,rich){
      재질에서 되읽으면 이전 프레임의 페이드값을 기준으로 삼아 점점 어두워진다. */
   edges.push({a,b,kind:rel.kind,label:rel.label,rel,line,rich:rich||null,baseOpacity:mat.opacity});}
 
+/* ═══ 관계선 재계산 [★ 2026-08-28] ═══
+   **관계선은 이제 그룹에서 유도한다.** 전에는 사람을 추가할 때마다 `nodes.forEach(addEdge)`로
+   **모든 사람 사이**에 선을 그었다. 그래서 그룹으로 묶어 놔도 다른 그룹 사람과 이어져 있어
+   관계도로 읽히지 않았다(사용자 지적).
+
+   규칙
+   - **같은 그룹 멤버끼리만** 잇는다. `effectiveMembers`를 쓰므로 하위 그룹 멤버도 부모 그룹
+     안에서는 서로 이어진다(트리에 찍히는 인원수와 같은 기준).
+   - 여러 그룹에 속한 사람은 **각 그룹 안에서 각각** 이어진다. 같은 쌍이 두 그룹에 겹치면
+     선은 **하나만** 긋는다(같은 자리에 두 번 그리면 굵기만 달라 보인다).
+   - **미분류(그룹 없는 사람)끼리는 잇지 않고, 나와만 잇는다.**
+     근거는 이 프로젝트의 명세다 — HANDOFF §0 표: "그룹 없는 사람 = 나와 1:1만 존재",
+     그리고 showGroup의 미분류 분기: "서로 맥락 없는 사람들의 우연한 묶음이라 관계 서술을
+     붙이면 억지스럽다". 서로 안 이으면서 나와도 안 이으면 그 사람만 은하에서 외톨이가 되는데,
+     이 앱은 애초에 **나를 기준으로** 사람을 담는 곳이라 나와의 1:1은 언제나 성립한다.
+
+   [저장 호환] `serializeState`의 `links`는 그대로 쓴다 — 모양이 안 바뀌므로 SAVE_VER을
+   올릴 일이 없다. 다만 이제 **읽을 때 기준이 아니다**(그룹에서 다시 만든다). 옛 저장본에
+   그룹을 넘나드는 links가 있어도 불러온 뒤 규칙대로 정리된다. */
+function clearEdges(){
+  edges.forEach(e=>{
+    scene.remove(e.line);
+    if(e.line.geometry)e.line.geometry.dispose();
+    if(e.line.material)e.line.material.dispose();});
+  edges.length=0;}
+
+function rebuildEdges(){
+  clearEdges();
+  const me=meNode();
+  const seen=new Set();
+  const link=(a,b)=>{
+    if(!a||!b||a===b)return;
+    const k=a.id<b.id?a.id+'|'+b.id:b.id+'|'+a.id;
+    if(seen.has(k))return;
+    seen.add(k);addEdge(a,b);};
+  groups.forEach(g=>{
+    const ms=effectiveMembers(g);
+    for(let i=0;i<ms.length;i++)for(let j=i+1;j<ms.length;j++)link(ms[i],ms[j]);});
+  if(me){
+    const grouped=new Set();
+    groups.forEach(g=>effectiveMembers(g).forEach(m=>grouped.add(m)));
+    nodes.forEach(n=>{if(n!==me&&!grouped.has(n))link(me,n);});}}
+
 /* 고리 재계산: 은하 전체 관계 기준(모드 무관 항상 표시 → UI 통일)
    v2: edges[]가 아니라 nodes[] 전체 쌍에 relation()을 직접 적용한다.
    edges[]는 "그릴 선"(명시적으로 등록된 관계만 표시)이라는 별개 개념이고,
@@ -3437,6 +3508,11 @@ function rebuildRings(){
    addbtn/delbtn 핸들러가 명시 호출)가 결국 이 함수 하나로 수렴하므로,
    "누가 언제 다시 계산해야 하는지"를 호출부가 개별적으로 기억할 필요가 없다. */
 function layoutGalaxy(){
+  /* [2026-08-28] 관계선을 여기서 다시 만든다. 그룹·인물이 바뀌는 경로가 **전부** layoutGalaxy를
+     지나므로(createGroup·removeGroupAt·saveGroup·savePerson·ptSave·삭제·시드) 호출부마다
+     기억할 필요가 없다 — 이 코드베이스는 "한쪽만 고쳐서 어긋나는" 사고가 반복된 곳이다.
+     매 프레임이 아니라 변경 시점에만 돈다(simulate는 layoutGalaxy를 부르지 않는다). */
+  if(typeof rebuildEdges==='function')rebuildEdges();
   const me=nodes.find(n=>n.isMe);
   if(!me)return;
   me.home=new THREE.Vector3(0,0,0);
@@ -4408,9 +4484,42 @@ function renderNav(){
 
 /* v0.7: 좌측 패널 접히는 그룹 트리 (데스크톱) */
 const collapsedG=new Set();
+
+/* ═══ 그룹 목록 접기 [★ 2026-08-28] ═══
+   [기본을 펼침으로 둔 이유] 이 목록이 **주 내비게이션**이다. 접힌 채로 시작하면 처음 온
+   사람은 그룹이 있다는 것 자체를 모른다 — 화면을 아끼려다 기능을 감추는 셈이다.
+   대신 **한 번 접으면 기억한다.** 좁다고 느낀 사람은 한 번만 접으면 된다.
+   [저장 위치] `groupsaju:save`가 아니라 별도 키다. 화면 상태이지 사용자 데이터가 아니고,
+   저장 스키마에 넣으면 SAVE_VER을 올리고 MIGRATIONS를 더해야 한다(CLAUDE.md 저장 규칙) —
+   접힘 하나에 치를 값이 아니다. 읽기 실패는 조용히 펼침으로 떨어진다. */
+const UI_KEY='groupsaju:ui';
+let treeCollapsed=(()=>{
+  try{return JSON.parse(localStorage.getItem(UI_KEY)||'{}').treeCollapsed===true;}
+  catch{return false;}})();
+function saveUiPref(){
+  try{
+    const o=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
+    o.treeCollapsed=treeCollapsed;
+    localStorage.setItem(UI_KEY,JSON.stringify(o));
+  }catch{/* 저장이 막혀 있어도 이번 세션 동안은 접힌 채로 동작한다 */}}
 function renderTree(){
   const el=document.getElementById('grouptree');if(!el)return;
-  let h=`<div class="eyebrow" style="margin-bottom:6px">GROUPS</div><div class="gtree">`;
+  /* [2026-08-28] 제목 줄이 곧 접기 버튼이다 — 별도 아이콘을 옆에 두면 누를 곳이 둘이 된다.
+     접었을 때도 **지금 보고 있는 곳**은 남긴다(제목 옆 요약) — 안 그러면 접는 순간
+     "내가 어느 그룹에 있는지"를 잃는다. */
+  const curName=activeGroup?activeGroup.name:'은하 전체';
+  h=`<button type="button" class="gtoggle${treeCollapsed?' off':''}" id="gtoggle"
+       aria-expanded="${treeCollapsed?'false':'true'}">
+      <span class="tw">${treeCollapsed?'▸':'▾'}</span><span class="eyebrow">GROUPS</span>
+      <span class="gcur">${treeCollapsed?bkEsc(curName):''}</span>
+      <span class="cnt">${groups.length}</span></button>`;
+  if(treeCollapsed){
+    el.innerHTML=h;
+    const tg=el.querySelector('#gtoggle');
+    if(tg)tg.onclick=()=>{treeCollapsed=false;saveUiPref();renderTree();};
+    renderWipe();
+    return;}
+  h+=`<div class="gtree">`;
   h+=`<div class="trow${activeGroup===null?' on':''}" data-root="1"><span class="tw">◦</span>은하 전체<span class="cnt">${nodes.length}</span></div>`;
   const walk=(pid,depth)=>{groups.filter(g=>(g.parentId||null)===pid).forEach(g=>{
     const kids=groups.some(c=>c.parentId===g.id);
@@ -4429,8 +4538,9 @@ function renderTree(){
   /* 되돌리기는 **있을 때만** 뜬다. 실수를 깨닫는 건 대개 몇 분 뒤라 알림 바만으로는 늦다. */
   if(hasUndo())
     h+=`<div class="bkundo"><button type="button" class="wipebtn" id="treeundo">불러오기 전으로 되돌리기</button></div>`;
-  if(nodes.length)
-    h+=`<div class="wipe" id="wipe"><button type="button" class="wipebtn">저장된 내용 모두 지우기</button></div>`;
+  /* [★ 자리 이동, 2026-08-28] ~~여기(그룹 트리 끝)~~ → **패널 맨 아래**(#wipehost).
+     트리는 패널 위쪽이라, 사람을 고르면 그 아래로 인물 카드가 붙어 지우기 버튼이
+     **화면 한가운데**에 놓였다. 되돌릴 수 없는 동작이 본문 한복판에 있으면 안 된다. */
   el.innerHTML=h;
   const bke=el.querySelector('#treebackup');if(bke)bke.onclick=openBackup;
   const bku=el.querySelector('#treeundo');if(bku)bku.onclick=()=>{
@@ -4438,7 +4548,9 @@ function renderTree(){
     showNote('불러오기 <b>직전 상태</b>로 되돌립니다. 지금 화면의 내용은 사라집니다.',
       [['되돌립니다',undoBackupLoad],
        ['취소',()=>document.getElementById('note').classList.remove('on')]]);};
-  wireWipe();
+  renderWipe();
+  const tg=el.querySelector('#gtoggle');
+  if(tg)tg.onclick=()=>{treeCollapsed=true;saveUiPref();renderTree();};
   el.querySelectorAll('.tw[data-t]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();
     const id=b.dataset.t;collapsedG.has(id)?collapsedG.delete(id):collapsedG.add(id);renderTree();});
   el.querySelectorAll('.trow[data-g]').forEach(r=>r.onclick=()=>{
@@ -5171,6 +5283,16 @@ function showNote(html,actions){
    "무엇이 몇 개 사라지는지"를 못 보여준다. (2) 실수로 엔터를 눌러 통과하기 쉽다.
    자리에서 펼쳐지는 방식이라 **두 번째 버튼은 첫 번째와 다른 자리에 생긴다** — 같은 곳을
    두 번 연타해서 지나가는 일이 없다. */
+/* [2026-08-28] 패널 **맨 아래**(#panelbody 뒤)에 그린다. 사람이 하나도 없으면(첫 화면)
+   지울 것도 없으므로 아예 안 그린다. */
+function renderWipe(){
+  const host=document.getElementById('wipehost');
+  if(!host)return;
+  host.innerHTML=nodes.length
+    ?`<div class="wipe" id="wipe"><button type="button" class="wipebtn">저장된 내용 모두 지우기</button></div>`
+    :'';
+  wireWipe();}
+
 function wireWipe(){
   const box=document.getElementById('wipe');
   if(!box)return;
@@ -5185,7 +5307,7 @@ function wireWipe(){
       +`되돌릴 수 없습니다.</div>`
       +`<div class="wipebtns"><button type="button" class="no">취소</button>`
       +`<button type="button" class="go">지웁니다</button></div>`;
-    box.querySelector('.no').onclick=()=>renderTree();
+    box.querySelector('.no').onclick=()=>renderWipe();
     box.querySelector('.go').onclick=()=>{
       clearSave();
       /* 저장소만 비우고 화면을 그대로 두면 **다음 변경이 곧바로 다시 저장한다.**
@@ -5863,11 +5985,32 @@ function showNode(n,groupContext,targetMesh){
     ?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`
     :`${STEM_BLURB[n.stemIdx].map(p=>`<p>${p}</p>`).join('')}
       <div class="tip"><b>NOTE</b>일간 기준 약식 — 만세력 엔진 연결 후 전체 분석 제공</div>`;
-  pbody.innerHTML=`${roleTag}<span class="tag">${EL_INFO[n.el].name}</span>
+  /* ═══ 뒤로 가기 [★ 2026-08-28] ═══
+     그룹을 보다 그 안의 사람을 누르면 인물 카드로 넘어가는데, 그룹 정보로 돌아가려면
+     그룹을 다시 눌러야 했다(사용자 지적).
+
+     [어디서 왔는지] `showNode(n, groupContext)`의 둘째 인자가 이미 그 답을 들고 있었다 —
+     그룹 안에서 부른 곳(트리·태그바·성계 클릭·멤버 목록)은 전부 그룹을 넘긴다. 새 상태를
+     만들지 않고 그것을 쓴다.
+
+     [은하에서 바로 눌렀을 때 — 숨기지 않고 "은하 전체"로 보낸다]
+     버튼이 있다 없다 하면 그 아래 카드가 위아래로 흔들리고, "이 사람은 왜 뒤로가 없지"를
+     사용자가 판단해야 한다. 은하 전체(`selectGroup(null)`)는 실재하는 목적지이고 트리 맨 위
+     항목과 같은 곳이라, 돌아갈 데가 늘 있다는 규칙이 더 단순하다.
+     [그룹이 지워졌으면] 그 사이에 그룹이 사라졌을 수 있다 — `groups`에 없으면 은하로 보낸다. */
+  const backTo=(ctx&&groups.indexOf(ctx)>=0)?ctx:null;
+  const backHtml=`<button type="button" class="pback" id="pback">←&nbsp;`
+    +(backTo?bkEsc(backTo.name):'은하 전체')+`</button>`;
+
+  pbody.innerHTML=`${backHtml}${roleTag}<span class="tag">${EL_INFO[n.el].name}</span>
     <h2>${r?r.title:`${n.name} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
     ${birthLine}${egoRelLine(n)}${main}<div class="rel-list">${rels}</div>
     <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">관계 보기</button></div>
     <div class="panelbtns"><button class="pbtn" id="vstoggle">${virtualMembers.some(c=>c.ref===n)?'가상 성계에서 빼기':'가상 성계에 담기'}</button></div>`;
+  /* 뒤로 가기 — 그룹이면 그 그룹으로, 아니면 은하 전체로. selectGroup이 카메라·패널·트리
+     강조를 한꺼번에 맞춰 주므로 showGroup을 직접 부르지 않는다(트리 강조가 어긋난다). */
+  const pb=pbody.querySelector('#pback');
+  if(pb)pb.onclick=()=>{selectGroup(backTo);};
   panel.classList.add('open');
   pbody.querySelectorAll('.rel-item').forEach(el=>el.onclick=()=>{
     const A=nodes.find(x=>x.id===el.dataset.a),B=nodes.find(x=>x.id===el.dataset.b);
@@ -6735,8 +6878,8 @@ function ptSave(){
       createdAt:t0,updatedAt:t0,
       birth:{y:v.y,m:v.m,d:v.d,sijin:v.sijin,city:v.city,lon:v.lon,
         sex:v.sex===undefined?null:v.sex}});
-    /* 기존 인물 전원과 관계선. 루프 안에서 만들어지므로 방금 넣은 사람들끼리도 이어진다 */
-    nodes.forEach(o=>{if(o!==n)addEdge(n,o);});
+    /* [2026-08-28] ~~기존 인물 전원과 관계선~~ — 아래 layoutGalaxy가 부르는 rebuildEdges가
+       **그룹에서** 다시 만든다. 전원 연결이 곧 "그룹과 무관한 선"의 출처였다. */
     (v.gids||[]).forEach(gid=>{
       const g=groups.find(x=>x.id===gid);
       if(g&&!g.members.includes(n))g.members.push(n);});
@@ -6988,7 +7131,7 @@ function savePerson(){
        고치는 경로는 이미 있다(내 카드 → 정보 수정). */
     const t0=nowISO();
     n=addNode({name,stemIdx:si,birth,isMe:false,createdAt:t0,updatedAt:t0});
-    nodes.forEach(o=>{if(o!==n)addEdge(n,o);});}
+    /* [2026-08-28] ~~전원과 관계선~~ — rebuildEdges가 그룹에서 만든다(addEdge 주석 참고) */}
   /* 그룹 멤버십 동기화 (이동 포함) */
   groups.forEach(g=>{
     const want=fGroups.has(g.id),has=g.members.includes(n);
