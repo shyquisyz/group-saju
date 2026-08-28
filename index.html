@@ -513,6 +513,25 @@
     border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);cursor:pointer}
   .wipe .wipebtns .go{border-color:rgba(255,255,255,.3)}
 
+  /* 예시 은하 — 배지는 둘러보는 동안 계속 떠 있고, 되돌아갈 버튼이 짝이다 */
+  #demobadge{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:11;
+    display:none;padding:6px 13px;border-radius:13px;
+    border:1px solid rgba(212,175,90,.5);background:rgba(212,175,90,.14);
+    backdrop-filter:blur(8px);color:var(--gold);font-size:var(--fs-xs);
+    font-weight:600;letter-spacing:.02em;white-space:nowrap;pointer-events:none}
+  body.demo #demobadge{display:block}
+  #demoback{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:13;
+    padding:12px 20px;border-radius:22px;border:1px solid var(--ink);
+    background:var(--ink);color:#101018;font-size:var(--fs-md);font-weight:700;
+    cursor:pointer;font-family:inherit;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  .obpeek{margin-top:12px;text-align:center;font-size:var(--fs-sm);color:var(--mut)}
+  .obpeek b{color:var(--gold)}
+  .obpeek button{background:none;border:0;padding:2px 4px;color:var(--gold);cursor:pointer;
+    font-size:var(--fs-sm);font-family:inherit;text-decoration:underline;text-underline-offset:3px}
+  /* 둘러보기 — 카드를 치우되 완전히 없애지 않는다(되돌아올 손잡이는 #demoback) */
+  #onboard.peek{pointer-events:none;background:transparent}
+  #onboard.peek .obcard{opacity:0;transform:translateY(12px);pointer-events:none}
+  #onboard .obcard{transition:opacity .25s,transform .25s}
   #onboard{position:fixed;inset:0;z-index:12;display:none;
     align-items:center;justify-content:center;padding:16px;
     background:radial-gradient(ellipse at center,rgba(8,9,16,.62),rgba(5,6,12,.9))}
@@ -815,6 +834,11 @@
 <div id="tagbar"></div>
 <div id="dim"></div>
 
+<!-- ═══ 예시 은하 표시 [2026-08-28] ═══ 둘러보는 동안 **여기가 예시라는 것**을 계속 알린다.
+     배지가 없으면 사용자가 이 사람들을 자기가 등록한 것으로 오해한다. -->
+<div id="demobadge">예시 은하 · 실제 데이터가 아닙니다</div>
+<button id="demoback" style="display:none">← 내 정보 입력하기</button>
+
 <!-- ═══ 알림 바 [2026-08-28] ═══ 저장 상태를 알린다. 위 #note CSS 주석 참고 -->
 <div id="note"><div><div class="notemsg"></div><div class="noteact"></div></div>
   <button type="button" class="notex" aria-label="알림 닫기">✕</button></div>
@@ -880,6 +904,11 @@
     <br>이 브라우저의 <b>방문 기록·쿠키를 지우면 함께 사라집니다</b> —
     나중에 파일로 백업해 두실 수 있습니다.</div>
   <button class="primary" id="ob-start">시작하기</button>
+  <!-- [예시 은하] 첫 화면은 닫는 수단이 없다(나 없이는 은하가 성립하지 않는다).
+       그 규칙을 깨지 않고 뒤를 보여주려면 **되돌아올 손잡이를 남긴 채 비켜 주는** 수밖에 없다. -->
+  <div class="obpeek" id="ob-peek" style="display:none">
+    지금 보이는 은하는 <b>예시</b>입니다 —
+    <button type="button" id="ob-peekbtn">잠시 둘러보기</button></div>
   <div class="sheetnote">일간은 실계산됩니다 · 시각·도시는 정밀 엔진(진태양시 보정) 연결 시 사용</div>
 </div></div>
 
@@ -4830,6 +4859,63 @@ let loadFailed=null;
 
 function nowISO(){return new Date().toISOString();}
 
+/* ═══════ 예시 은하 [2026-08-28] ═══════
+   [왜] 처음 열면 검은 화면에 안내 문구뿐이라 **무엇을 하는 서비스인지 알 수 없었다.**
+   말로 설명하는 대신 **돌아가는 것을 먼저 보여준다.**
+
+   [★ 저장하지 않는다 — 이 기능에서 가장 중요한 지점]
+   예시가 저장본이 되면 다음에 열 때 **남의 가짜 데이터가 자기 데이터로 둔갑한다.**
+   `demoMode`가 켜져 있는 동안 `saveState`가 스스로 물러난다(saveOn을 쓰지 않는 이유는
+   그게 'newer'/'blocked' 같은 **오류 상태**를 뜻하는 깃발이라, 정상 흐름과 섞으면
+   나중에 "왜 저장이 꺼졌지"를 구분할 수 없기 때문이다).
+
+   [이름] 특정 개인을 가리키지 않는 **관계 역할**만 쓴다(CLAUDE.md "구성원B·그룹A처럼 중립
+   표현"과 같은 취지). 생년월일도 1990-01-01처럼 **한눈에 가짜인 패턴**으로 둔다 —
+   CLAUDE.md가 "데모가 필요해지면 명백한 가짜 값으로 새로 만든다"고 허용한 자리다. */
+let demoMode=false;
+const DEMO_SEED={v:SAVE_VER,savedAt:null,
+  people:[
+    {key:'d0',name:'나',isMe:true,   birth:{y:1990,m:1,d:1, sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:null}},
+    {key:'d1',name:'어머니',         birth:{y:1960,m:2,d:2, sijin:5, hour:null,min:null,city:'서울',lon:126.978,sex:'여'}},
+    {key:'d2',name:'아버지',         birth:{y:1958,m:3,d:3, sijin:8, hour:null,min:null,city:'부산',lon:129.075,sex:'남'}},
+    {key:'d3',name:'동생',           birth:{y:1993,m:4,d:4, sijin:2, hour:null,min:null,city:'서울',lon:126.978,sex:'여'}},
+    {key:'d4',name:'친구',           birth:{y:1991,m:5,d:5, sijin:6, hour:null,min:null,city:'대구',lon:128.601,sex:'남'}},
+    {key:'d5',name:'선배',           birth:{y:1988,m:6,d:6, sijin:10,hour:null,min:null,city:'인천',lon:126.705,sex:'남'}},
+    {key:'d6',name:'동료',           birth:{y:1989,m:7,d:7, sijin:3, hour:null,min:null,city:'광주',lon:126.851,sex:'여'}},
+    {key:'d7',name:'이웃',           birth:{y:1995,m:8,d:8, sijin:12,hour:null,min:null,city:'대전',lon:127.385,sex:null}}],
+  links:[],
+  groups:[
+    {key:'dg1',name:'가족',type:'가족',parent:null,members:['d0','d1','d2','d3'],createdAt:null},
+    {key:'dg2',name:'친구들',type:'친구',parent:null,members:['d0','d4','d5'],createdAt:null},
+    {key:'dg3',name:'회사',type:'동료',parent:null,members:['d0','d6'],createdAt:null}]};
+
+/* 예시를 화면에서 완전히 걷어낸다. "시작하기"가 부른다. */
+function clearDemo(){
+  if(!demoMode)return;
+  edges.forEach(e=>{scene.remove(e.line);
+    if(e.line.geometry)e.line.geometry.dispose();
+    if(e.line.material)e.line.material.dispose();});
+  edges.length=0;
+  nodes.forEach(nd=>{scene.remove(nd.mesh);if(nd.label)scene.remove(nd.label);});
+  nodes.length=0;
+  groups.length=0;
+  /* 성계 중심 표식·복제 인스턴스도 함께 — layoutGalaxy가 topIds에 없는 것을 정리하지만,
+     노드를 통째로 비운 뒤라 그 경로가 안 도는 경우가 있어 여기서 직접 지운다. */
+  for(const[id,cm]of groupCenters){scene.remove(cm.mesh);scene.remove(cm.label);}
+  groupCenters.clear();
+  for(const[key,inst]of groupInstances){
+    scene.remove(inst.mesh);if(inst.label)scene.remove(inst.label);
+    if(inst.link)scene.remove(inst.link);}
+  groupInstances.clear();
+  UNCLASSIFIED_GROUP.members=[];
+  demoMode=false;
+  /* [실측으로 잡음] demoMode만 끄면 **배지가 화면에 남는다** — body.demo를 지우는 것은
+     maybeOnboard인데, 첫 화면이 닫히는 경로에서는 그게 다시 안 돌기 때문이다.
+     여기서 직접 뗀다(상태를 만든 곳이 치우는 것이 맞다). */
+  document.body.classList.remove('demo');
+  demoPeek(false);
+  seq=0;}
+
 /* 현재 상태 → 저장 형식. **그룹은 orderIndex 오름차순으로 쓴다** — 그 순서가 §3.2의 궤도
    경사를 정하므로, 순서가 바뀌면 구성은 같은데 성계가 다른 각도로 놓인다(예전에 배열을
    뒤에서부터 훑어 실제로 밟은 버그다). 불러올 때 createGroup이 이 순서대로 orderIndex를
@@ -4850,6 +4936,9 @@ function serializeState(){
 
 let saveFailWarned=false;
 function saveState(){
+  /* [★ 예시 은하] 예시는 저장하지 않는다 — 저장되면 다음에 열 때 남의 가짜 데이터가
+     자기 데이터로 둔갑한다. saveOn(오류 상태 깃발)과 섞지 않으려고 따로 둔다. */
+  if(demoMode)return;
   if(!saveOn||saveSuspended)return;
   /* [2026-08-28] 사람이 0명이면 쓰지 않는다. 빈 저장본은 담을 것도 없으면서
      **`my-data.js`를 가린다** — 다음 열 때 "저장본 있음"으로 잎혀 파일을 안 읽고
@@ -5334,6 +5423,9 @@ function wireBackup(){
    saveSuspended 검사는 남긴다 — 복원 **도중**(그룹을 하나씩 만드는 중)에 뜨는 것은 여전히
    막아야 하고 그 사이 renderNav가 여러 번 돌기 때문이다. */
 function maybeBackupHint(){
+  /* [★ 예시 은하, 2026-08-28] 예시 인원을 세고 "8명이니 백업하세요"가 떴다(실측).
+     **예시는 저장조차 안 되므로 백업할 것이 없다** — 틀린 안내이고, 예시 배지까지 가린다. */
+  if(demoMode)return;
   if(saveSuspended||nodes.length<3)return;
   try{
     if(localStorage.getItem(HINT_BACKUP_KEY))return;
@@ -5419,7 +5511,11 @@ if(boot.status==='ok'){
           [['계속',()=>{clearSave();location.reload();}],
            ['취소',()=>{document.getElementById('note').classList.remove('on');}]]);}]]);
 }else{
-  applySeed(window.SEED);
+  /* [예시 은하, 2026-08-28] 저장본도 my-data.js도 없는 **첫 방문**이면 예시를 띄운다.
+     빈 우주에 안내 문구만 있는 화면으로는 무엇을 하는 서비스인지 알 수 없었다.
+     applySeed를 그대로 쓴다 — 형식이 같아 별도 로더가 필요 없다. */
+  if(!window.SEED&&boot.status==='none'){demoMode=true;applySeed(DEMO_SEED);}
+  else applySeed(window.SEED);
   if(boot.status==='corrupt'){
     /* 원본을 **지우지 않고** 옮겨 둔다. 되돌릴 여지를 남긴다. */
     try{localStorage.setItem(SAVE_KEY_BAD,boot.raw);localStorage.removeItem(SAVE_KEY);}
@@ -7143,14 +7239,42 @@ function obRenderSijin(){renderTime('ob');}   /* 한 명 화면과 같은 컨트
   /* [2026-08-28] 두 번째 선택지 — 백업에서 되살리기. 백업 시트는 z-index 13이라 첫 화면(12)
      위에 뜬다. 사람이 0명이므로 openBackup이 내보내기 구역을 스스로 감춘다. */
   const obImp=document.getElementById('ob-import');
-  if(obImp)obImp.onclick=()=>openBackup();})();
+  if(obImp)obImp.onclick=()=>openBackup();
+  /* 둘러보기 ↔ 돌아가기. 첫 화면을 닫지 않고 비켜 주기만 한다(닫는 수단은 여전히 없다) */
+  const pk=document.getElementById('ob-peekbtn');
+  if(pk)pk.onclick=()=>demoPeek(true);
+  const bk=document.getElementById('demoback');
+  if(bk)bk.onclick=()=>demoPeek(false);})();
 
 /* 인물이 0명이면 띄우고, 있으면 닫는다. **여기가 유일한 판정 지점이다** —
    삭제·시드 로드 등 인물 수가 바뀌는 모든 경로가 이 함수를 부른다. */
 function maybeOnboard(){
-  const on=nodes.length===0;
+  /* [2026-08-28] 예시가 떠 있으면 nodes는 8명이지만 **아직 자기 정보는 없다** —
+     인원수가 아니라 demoMode를 함께 본다. */
+  const on=nodes.length===0||demoMode;
   document.getElementById('onboard').classList.toggle('on',on);
-  if(on)setTimeout(()=>{const el=document.getElementById('ob-name');if(el)el.focus();},60);}
+  document.body.classList.toggle('demo',demoMode);
+  const peek=document.getElementById('ob-peek');
+  if(peek)peek.style.display=demoMode?'block':'none';
+  if(on&&!demoMode)setTimeout(()=>{const el=document.getElementById('ob-name');if(el)el.focus();},60);}
+
+/* 둘러보기 — 첫 화면 카드를 잠시 접어 예시를 만져 볼 수 있게 한다.
+   [왜 닫기가 아니라 접기인가] 첫 화면은 **닫는 수단이 없다**(나 없이는 은하가 성립하지 않는다).
+   그 규칙을 깨지 않으면서 뒤를 보게 하려면 **되돌아올 손잡이를 남긴 채** 비켜 주는 수밖에 없다. */
+function demoPeek(on){
+  const ob=document.getElementById('onboard');
+  ob.classList.toggle('peek',on);
+  /* [2026-08-28] 카드 숨김을 **인라인으로** 준다. CSS 규칙(`#onboard.peek .obcard`)이
+     matches()로는 걸리는데 계산값이 안 바뀌는 상태를 만났다(실측: opacity 1 유지).
+     특이성 싸움을 더 파는 것보다 확실한 쪽을 택했다 — 이 전환은 한 곳에서만 쓴다. */
+  const card=ob.querySelector('.obcard');
+  if(card){
+    card.style.transition='opacity .25s, transform .25s';
+    card.style.opacity=on?'0':'1';
+    card.style.transform=on?'translateY(12px)':'none';
+    card.style.pointerEvents=on?'none':'auto';}
+  const back=document.getElementById('demoback');
+  if(back)back.style.display=on?'block':'none';}
 
 document.getElementById('ob-start').onclick=()=>{
   const name=document.getElementById('ob-name').value.trim();
@@ -7163,6 +7287,9 @@ document.getElementById('ob-start').onclick=()=>{
     sijin:obTime.sijin,hour:obTime.hour,min:obTime.min,
     city,lon:CITY_LON[city]!==undefined?CITY_LON[city]:null,
     sex:obSex===undefined?null:obSex};
+  /* [예시 은하, 2026-08-28] **예시를 먼저 걷어낸다.** 안 지우면 가짜 여덟 명이 자기
+     은하에 그대로 남고, 그 순간부터 저장까지 된다. */
+  clearDemo();
   /* ★ 이 경로만이 "나"를 만든다. 이 화면의 정의가 "당신"이므로 묻지 않는다. */
   const t0=nowISO();
   const me=addNode({name,stemIdx:dayStem(birth.y,birth.m,birth.d),birth,isMe:true,
