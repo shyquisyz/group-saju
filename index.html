@@ -262,6 +262,30 @@
     padding:0;width:100%;height:100%;font-family:inherit}
   .pt-del:hover{color:#ff9a86}
   .pt-lab{display:none}
+  /* ═══ 그룹 이름 후보 [2026-08-28] ═══
+     native <datalist>로는 못 한다 — **쉼표를 쓰는 순간 후보가 0이 된다**(브라우저가 칸 전체를
+     한 덩어리로 매칭한다). 여러 그룹에 넣는 흐름이 이 앱의 핵심인데 거기서 도움이 사라진다.
+     그래서 그룹 칸만 직접 만든다. 도시는 쉼표를 안 쓰고 목록 밖도 그대로 저장되므로 native 유지.
+     자리: #pt-mode 기준 absolute — .pt-wrap이 overflow:hidden이라 셀 안에 두면 잘린다. */
+  #pt-mode{position:relative}
+  .pt-sugg{position:absolute;z-index:5;background:var(--card);backdrop-filter:blur(14px);
+    border:1px solid var(--line);border-radius:7px;box-shadow:0 12px 34px rgba(0,0,0,.6);
+    max-height:190px;overflow-y:auto;padding:4px;min-width:150px}
+  .pt-sugg .s{padding:7px 9px;border-radius:5px;cursor:pointer;font-size:var(--fs-sm);
+    color:var(--ink);white-space:nowrap;display:flex;justify-content:space-between;gap:10px}
+  .pt-sugg .s:hover,.pt-sugg .s.on{background:rgba(255,255,255,.11)}
+  .pt-sugg .s em{font-style:normal;color:var(--gold);font-weight:700}
+  .pt-sugg .s small{color:var(--mut);font-size:var(--fs-xs)}
+  /* 저장 전 확인 — "그룹에 넣은 줄 알았는데 안 들어갔다"를 막는 마지막 관문 */
+  .pt-confirm{margin-top:10px;padding:11px 12px;border-radius:8px;
+    border:1px solid rgba(212,175,90,.45);background:rgba(212,175,90,.09);
+    font-size:var(--fs-sm);color:var(--ink);line-height:1.6}
+  .pt-confirm b{color:var(--gold)}
+  .pt-confirm .btns{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
+  .pt-confirm .btns button{flex:1;min-width:130px;padding:9px 8px;border-radius:6px;
+    border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);
+    font-size:var(--fs-sm);cursor:pointer;font-family:inherit}
+  .pt-confirm .btns .go{border-color:rgba(255,255,255,.32);font-weight:600}
   .pt-note{font-size:var(--fs-xs);color:var(--mut);line-height:1.6;margin-top:9px}
   .pt-summary{margin-top:10px;font-size:var(--fs-sm);color:var(--ink);line-height:1.6}
   .pt-summary .bad{color:#ff9a86;font-weight:600}
@@ -788,11 +812,14 @@
 
   <!-- 도시 자동완성 — 목록에 **없어도 그대로 저장**한다(경도만 빈다).
        "춘천이 없다"는 지적이 있었고, 지금 경도는 어떤 계산에도 안 쓰인다. -->
+  <!-- 도시만 native datalist를 쓴다 — 쉼표를 안 쓰고 목록 밖도 그대로 저장되므로 충분하다.
+       그룹은 #pt-sugg(직접 만든 후보)로 간다. -->
   <datalist id="pt-citylist"></datalist>
-  <datalist id="pt-grouplist"></datalist>
 
+  <div class="pt-sugg" id="pt-sugg" style="display:none"></div>
   <div class="pt-note" id="pt-note"></div>
   <div class="pt-summary" id="pt-summary"></div>
+  <div class="pt-confirm" id="pt-confirm" style="display:none"></div>
   <button class="primary" id="pt-save">저장</button>
   <div class="sheetnote">일간은 실계산됩니다 · 시·도시는 정밀 엔진(진태양시 보정) 연결 시 사용
     <br>· 이분들의 생년월일도 <b style="color:var(--ink)">이 브라우저 안에만</b> 남습니다 — 어디로도 전송되지 않습니다</div>
@@ -6160,19 +6187,59 @@ function ptParseSex(raw){
   if(/^(여|여자|여성|[Ff]|female)$/.test(t))return '여';
   return undefined;}
 
-/* 그룹 — **없는 이름은 오류로 막는다**(사용자 결정). 표에서는 유형(가족·부부·…)을 받을 수
-   없어 새 그룹을 제대로 만들 수 없기 때문이다. 쓸 수 있는 이름은 표 위에 펼쳐 둔다. */
+/* 그룹 — **못 찾은 이름은 막지 않고 알린다** [2026-08-28 개정].
+   ~~없는 이름은 오류로 막는다~~ 였는데, 그러면 **그 사람이 아예 등록되지 않는다.** 사용자가
+   원한 것은 "사람은 들어가되 그룹에 못 들어갔다는 걸 알기"다(사용자 지시). 그래서 오타는
+   **경고**로 내리고 그 사람은 미분류로 들어간다. 표에서 유형을 못 받아 새 그룹을 만들 수
+   없다는 사정은 그대로이므로, 없는 이름으로 그룹이 생기지는 않는다.
+   **빈 칸은 경고하지 않는다** — 아무것도 안 쓴 것은 오타가 아니라 의도다(사용자 지시). */
 function ptParseGroups(raw){
   const t=String(raw==null?'':raw).trim();
-  if(!t)return {ok:true,ids:[]};
+  if(!t)return {ids:[],unknown:[]};
   const names=t.split(/[,/·]/).map(x=>x.trim()).filter(Boolean);
-  const ids=[],miss=[];
+  const ids=[],unknown=[];
   names.forEach(nm=>{
     const g=groups.find(x=>x.name===nm);
-    if(g){if(ids.indexOf(g.id)<0)ids.push(g.id);}else miss.push(nm);});
-  if(miss.length)return {ok:false,why:'그런 이름의 그룹이 없습니다 — '+miss.join(', ')
-    +' (위 목록의 이름만 쓸 수 있습니다)'};
-  return {ok:true,ids};}
+    if(g){if(ids.indexOf(g.id)<0)ids.push(g.id);}
+    else if(unknown.indexOf(nm)<0)unknown.push(nm);});
+  return {ids,unknown};}
+
+/* ── 그룹 이름 후보 ──
+   [왜 직접 만드나] native <datalist>는 **쉼표를 쓰는 순간 후보가 0**이 된다(칸 전체를 한
+   덩어리로 매칭). 실측: 기존 그룹이 가족/대학 동기/회사 팀일 때 "가족, 대"의 후보는 0개였다.
+   [중간이 맞아도 찾는다] "가족"을 치면 "우리 가족"이 나와야 한다(사용자 지시) — 그래서
+   시작 일치만이 아니라 **부분 일치**까지 본다.
+   [공백은 무시] "대학동기"로 쳐도 "대학 동기"가 나온다. 실측에서 native가 못 잡던 자리다.
+   [오타도 한 칸까지] "가죽" → "가족". 편집 거리 1~2를 마지막 순위로 둔다 — 이게 없으면
+   오타는 경고만 보고 사용자가 직접 고쳐야 한다. */
+function ptNormName(s){return String(s==null?'':s).replace(/\s+/g,'').toLowerCase();}
+function ptEditDist(a,b){
+  if(a===b)return 0;
+  if(Math.abs(a.length-b.length)>2)return 99;
+  let prev=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    const cur=[i];
+    for(let j=1;j<=b.length;j++)
+      cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    prev=cur;}
+  return prev[b.length];}
+/* 커서가 있는 조각 = 마지막 쉼표 뒤. 앞서 고른 이름은 후보에서 뺀다. */
+function ptGrpSegment(val){
+  const i=Math.max(val.lastIndexOf(','),val.lastIndexOf('/'),val.lastIndexOf('·'));
+  return {head:i<0?'':val.slice(0,i+1),seg:(i<0?val:val.slice(i+1))};}
+function ptGroupSuggest(val){
+  const {head,seg}=ptGrpSegment(val);
+  const q=ptNormName(seg);
+  const taken=new Set(head.split(/[,/·]/).map(x=>x.trim()).filter(Boolean));
+  const pool=groups.filter(g=>!taken.has(g.name));
+  if(!q)return pool.slice(0,8).map(g=>({g,why:''}));   /* 빈 조각이면 전부 보여준다 */
+  const starts=[],mids=[],near=[];
+  pool.forEach(g=>{
+    const nm=ptNormName(g.name);
+    if(nm.indexOf(q)===0)starts.push({g,why:''});
+    else if(nm.indexOf(q)>=0)mids.push({g,why:''});
+    else if(q.length>=2&&ptEditDist(q,nm)<=(q.length<=3?1:2))near.push({g,why:'비슷한 이름'});});
+  return starts.concat(mids,near).slice(0,8);}
 
 /* 한 줄을 통째로 검사한다. 화면 표시와 저장이 **같은 결과를 쓴다** — 두 벌로 갈라지면
    "화면엔 초록인데 저장이 안 되는" 줄이 생긴다. */
@@ -6195,13 +6262,17 @@ function ptValidate(m){
   r.city=c.city;r.lon=c.lon;
   if(!c.known)r.warns.city='도시 목록에 없어 경도 없이 저장됩니다';
   const g=ptParseGroups(m.grp);
-  if(!g.ok)r.errs.grp=g.why; else r.gids=g.ids;
+  r.gids=g.ids;r.unknownGroups=g.unknown;
+  if(g.unknown.length)
+    r.warns.grp=g.unknown.map(x=>'"'+x+'"').join(', ')
+      +(g.unknown.length>1?' 그룹들이':' 그룹이')+' 없습니다 — '
+      +(g.ids.length?'나머지 그룹에만 들어갑니다':'미분류로 들어갑니다');
   r.sex=m.sex;
   r.ok=!Object.keys(r.errs).length;
   return r;}
 
 /* ── 화면 ── */
-const PT_BADGE={name:'중복',date:'추정',time:'분버림',city:'목록밖'};
+const PT_BADGE={name:'중복',date:'추정',time:'분버림',city:'목록밖',grp:'없는 그룹'};
 
 function ptRenderGroups(){
   const el=document.getElementById('pt-groups');
@@ -6217,8 +6288,65 @@ function ptRenderLists(){
   const cl=document.getElementById('pt-citylist');
   if(cl&&!cl.children.length)
     cl.innerHTML=CITY_GROUPS.map(g=>g.list.map(([c])=>`<option value="${c}">`).join('')).join('');
-  const gl=document.getElementById('pt-grouplist');
-  if(gl)gl.innerHTML=groups.map(g=>`<option value="${g.name}">`).join('');}
+}
+
+/* ── 후보 드롭다운 ──
+   #pt-sugg 하나를 돌려 쓴다(줄마다 만들면 100줄에 100개가 생긴다).
+   자리는 #pt-mode 기준 absolute — .pt-wrap이 overflow:hidden이라 셀 안에 두면 잘린다. */
+let ptSugg={input:null,items:[],idx:-1,m:null,row:null};
+function ptSuggClose(){
+  const b=document.getElementById('pt-sugg');
+  if(b)b.style.display='none';
+  ptSugg={input:null,items:[],idx:-1,m:null,row:null};}
+function ptSuggPaint(){
+  const b=document.getElementById('pt-sugg');
+  [...b.querySelectorAll('.s')].forEach((el,i)=>el.classList.toggle('on',i===ptSugg.idx));}
+function ptSuggOpen(row,m,input){
+  const b=document.getElementById('pt-sugg'),host=document.getElementById('pt-mode');
+  if(!b||!host)return;
+  const items=ptGroupSuggest(input.value);
+  if(!items.length){ptSuggClose();return;}
+  ptSugg={input,items,idx:-1,m,row};
+  const seg=ptGrpSegment(input.value).seg.trim();
+  b.innerHTML=items.map((it,i)=>{
+    /* 하이라이트는 **원문에 그대로 들어 있을 때만** 한다. 공백을 무시한 매칭까지 원문 좌표로
+       되돌리려면 품이 크고, 못 맞히면 엉뚱한 글자에 색이 붙어 더 헷갈린다. */
+    let nm=bkEsc(it.g.name);
+    if(seg&&it.g.name.indexOf(seg)>=0)
+      nm=nm.replace(bkEsc(seg),'<em>'+bkEsc(seg)+'</em>');
+    return `<div class="s" data-i="${i}"><span>${nm}</span>`
+      +(it.why?`<small>${it.why}</small>`:'')+`</div>`;}).join('');
+  const hb=host.getBoundingClientRect(),ib=input.getBoundingClientRect();
+  b.style.left=Math.round(ib.left-hb.left)+'px';
+  b.style.top=Math.round(ib.bottom-hb.top+2)+'px';
+  b.style.minWidth=Math.round(ib.width)+'px';
+  b.style.display='block';
+  b.querySelectorAll('.s').forEach(el=>{
+    /* mousedown에서 기본동작을 막아 blur가 먼저 나지 않게 한다 — 안 그러면 클릭이 안 먹는다 */
+    el.onmousedown=e=>e.preventDefault();
+    el.onclick=()=>ptSuggPick(+el.dataset.i);});}
+function ptSuggPick(i){
+  const st=ptSugg,it=st.items&&st.items[i];
+  if(!it||!st.input)return;
+  const {head}=ptGrpSegment(st.input.value);
+  const val=head?(head.replace(/\s*$/,'')+' '+it.g.name):it.g.name;
+  st.input.value=val;st.m.grp=val;
+  const row=st.row,input=st.input;
+  ptSuggClose();
+  ptTouch(row);
+  input.focus();}
+function ptWireSuggest(row,m,input){
+  if(!input)return;
+  input.addEventListener('focus',()=>ptSuggOpen(row,m,input));
+  input.addEventListener('input',()=>ptSuggOpen(row,m,input));
+  input.addEventListener('blur',()=>setTimeout(ptSuggClose,120));
+  input.addEventListener('keydown',e=>{
+    if(document.getElementById('pt-sugg').style.display==='none')return;
+    const n=ptSugg.items.length;
+    if(e.key==='ArrowDown'){e.preventDefault();ptSugg.idx=(ptSugg.idx+1)%n;ptSuggPaint();}
+    else if(e.key==='ArrowUp'){e.preventDefault();ptSugg.idx=(ptSugg.idx-1+n)%n;ptSuggPaint();}
+    else if(e.key==='Enter'){if(ptSugg.idx>=0){e.preventDefault();ptSuggPick(ptSugg.idx);}}
+    else if(e.key==='Escape'){e.preventDefault();ptSuggClose();}});}
 
 function ptMakeRow(m){
   const row=document.createElement('div');
@@ -6239,7 +6367,9 @@ function ptMakeRow(m){
     row._cells[key]=c;row._cells[key]._input=i;
     return c;};
   row.appendChild(mk('name','이름'));
-  row.appendChild(mk('grp','비워도 됨','pt-grouplist'));
+  const grpCell=mk('grp','비워도 됨');   /* native list를 안 쓴다 — 위 ptGroupSuggest 주석 참고 */
+  row.appendChild(grpCell);
+  ptWireSuggest(row,m,grpCell._input||grpCell.querySelector('input'));
   row.appendChild(mk('date','1990-01-01'));
   /* 성별만 버튼 — 사용자 지시. "안 밝힘"은 두지 않는다: 저장할 때 미입력과 같은 null이라
      표에서 가를 실익이 없다(§5.6 문제 4). 다시 누르면 꺼진다. */
@@ -6374,6 +6504,9 @@ function ptOnPaste(e,row,key){
 
 function openPersonTable(){
   ptModel=[ptBlank()];
+  ptGrpConfirmed=false;
+  const cb=document.getElementById('pt-confirm');if(cb)cb.style.display='none';
+  ptSuggClose();
   ptShowMode('table');
   ptRenderGroups();ptRenderLists();ptRenderAll();
   const note=document.getElementById('pt-note');
@@ -6388,6 +6521,7 @@ function openPersonTable(){
     const f=document.querySelector('#pt-body .pt-cell input');if(f)f.focus();},60);}
 
 /* 저장 — **재배치는 마지막에 한 번만.** 한 명씩 layoutGalaxy를 부르면 100명이면 100번 돈다. */
+let ptGrpConfirmed=false;
 function ptSave(){
   const body=document.getElementById('pt-body');
   const rows=[...body.children];
@@ -6401,6 +6535,37 @@ function ptSave(){
       ?'등록할 수 있는 줄이 없습니다 — <b>빨간 칸</b>을 고쳐 주세요.'
       :'이름과 생년월일을 넣어 주세요.');
     return;}
+  /* [★ 저장 전 확인, 2026-08-28] 못 찾은 그룹 이름이 있으면 **한 번 묻는다.**
+     노란 칸과 요약만으로는 지나치기 쉽고, 지나치면 **"그룹에 넣은 줄 알았는데 안 들어간"**
+     상태가 된다 — 사용자가 지목한 바로 그 문제다. 화면이 안 변하는 종류의 손실이라
+     수동 표시로는 부족하다고 봤다.
+     **빈 칸은 여기 안 걸린다** — 아무것도 안 쓴 것은 오타가 아니라 의도다. */
+  const miss=[];
+  usable.forEach(({v})=>(v.unknownGroups||[]).forEach(u=>{if(miss.indexOf(u)<0)miss.push(u);}));
+  const cbox=document.getElementById('pt-confirm');
+  if(miss.length&&!ptGrpConfirmed){
+    const who=usable.filter(x=>(x.v.unknownGroups||[]).length);
+    /* [2026-08-28] 조사를 하드코딩하지 않는다 — 받침에 따라 이라는/라는이 갈린다.
+       particle()은 pair[0]/pair[1]을 돌려주므로 배열도 그대로 받는다. */
+    const last=miss[miss.length-1];
+    cbox.innerHTML=miss.map(x=>'<b>"'+bkEsc(x)+'"</b>').join(', ')
+      +particle(last,['이라는','라는'])
+      +(miss.length>1?' 그룹들이 없습니다.':' 그룹이 없습니다.')
+      +'<br>'+who.map(x=>bkEsc(x.v.name)).join(', ')
+      +(who.length>1?' 님들은':' 님은')+' <b>미분류</b>로 들어갑니다.'
+      +'<br><span style="color:var(--mut);font-size:var(--fs-xs)">'
+      +'표에서는 그룹 유형(가족·부부·…)을 받을 수 없어 새 그룹을 만들지 않습니다. '
+      +'먼저 "그룹 만들기"에서 만든 뒤 이름을 골라 주세요.</span>'
+      +'<div class="btns"><button type="button" class="fix">돌아가서 고칩니다</button>'
+      +'<button type="button" class="go">그대로 등록합니다</button></div>';
+    cbox.style.display='block';
+    cbox.querySelector('.go').onclick=()=>{ptGrpConfirmed=true;cbox.style.display='none';ptSave();};
+    cbox.querySelector('.fix').onclick=()=>{
+      cbox.style.display='none';
+      const t=rows.find(r=>((r._v&&r._v.unknownGroups)||[]).length);
+      if(t){const i=t._cells.grp._input;if(i){i.focus();i.select();}}};
+    return;}
+  cbox.style.display='none';ptGrpConfirmed=false;
   const t0=nowISO();
   const made=[];
   usable.forEach(({v})=>{
