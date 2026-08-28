@@ -3379,7 +3379,9 @@ function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updat
     updatedAt:updatedAt===undefined?null:updatedAt};
   mesh.userData.node=node;nodes.push(node);
   return node;}
-function addEdge(a,b,rich){
+/* [2026-08-28] `sys`(이 선이 속한 최상위 성계)를 함께 담는다. 끝점을 **그 성계의 인스턴스**로
+   잡기 위해서다 — 아래 rebuildEdges 주석 참고. sys가 없으면 주 인스턴스를 쓴다. */
+function addEdge(a,b,rich,sys){
   const rel=relation(a.el,b.el);
   const geo=new THREE.BufferGeometry().setFromPoints([a.mesh.position,b.mesh.position]);
   const mat=rel.kind==='geuk'
@@ -3390,7 +3392,8 @@ function addEdge(a,b,rich){
   const line=new THREE.Line(geo,mat);line.computeLineDistances();scene.add(line);
   /* [F-2] 기본 불투명도를 기록해 둔다 — 장면 전환 페이드가 여기에 배율을 곱한다.
      재질에서 되읽으면 이전 프레임의 페이드값을 기준으로 삼아 점점 어두워진다. */
-  edges.push({a,b,kind:rel.kind,label:rel.label,rel,line,rich:rich||null,baseOpacity:mat.opacity});}
+  edges.push({a,b,sys:sys||null,kind:rel.kind,label:rel.label,rel,line,rich:rich||null,
+    baseOpacity:mat.opacity});}
 
 /* ═══ 관계선 재계산 [★ 2026-08-28] ═══
    **관계선은 이제 그룹에서 유도한다.** 전에는 사람을 추가할 때마다 `nodes.forEach(addEdge)`로
@@ -3402,11 +3405,18 @@ function addEdge(a,b,rich){
      안에서는 서로 이어진다(트리에 찍히는 인원수와 같은 기준).
    - 여러 그룹에 속한 사람은 **각 그룹 안에서 각각** 이어진다. 같은 쌍이 두 그룹에 겹치면
      선은 **하나만** 긋는다(같은 자리에 두 번 그리면 굵기만 달라 보인다).
-   - **미분류(그룹 없는 사람)끼리는 잇지 않고, 나와만 잇는다.**
-     근거는 이 프로젝트의 명세다 — HANDOFF §0 표: "그룹 없는 사람 = 나와 1:1만 존재",
-     그리고 showGroup의 미분류 분기: "서로 맥락 없는 사람들의 우연한 묶음이라 관계 서술을
-     붙이면 억지스럽다". 서로 안 이으면서 나와도 안 이으면 그 사람만 은하에서 외톨이가 되는데,
-     이 앱은 애초에 **나를 기준으로** 사람을 담는 곳이라 나와의 1:1은 언제나 성립한다.
+   - **미분류는 선이 없다. 각자 떠 있는다** [2026-08-28 개정].
+     ~~미분류끼리는 잇지 않고 나와만 잇는다~~ 였다. 그렇게 두니 미분류 인원이 늘수록 원점에서
+     사방으로 뻗는 선이 화면을 덮었다 — **외톨이로 보이는 것보다 지저분한 쪽이 더 문제**라는
+     판단이다(사용자 결정). 관계가 아직 정해지지 않은 사람이라는 뜻이 오히려 그림에 맞는다.
+   - **"그룹과 나"를 잇는 별도의 선은 만들지 않는다.** 궤도가 이미 나를 통과하고(§2.1),
+     내가 각 그룹의 멤버이므로 그룹 안 선으로 이미 이어진다. 따로 그으면 같은 사실을 두 번
+     그리는 것이고 원점 주변만 빽빽해진다.
+   - **선은 성계(최상위 그룹)마다 따로 만든다** [2026-08-28, §7.4].
+     다중소속자는 그룹마다 **복제 인스턴스**로 그려지는데, 선을 원본에만 붙이면
+     **나머지 인스턴스가 외톨이로 보인다**(아내가 세 그룹에 있으면 두 자리가 선 없이 뜬다).
+     그래서 같은 쌍이라도 성계가 다르면 선을 각각 긋고, 끝점은 그 성계의 인스턴스로 잡는다.
+     같은 성계 안에서 같은 쌍은 여전히 하나만 긋는다.
 
    [저장 호환] `serializeState`의 `links`는 그대로 쓴다 — 모양이 안 바뀌므로 SAVE_VER을
    올릴 일이 없다. 다만 이제 **읽을 때 기준이 아니다**(그룹에서 다시 만든다). 옛 저장본에
@@ -3420,20 +3430,20 @@ function clearEdges(){
 
 function rebuildEdges(){
   clearEdges();
-  const me=meNode();
-  const seen=new Set();
-  const link=(a,b)=>{
-    if(!a||!b||a===b)return;
-    const k=a.id<b.id?a.id+'|'+b.id:b.id+'|'+a.id;
-    if(seen.has(k))return;
-    seen.add(k);addEdge(a,b);};
-  groups.forEach(g=>{
-    const ms=effectiveMembers(g);
-    for(let i=0;i<ms.length;i++)for(let j=i+1;j<ms.length;j++)link(ms[i],ms[j]);});
-  if(me){
-    const grouped=new Set();
-    groups.forEach(g=>effectiveMembers(g).forEach(m=>grouped.add(m)));
-    nodes.forEach(n=>{if(n!==me&&!grouped.has(n))link(me,n);});}}
+  /* **최상위 성계 단위로 돈다.** 복제 인스턴스(groupInstances)의 키가 `사람|최상위그룹`이라
+     선도 같은 단위여야 끝점을 인스턴스로 잡을 수 있다. 하위 그룹은 따로 안 돈다 —
+     effectiveMembers가 하위 멤버까지 포함하므로 부모 한 바퀴로 덮인다(트리 인원수와 같은 기준).
+     미분류(UNCLASSIFIED_GROUP)는 건너뛴다 — 선이 없다. */
+  topLevelSystems().forEach(top=>{
+    if(top===UNCLASSIFIED_GROUP)return;
+    const ms=effectiveMembers(top);
+    const seen=new Set();   /* 성계 안에서만 중복을 막는다(성계가 다르면 각각 긋는다) */
+    for(let i=0;i<ms.length;i++)for(let j=i+1;j<ms.length;j++){
+      const a=ms[i],b=ms[j];
+      if(!a||!b||a===b)continue;
+      const k=a.id<b.id?a.id+'|'+b.id:b.id+'|'+a.id;
+      if(seen.has(k))continue;
+      seen.add(k);addEdge(a,b,null,top);}});}
 
 /* 고리 재계산: 은하 전체 관계 기준(모드 무관 항상 표시 → UI 통일)
    v2: edges[]가 아니라 nodes[] 전체 쌍에 relation()을 직접 적용한다.
@@ -4758,7 +4768,12 @@ function serializeState(){
   return {v:SAVE_VER,savedAt:nowISO(),
     people:nodes.map(x=>({key:x.id,name:x.name,isMe:!!x.isMe,birth:x.birth,
       createdAt:x.createdAt||null,updatedAt:x.updatedAt||null})),
-    links:edges.map(e=>[e.a.id,e.b.id]),
+    /* [2026-08-28] 성계마다 선을 긋게 되면서 같은 쌍이 여러 번 나온다. 저장본에는 한 번만
+       담는다 — 어차피 불러온 뒤 그룹에서 다시 만든다(rebuildEdges). */
+    links:(()=>{const seen=new Set(),out=[];
+      edges.forEach(e=>{const k=e.a.id<e.b.id?e.a.id+'|'+e.b.id:e.b.id+'|'+e.a.id;
+        if(!seen.has(k)){seen.add(k);out.push([e.a.id,e.b.id]);}});
+      return out;})(),
     groups:groups.slice().sort((a,b)=>a.orderIndex-b.orderIndex)
       .map(g=>({key:g.id,name:g.name,type:g.type,parent:g.parentId||null,
         members:g.members.map(m=>m.id),createdAt:g.createdAt||null}))};}
@@ -5804,8 +5819,12 @@ function simulate(){
        구 코드는 항상 주 인스턴스(n.mesh)를 썼는데, 다중소속자(구성원B: 주 인스턴스는 그룹A)를
        포함한 성계를 선택하면 주 인스턴스가 숨겨져 관계선이 통째로 사라졌다(실측: 그룹B을
        선택하면 선이 하나도 안 보였다). meshForMemberInGroup이 이미 그 해석을 갖고 있다. */
-    const ma=(!activeGroup||e.a.isMe)?e.a.mesh:meshForMemberInGroup(e.a,selTop);
-    const mb=(!activeGroup||e.b.isMe)?e.b.mesh:meshForMemberInGroup(e.b,selTop);
+    /* [2026-08-28] 끝점은 **이 선이 속한 성계(e.sys)의 인스턴스**다. 전에는 은하 조망에서
+       항상 주 인스턴스를 썼는데, 그러면 다중소속자의 복제 인스턴스가 선 없이 떠 있었다.
+       나(isMe)는 인스턴스가 없다 — 원점의 본체 하나뿐이라 언제나 n.mesh다(§2.1). */
+    const g4=e.sys||selTop;
+    const ma=(e.a.isMe||!g4)?e.a.mesh:meshForMemberInGroup(e.a,g4);
+    const mb=(e.b.isMe||!g4)?e.b.mesh:meshForMemberInGroup(e.b,g4);
     e.line.geometry.setFromPoints([ma.position,mb.position]);e.line.computeLineDistances();
     const opOf=m=>m.visible?(m.material.opacity===undefined?1:m.material.opacity):0;
     const ev=Math.min(e.a.isMe?1:opOf(ma),e.b.isMe?1:opOf(mb));
@@ -5975,7 +5994,13 @@ function showNode(n,groupContext,targetMesh){
   const sj=n.birth?SIJIN[n.birth.sijin]:null;
   const sjText=sj?(sj[1]?`${sj[1].replace('-','–')}시(${sj[0]})`:'시간 모름'):'';
   const birthLine=n.birth?`<p style="font-size:var(--fs-sm);color:var(--mut)">${n.birth.y}.${n.birth.m}.${n.birth.d} · ${sjText} · ${n.birth.city}</p>`:'';
-  const rels=edges.filter(e=>e.a===n||e.b===n).map(e=>{
+  /* [2026-08-28] 성계마다 선이 생기므로 같은 상대가 여러 번 나올 수 있다 — 한 번만 보인다 */
+  const relSeen=new Set();
+  const rels=edges.filter(e=>{
+    if(e.a!==n&&e.b!==n)return false;
+    const o=e.a===n?e.b:e.a;
+    if(relSeen.has(o.id))return false;
+    relSeen.add(o.id);return true;}).map(e=>{
     const o=e.a===n?e.b:e.a;
     return`<div class="rel-item" data-a="${n.id}" data-b="${o.id}">
       <span class="dot" style="background:${EL_INFO[o.el].css};color:${EL_INFO[o.el].css}"></span>${o.name}
