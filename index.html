@@ -1020,7 +1020,6 @@
   <div class="field"><label>태어난 시각</label>
     <div class="tmode" id="ob-tmode">
       <button type="button" data-m="exact">정확히 알아요</button>
-      <button type="button" data-m="range">대략 알아요</button>
       <button type="button" data-m="none">몰라요</button>
     </div>
     <div class="texact" id="ob-texact">
@@ -1029,7 +1028,6 @@
       <input id="ob-min" type="number" min="0" max="59" inputmode="numeric" placeholder="분">
       <span class="tcalc" id="ob-tcalc"></span>
     </div>
-    <div class="sijingrid" id="ob-sijin"></div>
     <div class="tnote" id="ob-tnote"></div></div>
 
   <div class="field"><label>태어난 도시</label><select id="ob-city"></select>
@@ -1120,7 +1118,6 @@
   <div class="field"><label>태어난 시각 <span class="opt">선택</span></label>
     <div class="tmode" id="f-tmode">
       <button type="button" data-m="exact">정확히 알아요</button>
-      <button type="button" data-m="range">대략 알아요</button>
       <button type="button" data-m="none">몰라요</button>
     </div>
     <div class="texact" id="f-texact">
@@ -1129,7 +1126,6 @@
       <input id="f-min" type="number" min="0" max="59" inputmode="numeric" placeholder="분">
       <span class="tcalc" id="f-tcalc"></span>
     </div>
-    <div class="sijingrid" id="f-sijin"></div>
     <div class="tnote" id="f-tnote"></div></div>
   <div class="field"><label>태어난 도시 <span class="opt">선택</span></label><select id="f-city"></select>
     <!-- [2026-08-27] 해외 출생자 등 목록에 없는 곳. 선택했을 때만 나타난다 -->
@@ -1471,27 +1467,24 @@ function sajuJieList(y){
   return out.sort(function(a,b){return a.ms-b.ms;});}
 
 /** 사주 계산. birth = {y,m,d,hour,min,sijin,lon}.
-    [시각 세 모드 — 입력 UI와 같다]
-      · 정확(hour가 정수)   — 진태양시로 시지까지 계산한다
-      · 대략(sijin 0~11만)  — **사용자가 고른 시지를 그대로 쓴다.**
-        [★ 2026-08-29] 이걸 "모름"과 같이 다뤄 시주를 비웠더니, 시간대만 고른 사람의 시주가
-        전부 미상으로 나왔다(실사용 9명 중 8명). 사용자가 준 정보는 **시각이 아니라 시지**다 —
-        보정은 시각에 하는 것이라 시지에는 할 것이 없고, 그대로 쓰는 것이 정보를 안 버린다.
-        연·월주 판정에 쓸 순간은 그 시간대의 **중앙**(자시 00시, 축시 02시 …)으로 잡는다.
-        정오로 뭉개면 그날 절입이 있을 때 월주가 틀린다.
-      · 모름                — 세 기둥만. 정오를 가정하지 않는다
-    반환 기둥은 [천간index, 지지index]. 시주를 못 내면 hour는 null.
-    `timeMode`로 셋을 구분해 돌려준다 — 화면이 "대략"임을 표시해야 하기 때문이다. */
+    [시각 두 모드 — 입력 UI와 같다]
+      · 정확(hour가 정수) — 진태양시로 시지까지 계산한다
+      · 모름              — 세 기둥만. **정오를 가정하지 않는다**
+    [★ 2026-08-29 "대략"을 없앤 이유] 두 시간짜리 칸을 고르게 하고 거기에 분 단위 보정을
+    얹으면 **대략 아는 값이 정확한 척**하게 된다(사용자 판단). 보정을 안 얹어도 문제는 남는다 —
+    시지를 그대로 쓰면 "정확히 아는 사람"과 "대충 고른 사람"의 결과가 화면에서 똑같아 보인다.
+    옛 "대략" 데이터는 계산에서 빼되 **저장값(birth.sijin)은 지우지 않는다**(사용자 입력이다).
+    반환 기둥은 [천간index, 지지index]. 시각을 모르면 hour는 null.
+    `timeMode`는 'exact' | 'none'. */
 function sajuOf(b){
   if(!b||!Number.isInteger(b.y)||!Number.isInteger(b.m)||!Number.isInteger(b.d))return null;
   const hasTime=Number.isInteger(b.hour);
-  const hasRange=!hasTime&&Number.isInteger(b.sijin)&&b.sijin>=0&&b.sijin<12;
-  const timeMode=hasTime?'exact':(hasRange?'range':'none');
+  const timeMode=hasTime?'exact':'none';
   const lon=(typeof b.lon==='number'&&isFinite(b.lon))?b.lon:SAJU_LON_DEFAULT;
-  /* 대략이면 그 시간대의 중앙 시각. 시지 s의 시계 구간은 (2s-1)~(2s+1)시라 중앙은 2s시다
-     (자시 23~01 → 00시, 사시 09~11 → 10시). */
-  const wall=Date.UTC(b.y,b.m-1,b.d,
-    hasTime?b.hour:(hasRange?b.sijin*2:12), hasTime?(b.min||0):0);
+  /* 시각을 모르면 연·월주 판정에 쓸 순간이 필요하다 — 그 날의 정오로 잡는다.
+     이건 "정오에 태어났다"는 가정이 아니라 **그 날 안에서 어디를 찍어도 대개 같은 절기 구간**
+     이라는 뜻이다. 그날 절입이 걸리면 갈릴 수 있고, 그건 화면이 경계 안내로 알린다. */
+  const wall=Date.UTC(b.y,b.m-1,b.d,hasTime?b.hour:12,hasTime?(b.min||0):0);
   const utcMs=sajuUtcFromWall(wall);
   const apparentMs=utcMs+(lon*4+sajuEot(utcMs))*60000;
 
@@ -1520,11 +1513,7 @@ function sajuOf(b){
     const hBranch=Math.floor(((aHour+1)%24)/2);
     const baseStem=(((aHour>=23?dayIdx+1:dayIdx)+7)%10+10)%10;
     hPil=[(((baseStem%5)*2)+hBranch)%10,hBranch];}
-  else if(hasRange){
-    /* 고른 시지를 그대로 쓰고 천간만 시두법으로 유도한다. 자시(23~01)를 골랐으면 전반(23시대)
-       인지 후반(00시대)인지 알 수 없는데, 조자시 방식에서 **일주는 어느 쪽이든 당일**이므로
-       천간도 당일 일간을 기준으로 잡는다. 화면이 "대략"이라고 밝힌다. */
-    hPil=[(((dStem%5)*2)+b.sijin)%10,b.sijin];}
+
 
   const nextMs=jl[k+1]?jl[k+1].ms:null;
   return {year:[yStem,yBranch],month:[mStem,cur.branch],day:[dStem,dBranch],hour:hPil,
@@ -1542,7 +1531,7 @@ function pillarStr(p){return p?STEMS[p[0]]+BRANCHES[p[1]]:null;}
 function stemOfBirth(b){
   if(!b)return 0;
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,sijin:b.sijin,lon:b.lon});
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon});
   return r?r.day[0]:dayStem(b.y,b.m,b.d);}
 
 /** 여덟 글자의 오행 개수. 해석이 아니라 계산 결과 표시다(사용자 결정). */
@@ -6520,7 +6509,7 @@ function egoRelLine(node){
 function sajuTableHtml(n){
   const b=n.birth; if(!b)return '';
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,sijin:b.sijin,lon:b.lon});
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon});
   if(!r)return '';
   const KEYS=['year','month','day','hour'], KO=['년주','월주','일주','시주'];
   const cols=KEYS.map((k,i)=>{
@@ -6536,11 +6525,14 @@ function sajuTableHtml(n){
 
   /* ── 안내 ── */
   const notes=[];
-  if(r.timeMode==='none')
-    notes.push('출생 시각을 몰라 <b>세 기둥</b>만 나옵니다. 시각을 알면 더 정확해지고, 나중에 언제든 채울 수 있습니다.');
-  else if(r.timeMode==='range')
-    notes.push('시간대만 알고 있어 시주는 <b>고른 시간대</b>로 잡았습니다. 몇 시 몇 분까지 알면 더 정확해집니다.');
-  else {
+  if(r.timeMode==='none'){
+    /* 모름을 "부족한 선택"으로 보이게 하지 않는다(사용자 지시) — 세 기둥만으로도 충분하다는
+       것을 먼저 말하고, 채울 수 있다는 것을 덧붙인다. */
+    const legacy=(Number.isInteger(b.sijin)&&b.sijin>=0&&b.sijin<12)?SIJIN[b.sijin]:null;
+    notes.push('출생 시각을 몰라 <b>세 기둥</b>만 나옵니다 — 이것만으로도 충분히 의미 있는 결과가 나옵니다. 시주는 보조입니다.'+
+      (legacy?' 예전에 넣으신 시간대(<b>'+legacy[1].replace('-','–')+'시</b>)는 그대로 남아 있습니다 — 정확한 시각을 알게 되면 채워 주세요.'
+            :' 나중에 알게 되면 언제든 채울 수 있습니다.'));
+  } else {
     /* 절입 경계 — 앞뒤 10분 */
     const toPrev=r.minSinceJie, toNext=r.minToNextJie;
     if(toPrev<=10||(toNext!=null&&toNext<=10)){
@@ -6583,9 +6575,12 @@ function showNode(n,groupContext,targetMesh){
   /* [2026-08-28] 분까지 받으므로 **아는 만큼 보여준다** — 정확 입력이면 "09:08 (사시)",
      시간대만 고르면 "09–11시(사)", 모르면 "시간 모름". 셋을 같은 문구로 뭉뚱그리면
      정확히 넣은 사람이 자기 값이 저장됐는지 확인할 길이 없다. */
+  /* [2026-08-29] 시각을 정확히 모르면 **"시간 모름"으로만** 적는다. 옛 "대략" 값이 남아 있어도
+     그것을 시각처럼 적으면 시주가 미상인 것과 화면에서 어긋나 보인다. 남아 있다는 사실은
+     사주 표 아래 안내가 따로 말한다. */
   const sjText=(n.birth&&Number.isInteger(n.birth.hour))
     ? `${String(n.birth.hour).padStart(2,'0')}:${String(n.birth.min||0).padStart(2,'0')} (${sj?sj[0]:''}시)`
-    : (sj?(sj[1]?`${sj[1].replace('-','–')}시(${sj[0]})`:'시간 모름'):'');
+    : '시간 모름';
   const birthLine=n.birth?`<p style="font-size:var(--fs-sm);color:var(--mut)">${n.birth.y}.${n.birth.m}.${n.birth.d} · ${sjText} · ${n.birth.city}</p>`:'';
   /* [2026-08-28] 성계마다 선이 생기므로 같은 상대가 여러 번 나올 수 있다 — 한 번만 보인다 */
   const relSeen=new Set();
@@ -6845,12 +6840,15 @@ function renderTime(pfx){
     b.classList.toggle('on',b.dataset.m===st.mode);
     b.onclick=()=>{
       st.mode=b.dataset.m;
-      if(st.mode==='none'){st.sijin=12;st.hour=null;st.min=null;}
-      else if(st.mode==='range'){st.hour=null;st.min=null;if(st.sijin===12)st.sijin=6;}
+      /* [★ 2026-08-29] "몰라요"로 바꿔도 **st.sijin은 건드리지 않는다.**
+         옛 "대략" 입력이 남아 있는 사람이 이 시트를 열면 모드가 자동으로 '몰라요'가 되는데,
+         여기서 12로 밀면 저장하는 순간 사용자가 넣었던 시간대가 조용히 지워진다.
+         계산에는 안 쓰이지만 **사용자가 입력한 값**이라 앱이 임의로 지우지 않는다. */
+      if(st.mode==='none'){st.hour=null;st.min=null;}
       else if(st.mode==='exact'&&st.hour===null){st.hour=12;st.min=0;st.sijin=hourToSijin(12);}
       renderTime(pfx);};});
   exEl.classList.toggle('on',st.mode==='exact');
-  gridEl.style.display=st.mode==='range'?'grid':'none';
+  if(gridEl)gridEl.style.display='none';
   if(st.mode==='exact'){
     const h=document.getElementById(pfx+'-hour'),m=document.getElementById(pfx+'-min');
     h.value=st.hour===null?'':st.hour;
@@ -6864,23 +6862,22 @@ function renderTime(pfx){
       if(c)c.textContent=hv===null?'':('→ '+SIJIN[st.sijin][0]+'시('+SIJIN[st.sijin][1].replace('-','–')+')');};
     h.oninput=sync;m.oninput=sync;sync();
   }
-  if(st.mode==='range'){
-    gridEl.innerHTML=SIJIN_ORDER.map(i=>{const sj=SIJIN[i];
-      return`<button type="button" class="sijin${i===st.sijin?' on':''}" data-i="${i}">${sj[1].replace('-','–')}시<small>${sj[0]}(${sj[2]})</small></button>`;}).join('');
-    gridEl.querySelectorAll('.sijin').forEach(b=>b.onclick=()=>{
-      st.sijin=+b.dataset.i;st.hour=null;st.min=null;renderTime(pfx);});
-  }
+  /* [2026-08-29] ~~"대략 알아요"(두 시간 격자)~~ 제거. **두 시간짜리 칸에는 보정할 것이 없다** —
+     대략 아는 값에 분 단위 보정을 얹으면 정확한 척하는 결과가 된다. 실측으로도 서머타임
+     기간에는 보정 폭이 104분이라 어느 칸을 골라도 한 칸씩 밀렸다(612/10368 = 5.9%, 전부 그 시기).
+     "정확히" 아니면 "몰라요" 둘로 간다. */
   if(noteEl)noteEl.textContent=
-    st.mode==='exact'?'분까지 저장합니다 — 나중에 출생지별 시간 보정(서울 약 32분)에 쓰입니다.'
-    :st.mode==='range'?'두 시간 단위로 저장합니다. 정확히 아시면 "정확히 알아요"로 바꿔 주세요.'
-    :'시각 없이 저장합니다. 나중에 언제든 채우실 수 있습니다.';}
+    st.mode==='exact'?'분까지 저장합니다 — 출생지별 시간 보정(서울 약 32분)에 쓰입니다.'
+    :'모르면 그대로 두세요. 세 기둥(년·월·일)만으로도 충분히 의미 있는 결과가 나옵니다 — 시주는 보조입니다. 나중에 알게 되면 언제든 채울 수 있습니다.';}
 /* 시 → 시진. 자시가 23시에 시작하므로 한 시간 밀어 2로 나눈다 */
 function hourToSijin(h){return Math.floor(((h+1)%24)/2);}
 /* birth의 시각 필드에서 화면 상태를 만든다(수정 모드에서 쓴다) */
 function timeFromBirth(b){
   if(!b)return {mode:'none',sijin:12,hour:null,min:null};
   if(Number.isInteger(b.hour))return {mode:'exact',sijin:hourToSijin(b.hour),hour:b.hour,min:Number.isInteger(b.min)?b.min:0};
-  if(Number.isInteger(b.sijin)&&b.sijin>=0&&b.sijin<12)return {mode:'range',sijin:b.sijin,hour:null,min:null};
+  /* [2026-08-29] 옛 "대략" 입력 — 화면에서는 '몰라요'로 보이지만 **sijin은 그대로 들고 간다.**
+     저장 경로가 fTime.sijin을 그대로 쓰므로, 여기서 12로 바꾸면 그 값이 영영 사라진다. */
+  if(Number.isInteger(b.sijin)&&b.sijin>=0&&b.sijin<12)return {mode:'none',sijin:b.sijin,hour:null,min:null};
   return {mode:'none',sijin:12,hour:null,min:null};}
 /* 옛 호출부 호환 — 이름만 남기고 새 컨트롤러로 넘긴다 */
 function renderSijin(){renderTime('f');}
@@ -7336,7 +7333,7 @@ function ptPaint(row){
      [2026-08-29] 저장 시점과 같은 계산을 쓴다 — 여기만 dayStem으로 두면 미리보기와 저장 결과가
      자정 근처 출생에서 갈린다(그 줄에 시각·도시가 이미 들어와 있을 수 있다). */
   row._cells.stem.textContent=(v.y&&!v.errs.date)
-    ?STEMS[stemOfBirth({y:v.y,m:v.m,d:v.d,hour:v.hour,min:v.min,sijin:v.sijin,lon:v.lon})]:'';}
+    ?STEMS[stemOfBirth({y:v.y,m:v.m,d:v.d,hour:v.hour,min:v.min,lon:v.lon})]:'';}
 
 /* 마지막 줄에 뭔가 들어가면 다음 줄이 저절로 생긴다 — **빈 줄을 미리 깔지 않는다.**
    한 명만 넣는 사람은 한 줄만 보고, 여러 명은 "+ 줄 추가"를 찾을 필요가 없다. */
@@ -7575,7 +7572,7 @@ function ptSave(){
   const made=[];
   usable.forEach(({v})=>{
     const n=addNode({name:v.name,
-      stemIdx:stemOfBirth({y:v.y,m:v.m,d:v.d,hour:v.hour,min:v.min,sijin:v.sijin,lon:v.lon}),isMe:false,
+      stemIdx:stemOfBirth({y:v.y,m:v.m,d:v.d,hour:v.hour,min:v.min,lon:v.lon}),isMe:false,
       createdAt:t0,updatedAt:t0,
       birth:{y:v.y,m:v.m,d:v.d,sijin:v.sijin,hour:v.hour,min:v.min,city:v.city,lon:v.lon,
         sex:v.sex===undefined?null:v.sex}});
