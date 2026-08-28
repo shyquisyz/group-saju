@@ -220,6 +220,23 @@
   .opt{font-family:inherit;font-size:var(--fs-xs);letter-spacing:0;color:var(--mut);
     font-weight:400;margin-left:5px;padding:1px 6px;border-radius:20px;
     background:rgba(255,255,255,.07)}
+  /* 시각 3모드 — 정확히 / 대략 / 몰라요 */
+  .tmode{display:flex;gap:6px;margin-bottom:9px}
+  .tmode button{flex:1;padding:9px 4px;border-radius:6px;border:1px solid var(--line);
+    background:rgba(255,255,255,.05);color:var(--mut);font-size:var(--fs-sm);
+    cursor:pointer;font-family:inherit}
+  .tmode button.on{background:var(--ink);color:#101018;border-color:var(--ink);font-weight:700}
+  .texact{display:none;align-items:center;gap:7px;margin-bottom:4px}
+  .texact.on{display:flex}
+  .texact input{width:76px;padding:11px 10px;border:1px solid var(--line);border-radius:6px;
+    background:rgba(255,255,255,.06);color:var(--ink);font-family:inherit;
+    font-size:var(--fs-md);text-align:center}
+  .texact input::-webkit-outer-spin-button,.texact input::-webkit-inner-spin-button{
+    -webkit-appearance:none;margin:0}
+  .tsep{color:var(--mut);font-weight:700}
+  /* 고른 시각이 어느 시진인지 되비춘다 — 12칸을 안 보고도 결과를 확인할 수 있어야 한다 */
+  .tcalc{font-size:var(--fs-sm);color:var(--gold);margin-left:4px}
+  .tnote{font-size:var(--fs-xs);color:var(--mut);line-height:1.55;margin-top:7px}
   .sijingrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
   /* [2026-08-24] 주/보조를 뒤집었다 — 사용자는 "몇 시에 태어났는지"로 기억하지 자시·축시로
      기억하지 않는다. 시간 표기가 주(13px/600), 지지가 보조(9.5px/--mut). 구 값은 지지 12.5px에
@@ -828,9 +845,26 @@
     <div class="sexrow" id="ob-sex"></div>
     <div class="fieldwhy">운의 흐름 방향(대운)을 계산하는 데 쓰입니다. 지금은 저장만 하고, 만세력 엔진이 붙으면 사용합니다.</div></div>
 
+  <!-- [★ 시각 입력 3모드, 2026-08-28] §5.6 문제 2의 (가) 안 채택.
+       왜 바꿨나 — 나중에 진태양시 보정(서울 32분·부산 24분)이 들어가면 **두 시간짜리 칸으로는
+       경계가 통째로 어긋난다.** 03:05에 태어난 사람이 보정 뒤 02:33이 되면 인시가 아니라
+       축시다. 칸을 고른 사람은 그 차이를 표현할 방법이 없다.
+       셋 다 받는 이유 — 정확히 아는 사람 / 대략 아는 사람 / 모르는 사람이 실제로 다 있고,
+       **모르는 것을 아는 척하게 만들면 안 된다**(§5.6 문제 3 "모름을 정직한 선택지로"). -->
   <div class="field"><label>태어난 시각</label>
+    <div class="tmode" id="ob-tmode">
+      <button type="button" data-m="exact">정확히 알아요</button>
+      <button type="button" data-m="range">대략 알아요</button>
+      <button type="button" data-m="none">몰라요</button>
+    </div>
+    <div class="texact" id="ob-texact">
+      <input id="ob-hour" type="number" min="0" max="23" inputmode="numeric" placeholder="시">
+      <span class="tsep">:</span>
+      <input id="ob-min" type="number" min="0" max="59" inputmode="numeric" placeholder="분">
+      <span class="tcalc" id="ob-tcalc"></span>
+    </div>
     <div class="sijingrid" id="ob-sijin"></div>
-    <button type="button" class="sijin unknown" id="ob-sijin-unknown">시간 모름</button></div>
+    <div class="tnote" id="ob-tnote"></div></div>
 
   <div class="field"><label>태어난 도시</label><select id="ob-city"></select>
     <input id="ob-city-custom" type="text" placeholder="도시 이름 (예: 도쿄, 로스앤젤레스)"
@@ -908,9 +942,26 @@
        그래서 실제로 바뀌는 것은 **수정 모드**다 — 기존 인물의 빈 시각·도시가 이제 보인다.
        그 자리가 바로 빈칸을 채우게 될 화면이라 접혀 있으면 안 된다.
        필수는 여전히 이름·생년월일뿐이고, 나머지는 비워도 저장된다. -->
+  <!-- [★ 시각 입력 3모드, 2026-08-28] §5.6 문제 2의 (가) 안 채택.
+       왜 바꿨나 — 나중에 진태양시 보정(서울 32분·부산 24분)이 들어가면 **두 시간짜리 칸으로는
+       경계가 통째로 어긋난다.** 03:05에 태어난 사람이 보정 뒤 02:33이 되면 인시가 아니라
+       축시다. 칸을 고른 사람은 그 차이를 표현할 방법이 없다.
+       셋 다 받는 이유 — 정확히 아는 사람 / 대략 아는 사람 / 모르는 사람이 실제로 다 있고,
+       **모르는 것을 아는 척하게 만들면 안 된다**(§5.6 문제 3 "모름을 정직한 선택지로"). -->
   <div class="field"><label>태어난 시각 <span class="opt">선택</span></label>
+    <div class="tmode" id="f-tmode">
+      <button type="button" data-m="exact">정확히 알아요</button>
+      <button type="button" data-m="range">대략 알아요</button>
+      <button type="button" data-m="none">몰라요</button>
+    </div>
+    <div class="texact" id="f-texact">
+      <input id="f-hour" type="number" min="0" max="23" inputmode="numeric" placeholder="시">
+      <span class="tsep">:</span>
+      <input id="f-min" type="number" min="0" max="59" inputmode="numeric" placeholder="분">
+      <span class="tcalc" id="f-tcalc"></span>
+    </div>
     <div class="sijingrid" id="f-sijin"></div>
-    <button type="button" class="sijin unknown" id="f-sijin-unknown">시간 모름</button></div>
+    <div class="tnote" id="f-tnote"></div></div>
   <div class="field"><label>태어난 도시 <span class="opt">선택</span></label><select id="f-city"></select>
     <!-- [2026-08-27] 해외 출생자 등 목록에 없는 곳. 선택했을 때만 나타난다 -->
     <input id="f-city-custom" type="text" placeholder="도시 이름 (예: 도쿄, 로스앤젤레스)"
@@ -4189,7 +4240,7 @@ function applySeed(seed){
       createdAt:p.createdAt||null,updatedAt:p.updatedAt||null,
       stemIdx:dayStem(p.birth.y,p.birth.m,p.birth.d),
       pos:p.pos?new THREE.Vector3(p.pos[0],p.pos[1],p.pos[2]):undefined,
-      birth:Object.assign({},p.birth,
+      birth:Object.assign({hour:null,min:null},p.birth,
         {lon:p.birth.lon!==undefined?p.birth.lon
           :(CITY_LON[p.birth.city]!==undefined?CITY_LON[p.birth.city]:null)})});
     byKey.set(p.key,n);});
@@ -4702,7 +4753,7 @@ const JUSTLOADED_KEY='groupsaju:justloaded';   /* 새로고침 너머로 넘기�
 const BACKUP_APP='group-saju';
 const BACKUP_MAX_CHARS=2*1024*1024; /* 실측 저장 한계 5,177,344바이트 대비 여유(30인=7,931바이트) */
 const BACKUP_MAX_PEOPLE=1000;       /* 폭주 방지. 30인 7.9KB이므로 1000인도 260KB 안팎이다 */
-const SAVE_VER=1;
+const SAVE_VER=2;
 /* ═════ 마이그레이션 [틀 정비 2026-08-28] ═════
    키 'N'이 **vN → v(N+1)** 변환이다. 구조를 바꾸는 사람이 함수를 더하고 SAVE_VER을 올린다.
    규칙 전문은 CLAUDE.md "저장 형식을 바꿀 때는 변환을 함께 넣는다".
@@ -4720,6 +4771,15 @@ const SAVE_VER=1;
    [입력을 고치지 않는다] 각 함수는 **새 객체를 돌려준다.** 체인 중간에서 실패했을 때
    원본이 성해야 loadSave가 'migfail'로 원본을 보존할 수 있다. */
 const MIGRATIONS={
+  /* [v1 → v2, 2026-08-28] **시각을 시·분으로 받기 시작했다**(§5.6 문제 2의 (가) 안 채택).
+     `birth.hour`/`birth.min`을 신설한다 — 둘 다 **null이 정상값**이다:
+     시간대만 고른 사람(sijin만 있음)과 모르는 사람(sijin 12)은 시·분이 없다.
+     빈 값을 0으로 채우면 **"모르는 사람이 0시에 태어난 것"**이 되어 L2가 틀린 시주를 낸다 —
+     CLAUDE.md "빠진 필드를 '없음'으로 때우지 말 것"의 반대편 경우다(여기서는 **모른다는
+     사실 자체가 값**이므로 null이 맞다). */
+  '1':d=>Object.assign({},d,{v:2,
+    people:(d.people||[]).map(p=>Object.assign({},p,{
+      birth:Object.assign({hour:null,min:null},p.birth)}))}),
   '0':d=>({v:1,savedAt:d.savedAt||null,
     people:(d.people||[]).map(p=>{
       const b=p.birth||{};
@@ -4927,6 +4987,9 @@ function parseBackup(text){
       updatedAt:typeof p.updatedAt==='string'?p.updatedAt:null,
       birth:{y:b.y,m:b.m,d:b.d,
         sijin:Number.isInteger(b.sijin)&&b.sijin>=0&&b.sijin<=12?b.sijin:12,
+        /* 시·분은 **null이 정상값**이다 — 시간대만 고른 사람과 모르는 사람은 없다 */
+        hour:Number.isInteger(b.hour)&&b.hour>=0&&b.hour<=23?b.hour:null,
+        min:Number.isInteger(b.min)&&b.min>=0&&b.min<=59?b.min:null,
         city,
         /* 목록에 있는 도시면 우리 경도를 쓴다 — 파일의 값을 그대로 믿지 않는다 */
         lon:CITY_LON[city]!==undefined?CITY_LON[city]
@@ -6002,7 +6065,12 @@ function showNode(n,groupContext,targetMesh){
   /* [2026-08-24] 입력과 같은 위계로 시간 우선 표기. 겸사겸사 "모름시"도 고친다 —
      구 코드가 `${SIJIN[i][0]}시`로 무조건 "시"를 붙여 sijin=12(모름)일 때 "모름시"가 찍혔다. */
   const sj=n.birth?SIJIN[n.birth.sijin]:null;
-  const sjText=sj?(sj[1]?`${sj[1].replace('-','–')}시(${sj[0]})`:'시간 모름'):'';
+  /* [2026-08-28] 분까지 받으므로 **아는 만큼 보여준다** — 정확 입력이면 "09:08 (사시)",
+     시간대만 고르면 "09–11시(사)", 모르면 "시간 모름". 셋을 같은 문구로 뭉뚱그리면
+     정확히 넣은 사람이 자기 값이 저장됐는지 확인할 길이 없다. */
+  const sjText=(n.birth&&Number.isInteger(n.birth.hour))
+    ? `${String(n.birth.hour).padStart(2,'0')}:${String(n.birth.min||0).padStart(2,'0')} (${sj?sj[0]:''}시)`
+    : (sj?(sj[1]?`${sj[1].replace('-','–')}시(${sj[0]})`:'시간 모름'):'');
   const birthLine=n.birth?`<p style="font-size:var(--fs-sm);color:var(--mut)">${n.birth.y}.${n.birth.m}.${n.birth.d} · ${sjText} · ${n.birth.city}</p>`:'';
   /* [2026-08-28] 성계마다 선이 생기므로 같은 상대가 여러 번 나올 수 있다 — 한 번만 보인다 */
   const relSeen=new Set();
@@ -6171,7 +6239,9 @@ document.querySelectorAll('#createtabs .tab').forEach(b=>b.onclick=()=>{
   setCreateTab(b.dataset.tab,false);});
 dim.onclick=closeSheets;
 let editTarget=null;   // null=추가 모드, 노드=수정 모드
-let fSijin=12;         // 기본 '모름'
+/* [2026-08-28] ~~let fSijin~~ → 시각 상태를 객체 하나로. 모드·시진·시·분이 함께 움직여야
+   해서 흩어 두면 어긋난다(모드는 exact인데 hour가 null 같은 상태가 생긴다). */
+let fTime={mode:'none',sijin:12,hour:null,min:null};
 const fGroups=new Set();
 /* [2026-08-27] 이 시트 안에서 만들기로 한 새 그룹들(저장 전 대기 목록). groups[]에 바로 넣지
    않는 이유는 renderFGroups 주석 참고 — 시트를 그냥 닫으면 아무 일도 없어야 한다. */
@@ -6234,14 +6304,68 @@ function refreshDays(){
   let dh='';for(let d=1;d<=dim_;d++)dh+=`<option value="${d}">${d}일</option>`;
   selD.innerHTML=dh;selD.value=Math.min(cur,dim_);}
 function renderFSex(){renderSex('f-sex',fSex,v=>{fSex=v;});}
-function renderSijin(){
-  const el=document.getElementById('f-sijin');
-  el.innerHTML=SIJIN_ORDER.map(i=>{const s=SIJIN[i];
-    return`<button type="button" class="sijin${i===fSijin?' on':''}" data-i="${i}">${s[1].replace('-','–')}시<small>${s[0]}(${s[2]})</small></button>`;}).join('');
-  el.querySelectorAll('.sijin').forEach(b=>b.onclick=()=>{fSijin=+b.dataset.i;renderSijin();});
-  const un=document.getElementById('f-sijin-unknown');
-  un.classList.toggle('on',fSijin===12);
-  un.onclick=()=>{fSijin=12;renderSijin();};}
+/* ═══ 시각 입력 — 한 명 화면과 첫 화면이 **같은 코드를 쓴다** [2026-08-28] ═══
+   두 벌로 갈라지면 한쪽만 고쳤을 때 조용히 어긋난다(도시 목록에 이미 적용한 원칙).
+   상태는 `{mode:'exact'|'range'|'none', sijin, hour, min}` 하나로 들고 다닌다.
+
+   [세 모드를 두는 이유] 진태양시 보정이 들어오면 두 시간짜리 칸으로는 경계가 어긋난다
+   (§5.6 문제 2). 그렇다고 전원에게 분을 요구하면 **모르는 사람이 아는 척하게 된다** —
+   §5.6 문제 3이 "모름을 정직한 선택지로 남긴다"고 못박은 자리다.
+
+   [sijin은 계속 채운다] 정확 입력이어도 sijin을 시에서 계산해 넣는다. 화면 표시·해설이
+   전부 sijin을 읽고 있어서, 안 채우면 그 코드를 전부 고쳐야 한다. 정밀값이 필요한
+   L2만 hour/min을 보면 된다. */
+function tState(pfx){return pfx==='ob'?obTime:fTime;}
+function renderTime(pfx){
+  const st=tState(pfx);
+  const modeEl=document.getElementById(pfx+'-tmode');
+  const exEl=document.getElementById(pfx+'-texact');
+  const gridEl=document.getElementById(pfx+'-sijin');
+  const noteEl=document.getElementById(pfx+'-tnote');
+  if(!modeEl)return;
+  modeEl.querySelectorAll('button').forEach(b=>{
+    b.classList.toggle('on',b.dataset.m===st.mode);
+    b.onclick=()=>{
+      st.mode=b.dataset.m;
+      if(st.mode==='none'){st.sijin=12;st.hour=null;st.min=null;}
+      else if(st.mode==='range'){st.hour=null;st.min=null;if(st.sijin===12)st.sijin=6;}
+      else if(st.mode==='exact'&&st.hour===null){st.hour=12;st.min=0;st.sijin=hourToSijin(12);}
+      renderTime(pfx);};});
+  exEl.classList.toggle('on',st.mode==='exact');
+  gridEl.style.display=st.mode==='range'?'grid':'none';
+  if(st.mode==='exact'){
+    const h=document.getElementById(pfx+'-hour'),m=document.getElementById(pfx+'-min');
+    h.value=st.hour===null?'':st.hour;
+    m.value=st.min===null?'':st.min;
+    const sync=()=>{
+      let hv=h.value===''?null:Math.max(0,Math.min(23,parseInt(h.value,10)||0));
+      let mv=m.value===''?null:Math.max(0,Math.min(59,parseInt(m.value,10)||0));
+      st.hour=hv;st.min=hv===null?null:(mv===null?0:mv);
+      st.sijin=hv===null?12:hourToSijin(hv);
+      const c=document.getElementById(pfx+'-tcalc');
+      if(c)c.textContent=hv===null?'':('→ '+SIJIN[st.sijin][0]+'시('+SIJIN[st.sijin][1].replace('-','–')+')');};
+    h.oninput=sync;m.oninput=sync;sync();
+  }
+  if(st.mode==='range'){
+    gridEl.innerHTML=SIJIN_ORDER.map(i=>{const sj=SIJIN[i];
+      return`<button type="button" class="sijin${i===st.sijin?' on':''}" data-i="${i}">${sj[1].replace('-','–')}시<small>${sj[0]}(${sj[2]})</small></button>`;}).join('');
+    gridEl.querySelectorAll('.sijin').forEach(b=>b.onclick=()=>{
+      st.sijin=+b.dataset.i;st.hour=null;st.min=null;renderTime(pfx);});
+  }
+  if(noteEl)noteEl.textContent=
+    st.mode==='exact'?'분까지 저장합니다 — 나중에 출생지별 시간 보정(서울 약 32분)에 쓰입니다.'
+    :st.mode==='range'?'두 시간 단위로 저장합니다. 정확히 아시면 "정확히 알아요"로 바꿔 주세요.'
+    :'시각 없이 저장합니다. 나중에 언제든 채우실 수 있습니다.';}
+/* 시 → 시진. 자시가 23시에 시작하므로 한 시간 밀어 2로 나눈다 */
+function hourToSijin(h){return Math.floor(((h+1)%24)/2);}
+/* birth의 시각 필드에서 화면 상태를 만든다(수정 모드에서 쓴다) */
+function timeFromBirth(b){
+  if(!b)return {mode:'none',sijin:12,hour:null,min:null};
+  if(Number.isInteger(b.hour))return {mode:'exact',sijin:hourToSijin(b.hour),hour:b.hour,min:Number.isInteger(b.min)?b.min:0};
+  if(Number.isInteger(b.sijin)&&b.sijin>=0&&b.sijin<12)return {mode:'range',sijin:b.sijin,hour:null,min:null};
+  return {mode:'none',sijin:12,hour:null,min:null};}
+/* 옛 호출부 호환 — 이름만 남기고 새 컨트롤러로 넘긴다 */
+function renderSijin(){renderTime('f');}
 /* [2026-08-28 제거] ~~updMoreSummary~~ — 접힘(#f-more) 헤더에 시각·도시 값을 요약해 주던
    함수다. **접힘을 없애 칸이 상시 보이므로 요약할 것이 없다.** 값이 화면에 그대로 있는데
    위에 또 적으면 같은 것이 두 곳에 뜬다. */
@@ -6314,13 +6438,14 @@ function resetPersonForm(node){
   fGroups.clear();
   if(node)groups.forEach(g=>{if(g.members.includes(node))fGroups.add(g.id);});
   if(node&&node.birth){selY.value=node.birth.y;selM.value=node.birth.m;refreshDays();selD.value=node.birth.d;
-    fSijin=node.birth.sijin;
+    fTime=timeFromBirth(node.birth);
     /* [2026-08-27] 목록에 없는 도시(직접 입력으로 저장된 것)면 그 항목을 고르고 칸을 채운다 */
     const cc0=document.getElementById('f-city-custom');
     if(CITY_LON[node.birth.city]!==undefined||node.birth.city===CITY_UNKNOWN){
       selCity.value=node.birth.city;if(cc0)cc0.value='';}
     else{selCity.value=CITY_CUSTOM;if(cc0)cc0.value=node.birth.city||'';}}
-  else{selY.value='1990';selM.value='1';refreshDays();selD.value='1';fSijin=12;
+  else{selY.value='1990';selM.value='1';refreshDays();selD.value='1';
+    fTime={mode:'none',sijin:12,hour:null,min:null};
     selCity.value='서울';
     const cc1=document.getElementById('f-city-custom');if(cc1)cc1.value='';}
   /* [2026-08-28] 성별 — **새 사람**은 `undefined`(아무것도 안 골린 상태)로 열고, 기존 인물은
@@ -6412,12 +6537,14 @@ const PT_JIJI={'자':0,'축':1,'인':2,'묘':3,'진':4,'사':5,'오':6,'미':7,'
 function ptHourToSijin(h){return Math.floor(((h+1)%24)/2);}
 function ptParseTime(raw){
   let t=ptNormNum(raw).trim();
-  if(!t||/^(모름|모릅니다|미상|없음|\?|-|—)$/.test(t))return {ok:true,sijin:12};
+  if(!t||/^(모름|모릅니다|미상|없음|\?|-|—)$/.test(t))return {ok:true,sijin:12,hour:null,min:null};
   const j=t.replace(/시$/,'');
-  if(PT_JIJI[j]!==undefined)return {ok:true,sijin:PT_JIJI[j]};
+  /* 지지 이름은 **시간대**를 고른 것이다 — 분을 알 수 없으므로 hour/min은 비운다 */
+  if(PT_JIJI[j]!==undefined)return {ok:true,sijin:PT_JIJI[j],hour:null,min:null};
   const pm=/오후|저녁|밤|[Pp][Mm]/.test(t), am=/오전|새벽|아침|[Aa][Mm]/.test(t);
   t=t.replace(/오전|오후|새벽|아침|저녁|밤|[APap][Mm]/g,'').trim();
   let h=null,min=0,mm;
+  /* "9시 8분" · "9:08" · "9시8분" — 시와 분 사이의 구분자를 : 또는 시로 본다 */
   if((mm=/^(\d{1,2})\s*[:시]\s*(\d{1,2})\s*분?$/.exec(t))){h=+mm[1];min=+mm[2];}
   else if((mm=/^(\d{1,2})\s*시$/.exec(t))){h=+mm[1];}
   else if(/^\d{4}$/.test(t)){h=+t.slice(0,2);min=+t.slice(2,4);}
@@ -6426,11 +6553,10 @@ function ptParseTime(raw){
   if(pm&&h<12)h+=12;
   if(am&&h===12)h=0;
   if(!(h>=0&&h<=23&&min>=0&&min<=59))return {ok:false,why:'시각 범위를 벗어났습니다'};
-  /* [분은 저장하지 않는다 — 2026-08-28 결정] birth에 min 칸을 만들려면 SAVE_VER을 올리고
-     변환을 넣어야 하는데, 분을 실제로 쓸지는 §5.6 문제 2(가/나/다)를 정해야 갈린다.
-     표에서만 받으면 시트로 넣은 사람과 데이터가 갈리므로 **미룬다.**
-     대신 버렸다는 것을 셀에 표시한다 — 조용히 버리면 "15:30을 넣었는데 왜 15시인가"가 된다. */
-  return {ok:true,sijin:ptHourToSijin(h),dropMin:min>0};}
+  /* [2026-08-28 개정] ~~분은 저장하지 않는다~~ → **저장한다.** §5.6 문제 2에서 (가) 분 단위
+     입력을 채택했고 한 명 화면도 시·분을 받으므로, 표만 버리면 두 경로의 데이터가 갈린다.
+     `hour`가 있으면 정확 입력, 없으면(지지 이름·"모름") 시간대나 모름이다. */
+  return {ok:true,sijin:ptHourToSijin(h),hour:h,min:min};}
 
 /* 도시 — **목록에 없어도 그대로 저장한다.** 경도만 빈다(지금 경도는 계산에 안 쓰인다).
    "춘천이 없다"는 지적이 있었고, 목록을 이유로 입력을 막는 것이 더 나쁘다. */
@@ -6522,7 +6648,7 @@ function ptValidate(m){
       +'년으로 펼쳤습니다 — 맞는지 확인해 주세요';}
   const t=ptParseTime(m.time);
   if(!t.ok)r.errs.time=t.why;
-  else{r.sijin=t.sijin; if(t.dropMin)r.warns.time='분은 저장하지 않습니다';}
+  else{r.sijin=t.sijin;r.hour=t.hour===undefined?null:t.hour;r.min=t.min===undefined?null:t.min;}
   const c=ptParseCity(m.city);
   r.city=c.city;r.lon=c.lon;
   if(!c.known)r.warns.city='도시 목록에 없어 경도 없이 저장됩니다';
@@ -6541,7 +6667,7 @@ function ptValidate(m){
   return r;}
 
 /* ── 화면 ── */
-const PT_BADGE={name:'중복',date:'추정',time:'분버림',city:'목록밖',grp:'새 그룹'};
+const PT_BADGE={name:'중복',date:'추정',city:'목록밖',grp:'새 그룹'};
 
 function ptRenderGroups(){
   const el=document.getElementById('pt-groups');
@@ -6833,7 +6959,7 @@ function resetBulkTable(){
      셋째는 넣은 값이 사라지는 자리라 밝혀야 한다. */
   if(note)note.innerHTML='<b>19900101</b> · <b>90.1.1</b> 처럼 적어도 됩니다'
     +' (두 자리 연도는 00~'+String(new Date().getFullYear()%100).padStart(2,'0')+'을 2000년대로)'
-    +' &nbsp;·&nbsp; 시각은 <b>3시</b> · <b>0300</b> · <b>15:30</b> — 분은 저장하지 않습니다';
+    +' &nbsp;·&nbsp; 시각은 <b>9시 8분</b> · <b>0908</b> · <b>09:08</b> · <b>3시</b> · <b>모름</b>';
   ptResetPasteHint();}
 
 /* 저장 — **재배치는 마지막에 한 번만.** 한 명씩 layoutGalaxy를 부르면 100명이면 100번 돈다. */
@@ -6929,7 +7055,7 @@ function ptSave(){
   usable.forEach(({v})=>{
     const n=addNode({name:v.name,stemIdx:dayStem(v.y,v.m,v.d),isMe:false,
       createdAt:t0,updatedAt:t0,
-      birth:{y:v.y,m:v.m,d:v.d,sijin:v.sijin,city:v.city,lon:v.lon,
+      birth:{y:v.y,m:v.m,d:v.d,sijin:v.sijin,hour:v.hour,min:v.min,city:v.city,lon:v.lon,
         sex:v.sex===undefined?null:v.sex}});
     /* [2026-08-28] ~~기존 인물 전원과 관계선~~ — 아래 layoutGalaxy가 부르는 rebuildEdges가
        **그룹에서** 다시 만든다. 전원 연결이 곧 "그룹과 무관한 선"의 출처였다. */
@@ -6982,7 +7108,8 @@ function ptSave(){
    필수다.
    [건너뛰기를 안 두는 이유] 나 없이는 은하가 성립하지 않는다. 대신 **왜 필요한지**를
    한 줄로 밝힌다 — 이유를 알면 생년월일을 넣는 부담이 준다(사용자 지시). */
-let obSijin=12, obSex;   // obSex: undefined = 아직 안 고름
+let obTime={mode:'none',sijin:12,hour:null,min:null};
+let obSex;   // obSex: undefined = 아직 안 고름
 const obY=document.getElementById('ob-y'),obM=document.getElementById('ob-m'),
       obD=document.getElementById('ob-d'),obCity=document.getElementById('ob-city');
 
@@ -6992,14 +7119,7 @@ function obRefreshDays(){
   let h='';for(let d=1;d<=dim_;d++)h+=`<option value="${d}">${d}일</option>`;
   obD.innerHTML=h;obD.value=Math.min(cur,dim_);}
 
-function obRenderSijin(){
-  const el=document.getElementById('ob-sijin');
-  el.innerHTML=SIJIN_ORDER.map(i=>{const t=SIJIN[i];
-    return`<button type="button" class="sijin${i===obSijin?' on':''}" data-i="${i}">${t[1].replace('-','–')}시<small>${t[0]}(${t[2]})</small></button>`;}).join('');
-  el.querySelectorAll('.sijin').forEach(b=>b.onclick=()=>{obSijin=+b.dataset.i;obRenderSijin();});
-  const un=document.getElementById('ob-sijin-unknown');
-  un.classList.toggle('on',obSijin===12);
-  un.onclick=()=>{obSijin=12;obRenderSijin();};}
+function obRenderSijin(){renderTime('ob');}   /* 한 명 화면과 같은 컨트롤러를 쓴다 */
 
 (function initOnboardFields(){
   let yh='';for(let y=2026;y>=1930;y--)yh+=`<option value="${y}">${y}년</option>`;
@@ -7039,7 +7159,8 @@ document.getElementById('ob-start').onclick=()=>{
   if(city===CITY_CUSTOM){
     const occ=document.getElementById('ob-city-custom');
     city=(occ&&occ.value.trim())||CITY_UNKNOWN;}
-  const birth={y:+obY.value,m:+obM.value,d:+obD.value,sijin:obSijin,
+  const birth={y:+obY.value,m:+obM.value,d:+obD.value,
+    sijin:obTime.sijin,hour:obTime.hour,min:obTime.min,
     city,lon:CITY_LON[city]!==undefined?CITY_LON[city]:null,
     sex:obSex===undefined?null:obSex};
   /* ★ 이 경로만이 "나"를 만든다. 이 화면의 정의가 "당신"이므로 묻지 않는다. */
@@ -7159,7 +7280,8 @@ function savePerson(){
      진태양시 보정이 이 값을 요구한다 — 그때 사람들의 출생지를 다시 물을 수는 없다.
      목록 밖 도시(직접 입력)와 "모름"은 경도가 null이고, L2는 그때 보정을 건너뛰면 된다. */
   const cityName=currentCity();
-  const birth={y:+selY.value,m:+selM.value,d:+selD.value,sijin:fSijin,
+  const birth={y:+selY.value,m:+selM.value,d:+selD.value,
+    sijin:fTime.sijin,hour:fTime.hour,min:fTime.min,
     city:cityName,lon:CITY_LON[cityName]!==undefined?CITY_LON[cityName]:null,
     sex:fSex===undefined?null:fSex};   /* [2026-08-28] null = 값 없음 — L2가 대운을 건너뛴다 */
   let n;
