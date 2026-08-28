@@ -258,6 +258,10 @@
   /* 일간 — 입력이 아니라 **계산 결과를 되비추는 칸**이다. 날짜를 잘못 읽었으면 여기서 드러난다 */
   .pt-stemcell{padding:9px 6px;font-size:var(--fs-sm);color:var(--gold);
     text-align:center;font-weight:600}
+  /* [2026-08-28] 빈 칸일 때 **계산 결과 칸이라는 걸 알린다** — 머리글 "일간"만으로는
+     입력칸인지 결과칸인지 구분이 안 된다(사용자 지시). 값이 들어오면 저절로 사라진다. */
+  .pt-stemcell:empty::before{content:'자동';color:var(--mut);opacity:.55;
+    font-weight:400;font-size:var(--fs-xs)}
   .pt-del{background:none;border:0;color:var(--mut);cursor:pointer;font-size:var(--fs-md);
     padding:0;width:100%;height:100%;font-family:inherit}
   .pt-del:hover{color:#ff9a86}
@@ -286,7 +290,13 @@
     border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);
     font-size:var(--fs-sm);cursor:pointer;font-family:inherit}
   .pt-confirm .btns .go{border-color:rgba(255,255,255,.32);font-weight:600}
-  .pt-note{font-size:var(--fs-xs);color:var(--mut);line-height:1.6;margin-top:9px}
+  /* 붙여넣기 — 눈에 띄게 따로 세운다(사용자 지시). 형식 안내와 같은 흐린 글씨에 묻혀 있었다 */
+  .pt-paste{margin-top:11px;padding:9px 11px;border-radius:7px;
+    border:1px dashed rgba(212,175,90,.42);background:rgba(212,175,90,.06);
+    font-size:var(--fs-sm);color:var(--ink);line-height:1.55}
+  .pt-paste b{color:var(--gold);font-weight:700}
+  .pt-paste.done{border-style:solid}
+  .pt-note{font-size:var(--fs-xs);color:var(--mut);line-height:1.6;margin-top:8px}
   .pt-summary{margin-top:10px;font-size:var(--fs-sm);color:var(--ink);line-height:1.6}
   .pt-summary .bad{color:#ff9a86;font-weight:600}
   .pt-summary .warn{color:var(--gold);font-weight:600}
@@ -817,6 +827,11 @@
   <datalist id="pt-citylist"></datalist>
 
   <div class="pt-sugg" id="pt-sugg" style="display:none"></div>
+  <!-- [2026-08-28] 안내를 둘로 갈랐다. 한 줄에 생년월일 형식·시각 형식·붙여넣기를 다 넣었더니
+       읽히지 않았다(사용자 지적). 형식은 흐린 한 줄로 줄이고 — 입력칸 흐린 글씨와 겹치는
+       예시는 뺐다 — 붙여넣기는 **따로 세운다.** 유용한데 문장 끝에 묻혀 있었다.
+       #pt-paste는 붙여넣기 뒤 결과 문구("5줄을 받았습니다")도 같은 자리에서 받는다. -->
+  <div class="pt-paste" id="pt-paste"></div>
   <div class="pt-note" id="pt-note"></div>
   <div class="pt-summary" id="pt-summary"></div>
   <div class="pt-confirm" id="pt-confirm" style="display:none"></div>
@@ -6499,8 +6514,20 @@ function ptOnPaste(e,row,key){
       m._dateGuessed=d.y;}});
   ptRenderAll();
   const note=document.getElementById('pt-note');
-  if(note)note.textContent=`붙여넣기: ${lines.length}줄을 받았습니다`
-    +(sep==='\t'?' (탭으로 칸을 나눴습니다)':' (쉼표로 칸을 나눴습니다)');}
+  const pv=document.getElementById('pt-paste');
+  if(pv){pv.classList.add('done');
+    pv.innerHTML='<b>'+lines.length+'줄</b>을 받아 줄마다 나눴습니다'
+      +(sep==='	'?' (탭 기준)':' (쉼표 기준)')
+      +' — 빨간 칸이 있으면 고친 뒤 저장하세요.';}}
+
+/* 붙여넣기 안내를 기본 문구로 되돌린다. 시트를 새로 열 때마다 부른다 —
+   지난번 "5줄을 받았습니다"가 남아 있으면 이번에 붙여넣은 것으로 오해한다. */
+function ptResetPasteHint(){
+  const pv=document.getElementById('pt-paste');
+  if(!pv)return;
+  pv.classList.remove('done');
+  pv.innerHTML='엑셀·구글시트에서 <b>여러 줄을 복사해 이 표에 붙여넣을 수 있습니다</b>'
+    +' — 줄이 그대로 나뉩니다.';}
 
 function openPersonTable(){
   ptModel=[ptBlank()];
@@ -6510,11 +6537,14 @@ function openPersonTable(){
   ptShowMode('table');
   ptRenderGroups();ptRenderLists();ptRenderAll();
   const note=document.getElementById('pt-note');
-  if(note)note.innerHTML='생년월일 — <b>1990-01-01</b> · <b>19900101</b> · <b>90.1.1</b>'
-    +' (두 자리 연도는 00~'+String(new Date().getFullYear()%100).padStart(2,'0')
-    +'을 2000년대로, 그 위를 1900년대로 봅니다) &nbsp;·&nbsp; '
-    +'시각 — <b>3</b> · <b>3시</b> · <b>0300</b> · <b>15:30</b> · <b>모름</b> (분은 저장하지 않습니다)'
-    +' &nbsp;·&nbsp; 엑셀에서 <b>여러 줄을 복사해 붙여넣을 수 있습니다</b>';
+  /* [문구 정리 2026-08-28] 입력칸 흐린 글씨에 이미 있는 예시(1990-01-01 · 모름)는 뺐다.
+     남긴 것은 **거기서 알 수 없는 것**뿐이다 — 다른 형식도 받는다는 사실, 두 자리 연도를
+     어떻게 펼치는지, 분을 버린다는 것. 앞의 둘은 추측이 개입하는 자리라 밝혀야 하고,
+     셋째는 넣은 값이 사라지는 자리라 밝혀야 한다. */
+  if(note)note.innerHTML='<b>19900101</b> · <b>90.1.1</b> 처럼 적어도 됩니다'
+    +' (두 자리 연도는 00~'+String(new Date().getFullYear()%100).padStart(2,'0')+'을 2000년대로)'
+    +' &nbsp;·&nbsp; 시각은 <b>3시</b> · <b>0300</b> · <b>15:30</b> — 분은 저장하지 않습니다';
+  ptResetPasteHint();
   setCreateTab('person',false);
   createsheet.classList.add('open');dim.classList.add('on');
   setTimeout(()=>{
