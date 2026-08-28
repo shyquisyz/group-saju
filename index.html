@@ -311,7 +311,17 @@
     border:1px solid rgba(212,175,90,.45);background:rgba(212,175,90,.09);
     font-size:var(--fs-sm);color:var(--ink);line-height:1.6}
   .pt-confirm b{color:var(--gold)}
-  .pt-confirm .btns{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap}
+  /* 새 그룹 유형 고르기 — 한 화면에서 전부 받는다(그룹마다 창을 띄우면 세 개일 때 세 번 막힌다) */
+  .ptg-row{margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.08)}
+  .ptg-name{font-size:var(--fs-sm);font-weight:700;color:var(--ink);margin-bottom:6px}
+  .ptg-name::before{content:'"';opacity:.6}
+  .ptg-name::after{content:'"';opacity:.6}
+  .ptg-types{display:flex;flex-wrap:wrap;gap:5px}
+  .ptg-t{padding:5px 10px;border-radius:12px;border:1px solid var(--line);
+    background:rgba(255,255,255,.05);color:var(--mut);font-size:var(--fs-xs);
+    cursor:pointer;font-family:inherit}
+  .ptg-t.on{background:var(--ink);color:#101018;border-color:var(--ink);font-weight:700}
+  .pt-confirm .btns{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
   .pt-confirm .btns button{flex:1;min-width:130px;padding:9px 8px;border-radius:6px;
     border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);
     font-size:var(--fs-sm);cursor:pointer;font-family:inherit}
@@ -6812,7 +6822,7 @@ function openBulkSheet(){
 function resetBulkTable(){
   tabReady.bulk=true;
   ptModel=[ptBlank()];
-  ptGrpConfirmed=false;
+  ptGrpConfirmed=false;ptNewTypes=null;
   const cb=document.getElementById('pt-confirm');if(cb)cb.style.display='none';
   ptSuggClose();
   ptRenderGroups();ptRenderLists();ptRenderAll();ptRenderFormat();
@@ -6828,6 +6838,9 @@ function resetBulkTable(){
 
 /* 저장 — **재배치는 마지막에 한 번만.** 한 명씩 layoutGalaxy를 부르면 100명이면 100번 돈다. */
 let ptGrpConfirmed=false;
+/* 확인 화면에서 고른 "새 그룹 이름 → 유형". 시트를 새로 열 때 비운다 — 지난번 선택이
+   남아 있으면 이번에 안 고른 그룹이 엉뚱한 유형으로 만들어진다. */
+let ptNewTypes=null;
 function ptSave(){
   const body=document.getElementById('pt-body');
   const rows=[...body.children];
@@ -6854,20 +6867,35 @@ function ptSave(){
     const who=usable.filter(x=>(x.v.unknownGroups||[]).length);
     /* [2026-08-28] 조사를 하드코딩하지 않는다 — 받침에 따라 이라는/라는이 갈린다.
        particle()은 pair[0]/pair[1]을 돌려주므로 배열도 그대로 받는다. */
-    const last=miss[miss.length-1];
-    cbox.innerHTML=miss.map(x=>'<b>"'+bkEsc(x)+'"</b>').join(', ')
-      +(miss.length>1?' 그룹들을':' 그룹을')+' <b>새로 만듭니다.</b>'
-      +'<br>'+who.map(x=>bkEsc(x.v.name)).join(', ')
-      +(who.length>1?' 님들이':' 님이')+' 그 그룹에 들어갑니다.'
+    /* [★ 유형을 여기서 묻는다, 2026-08-28] ~~전부 '기타'로 만들고 나중에 고치게~~ 했는데,
+       **나중에 고치는 사람은 거의 없다.** 유형은 GTYPE_CLOSER의 21문장 중 어느 줄을 쓸지를
+       정하므로(§5.7 2단계) '기타'로 굳으면 그 그룹의 해설이 계속 일반론에 머문다.
+       저장 직전 한 화면에서 **새로 만들 그룹 전부의 유형을 한꺼번에** 받는다 —
+       그룹마다 창을 띄우면 세 개일 때 세 번 막힌다.
+       기본값은 '기타'를 켜 둔다. 성별(§5.6 문제 4)과 달리 **유형은 비울 수 없어서**다 —
+       그룹은 반드시 유형을 하나 갖는다. 대신 화면에 펼쳐 두었으므로 조용히 굳지는 않는다. */
+    if(!ptNewTypes)ptNewTypes={};
+    miss.forEach(nm=>{if(!ptNewTypes[nm])ptNewTypes[nm]='기타';});
+    cbox.innerHTML='<b>새로 만들 그룹 '+miss.length+'개</b>의 유형을 골라 주세요.'
       +'<br><span style="color:var(--mut);font-size:var(--fs-xs)">'
-      /* 오타를 알아챌 자리다 — "만들어집니다"만 적으면 이름이 맞는지 다시 안 본다.
-         쓰려던 이름이 이미 있으면 자동완성 후보에서 고르면 된다는 것까지 밝힌다. */
+      +who.map(x=>bkEsc(x.v.name)).join(', ')
+      +(who.length>1?' 님들이':' 님이')+' 그 그룹에 들어갑니다. '
+      /* 오타를 알아챌 자리다 — 이름이 맞는지 다시 볼 마지막 기회다 */
       +'쓰시려던 그룹이 이미 있다면 <b>돌아가서</b> 칸을 눌러 후보에서 골라 주세요. '
-      +'유형은 <b>기타</b>로 만들어지고(나중에 그룹 수정에서 고칩니다), '
       +'<b>나</b>도 함께 들어갑니다 — 내가 없는 그룹은 만들 수 없습니다.</span>'
+      +miss.map(nm=>'<div class="ptg-row"><div class="ptg-name">'+bkEsc(nm)+'</div>'
+        +'<div class="ptg-types" data-nm="'+bkEsc(nm)+'">'
+        +GTYPES.map(ty=>'<button type="button" class="ptg-t'
+          +(ptNewTypes[nm]===ty?' on':'')+'" data-t="'+ty+'">'+ty+'</button>').join('')
+        +'</div></div>').join('')
       +'<div class="btns"><button type="button" class="fix">돌아가서 고칩니다</button>'
       +'<button type="button" class="go">만들고 등록합니다</button></div>';
     cbox.style.display='block';
+    cbox.querySelectorAll('.ptg-types').forEach(box=>{
+      const nm=box.dataset.nm;
+      box.querySelectorAll('.ptg-t').forEach(b=>b.onclick=()=>{
+        ptNewTypes[nm]=b.dataset.t;
+        box.querySelectorAll('.ptg-t').forEach(x=>x.classList.toggle('on',x===b));});});
     cbox.querySelector('.go').onclick=()=>{ptGrpConfirmed=true;cbox.style.display='none';ptSave();};
     cbox.querySelector('.fix').onclick=()=>{
       cbox.style.display='none';
@@ -6878,7 +6906,7 @@ function ptSave(){
   const t0=nowISO();
 
   /* [★ 새 그룹 생성, 2026-08-28] 표에 있는 없는 이름으로 그룹을 만든다.
-     - 유형은 **기타** — 표는 유형 칸이 없다. 저장 뒤 안내에서 고치도록 유도한다.
+     - 유형은 **확인 화면에서 고른 값**(ptNewTypes). 못 고른 경우에만 '기타'로 떨어진다.
      - **나를 넣고 시작한다**(§7.2: 내가 없는 그룹은 성립하지 않는다).
      - 상위 그룹 없음(최상위).
      [★ 같은 이름이 여러 줄에 있어도 하나만 만든다] `byName`으로 잠근다. 이름별로 한 번만
@@ -6894,7 +6922,7 @@ function ptSave(){
     /* 확인 창을 띄운 뒤 사용자가 다른 탭에서 같은 이름을 만들었을 수도 있다 — 한 번 더 본다 */
     const exist=groups.find(g=>g.name===nm);
     if(exist){newByName.set(nm,exist);return;}
-    const g=createGroup(nm,'기타',meG?[meG]:[],null);
+    const g=createGroup(nm,(ptNewTypes&&ptNewTypes[nm])||'기타',meG?[meG]:[],null);
     newByName.set(nm,g);newGroups.push(g);}));
 
   const made=[];
@@ -6916,21 +6944,15 @@ function ptSave(){
     made.push(n);});
   layoutGalaxy();rebuildRings();renderNav();   /* ★ 사람 배정 뒤 여기 한 번뿐이다 */
 
-  /* [★ 유형 안내, 2026-08-28] 새로 만든 그룹은 유형이 **기타**다. 유형에 따라 해석 문구가
-     달라지므로 고쳐 두는 편이 낫다 — 그런데 그 사실을 알릴 자리가 마땅치 않다.
-     [택하지 않은 안] 그룹 목록에 상시 표시. 두 가지가 걸린다 — (1) '기타'는 사람이 일부러
-     고르는 정당한 유형이라(GTYPES에 있다) 전부 "고쳐야 할 것"으로 보이면 틀린 표시가 된다.
-     (2) "표에서 만들어졌다"를 구별하려면 그룹에 새 필드가 필요하고, 그러면 SAVE_VER을 올리고
-     MIGRATIONS를 더해야 한다(CLAUDE.md 저장 규칙) — 안내 한 줄에 치르기엔 비싸다.
-     [택한 것] **저장 직후 한 번**, 고치러 가는 버튼과 함께. 행동할 수 있는 순간이 그때다. */
-  const gnames=newGroups.map(g=>'<b>'+bkEsc(g.name)+'</b>').join(', ');
+  /* [★ 유형 안내, 2026-08-28 개정] ~~새 그룹은 유형이 기타라 고치러 가는 버튼을 붙였다~~
+     → **유형은 이제 저장 직전 확인 화면에서 받는다**(ptNewTypes). 고칠 것이 없으므로
+     버튼을 뺐다. 대신 **무엇을 어떤 유형으로 만들었는지** 되읽어 준다 —
+     방금 고른 값이라도 화면에 남겨야 잘못 고른 것을 그 자리에서 알아챈다. */
+  const gnames=newGroups.map(g=>'<b>'+bkEsc(g.name)+'</b>('+g.type+')').join(', ');
   const gTail=newGroups.length
-    ? ` ${gnames} 그룹을 새로 만들었습니다 — 유형이 <b>기타</b>입니다.`
+    ? ` ${gnames} 그룹을 새로 만들었습니다.`
     : '';
-  const gActs=newGroups.length
-    ? [[newGroups.length>1?`"${newGroups[0].name}" 유형 고치기`:'유형 고치기',
-        ()=>openGrpSheet(null,newGroups[0])]]
-    : null;
+  const gActs=null;
 
   /* 오류 줄은 **남긴다** — 한 글자 때문에 열 줄을 다시 붙여넣게 하지 않는다 */
   if(bad.length){
