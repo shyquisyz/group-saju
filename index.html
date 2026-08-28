@@ -643,6 +643,13 @@
   <div class="field"><label>태어난 날 (양력)</label>
     <div class="row3"><select id="ob-y"></select><select id="ob-m"></select><select id="ob-d"></select></div></div>
 
+  <!-- [★ 자리 이동, 2026-08-28] 인물 시트와 같은 자리(생년월일 바로 뒤)로 맞췄다.
+       전에는 시각 12칸 격자와 도시 뒤 맨 끝이라, 카드가 화면보다 길어 **스크롤해야 보였다.**
+       필수 항목을 큰 덩어리 뒤에 두면 묻힌다. -->
+  <div class="field"><label>성별</label>
+    <div class="sexrow" id="ob-sex"></div>
+    <div class="fieldwhy">운의 흐름 방향(대운)을 계산하는 데 쓰입니다. 지금은 저장만 하고, 만세력 엔진이 붙으면 사용합니다.</div></div>
+
   <div class="field"><label>태어난 시각</label>
     <div class="sijingrid" id="ob-sijin"></div>
     <button type="button" class="sijin unknown" id="ob-sijin-unknown">시간 모름</button></div>
@@ -650,10 +657,6 @@
   <div class="field"><label>태어난 도시</label><select id="ob-city"></select>
     <input id="ob-city-custom" type="text" placeholder="도시 이름 (예: 도쿄, 로스앤젤레스)"
       maxlength="24" style="display:none;margin-top:7px"></div>
-
-  <div class="field"><label>성별</label>
-    <div class="sexrow" id="ob-sex"></div>
-    <div class="fieldwhy">운의 흐름 방향(대운)을 계산하는 데 쓰입니다. 지금은 저장만 하고, 만세력 엔진이 붙으면 사용합니다.</div></div>
 
   <!-- [2026-08-28] 저장 위치 안내. **"다른 기기에서는 안 보인다"를 여기서 못 박는다** —
        이걸 모르면 폰에서 열었다가 데이터가 없어진 줄 알고 놀란다(사용자 지시). -->
@@ -692,6 +695,17 @@
       <select id="f-y"></select><select id="f-m"></select><select id="f-d"></select>
     </div>
   </div>
+  <!-- [★ 자리 이동, 2026-08-28] 성별을 **접힘 밖 · 생년월일 바로 뒤**로 옮겼다.
+       두 가지가 틀려 있었다(사용자 지적):
+       (1) 접힘 이름이 "태어난 시각 · 도시"인데 성별이 그 안에 있었다 — **그 자리가 아니다.**
+       (2) 접힌 채로는 안 보인다. 성별은 L2 대운이 요구하는 항목이라 **못 보고 지나가면 안 된다.**
+           접힌 헤더 요약(updMoreSummary)에 "성별 미입력"을 찍어 가리려 했으나, 그건
+           **칸이 안 보인다는 사실 자체를 못 고친다.** 요약을 늘리는 대신 칸을 꺼냈다.
+       온보딩(#ob-sex)도 같은 자리로 맞췄다 — 두 화면의 필드 순서가 어긋나면 같은 앱으로
+       안 읽힌다. -->
+  <div class="field"><label>성별</label>
+    <div class="sexrow" id="f-sex"></div>
+    <div class="fieldwhy">운의 흐름 방향(대운) 계산에 쓰입니다. 비워 둬도 저장됩니다.</div></div>
   <!-- [E, 2026-08-26] 시각·도시를 접는다. 근거가 코드에 있다 — `dayStem(y,m,d)`는 **날짜만**
        쓴다. birth.sijin/birth.city의 유일한 사용처는 인물 패널의 표시 한 줄이고, 아래 각주가
        이미 "정밀 엔진 연결 시 사용"이라고 밝히고 있다. 즉 **지금 계산에 안 쓰이는 필드가
@@ -706,11 +720,6 @@
         <!-- [2026-08-27] 해외 출생자 등 목록에 없는 곳. 선택했을 때만 나타난다 -->
         <input id="f-city-custom" type="text" placeholder="도시 이름 (예: 도쿄, 로스앤젤레스)"
           maxlength="24" style="display:none;margin-top:7px"></div>
-      <!-- [2026-08-28] 성별 — 대운 방향이 성별과 연간 음양으로 정해져 만세력(L2)이 요구한다.
-           지금 안 받으면 그때 전원에게 다시 물어야 하는데 사실상 불가능하다(경도와 같은 논리). -->
-      <div class="field"><label>성별</label>
-        <div class="sexrow" id="f-sex"></div>
-        <div class="fieldwhy">운의 흐름 방향(대운) 계산에 쓰입니다. 비워 둬도 저장됩니다.</div></div>
       <!-- [2026-08-28] 첫 화면과 **다른 말**을 쓴다. 거기서는 "내 정보가 어디 가나"가,
            여기서는 "남의 생년월일을 넣고 있다"가 맥락이다(사용자 지시: 맥락에 맞게 다르게). -->
       <div class="sheetnote">일간은 실계산됩니다 · 시·도시는 정밀 엔진(진태양시 보정) 연결 시 사용 · 음력 변환은 엔진 연결 후 지원
@@ -5827,8 +5836,9 @@ function updMoreSummary(){
   const el=document.getElementById('f-moresum');
   if(!el)return;
   const s=SIJIN[fSijin];
-  el.textContent=`${s&&s[1]?s[1].replace('-','–')+'시':'시간 모름'} · ${currentCity()}`
-    +` · ${fSex===undefined?'성별 미입력':fSex===null?'성별 안 밝힘':fSex}`;}
+  /* [2026-08-28] 성별을 요약에서 뺐다 — 칸이 접힘 밖으로 나가 화면에 상시 보이므로,
+     여기 또 찍으면 같은 값이 두 곳에 뜬다. 이 요약은 **접혀서 안 보이는 것**만 알린다. */
+  el.textContent=`${s&&s[1]?s[1].replace('-','–')+'시':'시간 모름'} · ${currentCity()}`;}
 function updGrpMoreSummary(){
   const el=document.getElementById('g-moresum'),ps=document.getElementById('g-parent');
   if(!el||!ps)return;
