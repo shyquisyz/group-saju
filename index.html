@@ -194,7 +194,29 @@
      그대로 옮겼다 — 기존 핸들러가 전부 id로 잡고 있어 건드리면 회귀 위험이 크다.
      탭은 **생성 모드에서만** 보인다. 수정 모드(사람 수정·그룹 수정)에서는 탭을 감추고 제목만
      남긴다 — 무언가를 고치는 중에 다른 탭으로 넘어가면 입력이 그대로 날아간다. */
-  /* .tabs — [2026-08-28] 탭 줄을 없애 쓰는 곳이 사라졌다. 규칙은 지웠다 */
+  /* [2026-08-28 되살림] 탭 줄. 3개가 되어 390px에서도 한 줄에 들어가야 하므로
+     flex 균등 분할 + 글자를 줄인다(넷이 되면 그때는 가로 스크롤로 바꿀 것). */
+  .tabs{display:flex;gap:4px;margin:-4px 0 16px;padding:4px;border-radius:10px;
+    background:rgba(255,255,255,.05);border:1px solid var(--line)}
+  .tabs .tab{flex:1 1 0;min-width:0;padding:9px 4px;border:0;border-radius:7px;
+    background:transparent;color:var(--mut);font-family:inherit;font-size:var(--fs-sm);
+    font-weight:600;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tabs .tab:hover{color:var(--ink)}
+  .tabs .tab.on{background:rgba(255,255,255,.12);color:var(--ink)}
+  .tabs[hidden]{display:none}
+  /* 선택 항목 배지 — **필수가 아니라는 것만 알린다.** 배지가 없으면 필수다.
+     빈칸을 부담으로 느끼면 안 되지만, 아예 안 보이면 나중에 다시 물어야 한다(2026-08-28 방침) */
+  /* 표 양식 안내 — 열 순서와 예시 한 줄. 표 머리글과 세로로 이어져 읽히게 같은 여백을 쓴다 */
+  .pt-format{margin:0 0 8px;padding:9px 11px;border-radius:8px;
+    background:rgba(255,255,255,.04);border:1px solid var(--line);
+    font-size:var(--fs-xs);color:var(--mut);line-height:1.75;overflow-x:auto}
+  .pt-format b{color:var(--ink);font-weight:600}
+  .pt-format .k{display:inline-block;min-width:52px;color:var(--mut)}
+  .pt-format code{font-family:'Space Mono',monospace;color:var(--ink);
+    background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px;white-space:nowrap}
+  .opt{font-family:inherit;font-size:var(--fs-xs);letter-spacing:0;color:var(--mut);
+    font-weight:400;margin-left:5px;padding:1px 6px;border-radius:20px;
+    background:rgba(255,255,255,.07)}
   .sijingrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
   /* [2026-08-24] 주/보조를 뒤집었다 — 사용자는 "몇 시에 태어났는지"로 기억하지 자시·축시로
      기억하지 않는다. 시간 표기가 주(13px/600), 지지가 보조(9.5px/--mut). 구 값은 지지 12.5px에
@@ -796,55 +818,19 @@
      무엇보다 **탭을 오가면 입력이 날아갔다** — openBulkSheet/openGrpSheet가 상태를
      초기화하기 때문이다(실측: 표에 "유지검사" 입력 → 그룹 탭 → 사람 탭 → 사라짐).
      즉 "닫지 않고 오간다"는 이점이 실제로는 없었다. 코드 주석은 반대로 적혀 있었다. -->
-<div id="tab-person">
-
-<!-- ═══ 표 모드 — 사람 **추가**는 전부 여기로 [2026-08-28] ═══
-     [왜 표가 기본인가] 여러 명을 넣는 게 더 흔한 상황이다(사용자 판단). 한 명만 넣을 때는
-     **한 줄만 채우고 저장**하면 되므로 한 명 흐름이 손해 보지 않는다.
-     줄이 하나뿐일 때 어색하지 않게 — **빈 줄을 미리 깔지 않고**, 마지막 줄에 글자가 들어가면
-     그때 다음 줄이 자동으로 생긴다(스프레드시트와 같은 감각). 처음엔 한 줄뿐이다.
-
-     [전부 텍스트로 받는다] 앞서 표를 기각한 근거가 "12지시 버튼과 도시 셀렉트를 셀에 넣을 수
-     없다"였는데 **그 전제가 틀렸다**(사용자 지적). 위젯을 셀 안에 재현할 이유가 없었다 —
-     텍스트로 받아 해석하면 된다. 성별만 버튼이다(남/여 토글).
-
-     [기존 한 명 폼(#ps-mode)은 수정 전용이 됐다] 사람을 클릭해 고치는 경로다. -->
-<div id="pt-mode">
-  <h3 class="pt-h3">여러 명 추가</h3>
-
-  <!-- [그룹 열의 짝] 표에서는 그룹 **유형**(가족·부부·…)을 받을 수 없어 새 그룹을 만들 수
-       없다. 그래서 없는 이름은 오류로 막고, 대신 **쓸 수 있는 이름을 여기 펼쳐 둔다**
-       (사용자 지시). 아래 그룹 칸의 자동완성 목록도 이것과 같은 출처다. -->
-  <div class="pt-groups" id="pt-groups"></div>
-
-  <div class="pt-wrap">
-    <div class="pt-head">
-      <div>이름</div><div>그룹</div><div>생년월일</div>
-      <div>성별</div><div>시각</div><div>도시</div><div class="pt-stem">일간</div><div></div>
-    </div>
-    <div id="pt-body"></div>
-  </div>
-
-  <!-- 도시 자동완성 — 목록에 **없어도 그대로 저장**한다(경도만 빈다).
-       "춘천이 없다"는 지적이 있었고, 지금 경도는 어떤 계산에도 안 쓰인다. -->
-  <!-- 도시만 native datalist를 쓴다 — 쉼표를 안 쓰고 목록 밖도 그대로 저장되므로 충분하다.
-       그룹은 #pt-sugg(직접 만든 후보)로 간다. -->
-  <datalist id="pt-citylist"></datalist>
-
-  <div class="pt-sugg" id="pt-sugg" style="display:none"></div>
-  <!-- [2026-08-28] 안내를 둘로 갈랐다. 한 줄에 생년월일 형식·시각 형식·붙여넣기를 다 넣었더니
-       읽히지 않았다(사용자 지적). 형식은 흐린 한 줄로 줄이고 — 입력칸 흐린 글씨와 겹치는
-       예시는 뺐다 — 붙여넣기는 **따로 세운다.** 유용한데 문장 끝에 묻혀 있었다.
-       #pt-paste는 붙여넣기 뒤 결과 문구("5줄을 받았습니다")도 같은 자리에서 받는다. -->
-  <div class="pt-paste" id="pt-paste"></div>
-  <div class="pt-note" id="pt-note"></div>
-  <div class="pt-summary" id="pt-summary"></div>
-  <div class="pt-confirm" id="pt-confirm" style="display:none"></div>
-  <button class="primary" id="pt-save">저장</button>
-  <div class="sheetnote">일간은 실계산됩니다 · 시·도시는 정밀 엔진(진태양시 보정) 연결 시 사용
-    <br>· 이분들의 생년월일도 <b style="color:var(--ink)">이 브라우저 안에만</b> 남습니다 — 어디로도 전송되지 않습니다</div>
+<!-- ═══ 탭 줄 [2026-08-28 되살림] ═══
+     [왜 다시 넣나] 하루 전 `e17ccb1`이 탭을 없앴다. 이유는 "탭을 오가면 입력이 날아갔다"였는데,
+     그건 탭의 문제가 아니라 **openAddSheet/openBulkSheet/openGrpSheet가 "표시"와 "초기화"를
+     한 몸으로 하고 있었기 때문**이다. 셋을 reset·show 짝으로 가르고 탭 줄은 show만 부른다 —
+     그러면 DOM 값도 전역 상태(ptModel·pickedMembers·fGroups…)도 그대로 남는다.
+     [수정 모드에서는 감춘다] 사람/그룹을 고치는 중에 탭으로 새 것을 만들면 editTarget·
+     editGroup이 엉킨다. setCreateTab의 둘째 인자가 그 뜻으로 이미 있었다. -->
+<div class="tabs" id="createtabs" role="tablist">
+  <button type="button" class="tab" data-tab="person" role="tab">사람 추가</button>
+  <button type="button" class="tab" data-tab="bulk" role="tab">여러 명 추가</button>
+  <button type="button" class="tab" data-tab="group" role="tab">그룹 만들기</button>
 </div>
-
+<div id="tab-person">
 <div id="ps-mode">
   <h3 id="as-title">사람 추가</h3>
   <div class="field"><label>이름</label><input id="f-name" type="text" placeholder="예: 어머니, 김OO"></div>
@@ -873,26 +859,28 @@
   <div class="field"><label>성별</label>
     <div class="sexrow" id="f-sex"></div>
     <div class="fieldwhy">운의 흐름 방향(대운) 계산에 쓰입니다. 비워 둬도 저장됩니다.</div></div>
-  <!-- [E, 2026-08-26] 시각·도시를 접는다. 근거가 코드에 있다 — `dayStem(y,m,d)`는 **날짜만**
-       쓴다. birth.sijin/birth.city의 유일한 사용처는 인물 패널의 표시 한 줄이고, 아래 각주가
-       이미 "정밀 엔진 연결 시 사용"이라고 밝히고 있다. 즉 **지금 계산에 안 쓰이는 필드가
-       시트의 42.5%(329/775px)를 차지**하고 있었다. 각주도 이 안으로 옮긴다 — 시각·도시를
-       설명하는 문구라 그 옆이 제자리다. -->
-  <details class="more" id="f-more">
-    <summary>태어난 시각 · 도시<span class="dsum" id="f-moresum"></span></summary>
-    <div class="morebody">
-      <div class="field"><div class="sijingrid" id="f-sijin"></div>
-        <button type="button" class="sijin unknown" id="f-sijin-unknown">시간 모름</button></div>
-      <div class="field"><label>태어난 도시</label><select id="f-city"></select>
-        <!-- [2026-08-27] 해외 출생자 등 목록에 없는 곳. 선택했을 때만 나타난다 -->
-        <input id="f-city-custom" type="text" placeholder="도시 이름 (예: 도쿄, 로스앤젤레스)"
-          maxlength="24" style="display:none;margin-top:7px"></div>
-      <!-- [2026-08-28] 첫 화면과 **다른 말**을 쓴다. 거기서는 "내 정보가 어디 가나"가,
-           여기서는 "남의 생년월일을 넣고 있다"가 맥락이다(사용자 지시: 맥락에 맞게 다르게). -->
-      <div class="sheetnote">일간은 실계산됩니다 · 시·도시는 정밀 엔진(진태양시 보정) 연결 시 사용 · 음력 변환은 엔진 연결 후 지원
-        <br>· 이분의 생년월일도 <b style="color:var(--ink)">이 브라우저 안에만</b> 남습니다 — 어디로도 전송되지 않습니다</div>
-    </div>
-  </details>
+  <!-- [★ 접힘 제거, 2026-08-28] 시각·도시를 **펼친 채로 상시 노출**한다.
+       [왜 접었었나] 2026-08-26에는 `dayStem(y,m,d)`가 날짜만 쓴다는 이유로 접었다 —
+       "지금 계산에 안 쓰이는 필드가 시트의 42.5%(329/775px)를 차지"한다는 근거였다.
+       [왜 다시 펴나] 그 근거가 **지금 쓰이느냐**만 봤다. 만세력 엔진이 붙으면 성별·출생시각·
+       출생지가 전부 필요해지는데, 그때 이미 등록된 사람들의 빈칸을 뒤늦게 채우려면
+       **등록한 사람 수만큼 다시 물어봐야 한다.** 남의 생년월일은 한 번 묻기도 어렵고
+       두 번은 더 어렵다 — 대부분 안 채운다(사용자 판단). 그러니 **받을 수 있을 때 받는다.**
+       [추가는 이미 펴져 있었다] `openAddSheet`가 `fm2.open=!node`로 추가일 때만 펴 뒀다.
+       그래서 실제로 바뀌는 것은 **수정 모드**다 — 기존 인물의 빈 시각·도시가 이제 보인다.
+       그 자리가 바로 빈칸을 채우게 될 화면이라 접혀 있으면 안 된다.
+       필수는 여전히 이름·생년월일뿐이고, 나머지는 비워도 저장된다. -->
+  <div class="field"><label>태어난 시각 <span class="opt">선택</span></label>
+    <div class="sijingrid" id="f-sijin"></div>
+    <button type="button" class="sijin unknown" id="f-sijin-unknown">시간 모름</button></div>
+  <div class="field"><label>태어난 도시 <span class="opt">선택</span></label><select id="f-city"></select>
+    <!-- [2026-08-27] 해외 출생자 등 목록에 없는 곳. 선택했을 때만 나타난다 -->
+    <input id="f-city-custom" type="text" placeholder="도시 이름 (예: 도쿄, 로스앤젤레스)"
+      maxlength="24" style="display:none;margin-top:7px"></div>
+  <!-- [2026-08-28] 첫 화면과 **다른 말**을 쓴다. 거기서는 "내 정보가 어디 가나"가,
+       여기서는 "남의 생년월일을 넣고 있다"가 맥락이다(사용자 지시: 맥락에 맞게 다르게). -->
+  <div class="sheetnote">일간은 실계산됩니다 · 시·도시는 정밀 엔진(진태양시 보정) 연결 시 사용 · 음력 변환은 엔진 연결 후 지원
+    <br>· 이분의 생년월일도 <b style="color:var(--ink)">이 브라우저 안에만</b> 남습니다 — 어디로도 전송되지 않습니다</div>
   <!-- [2026-08-28] "저장하고 계속"을 뺐다 — **표가 그 일을 대신한다.**
        이 폼은 이제 수정 전용이라(추가는 전부 #pt-mode로 간다) 연속으로 고칠 대상이 없다. -->
   <div class="savedwith" id="as-added" style="display:none"></div>
@@ -901,6 +889,62 @@
   <div class="guardnote" id="del-guard" style="display:none"><b>나</b>는 삭제할 수 없습니다 —
     내가 은하의 유일한 항성이라, 사라지면 모든 항성계의 중심이 빕니다.
     <b>이름·생년월일은 위에서 수정할 수 있습니다.</b></div>
+</div>
+</div>
+<div id="tab-bulk" hidden>
+
+<!-- ═══ 표 모드 — 사람 **추가**는 전부 여기로 [2026-08-28] ═══
+     [왜 표가 기본인가] 여러 명을 넣는 게 더 흔한 상황이다(사용자 판단). 한 명만 넣을 때는
+     **한 줄만 채우고 저장**하면 되므로 한 명 흐름이 손해 보지 않는다.
+     줄이 하나뿐일 때 어색하지 않게 — **빈 줄을 미리 깔지 않고**, 마지막 줄에 글자가 들어가면
+     그때 다음 줄이 자동으로 생긴다(스프레드시트와 같은 감각). 처음엔 한 줄뿐이다.
+
+     [전부 텍스트로 받는다] 앞서 표를 기각한 근거가 "12지시 버튼과 도시 셀렉트를 셀에 넣을 수
+     없다"였는데 **그 전제가 틀렸다**(사용자 지적). 위젯을 셀 안에 재현할 이유가 없었다 —
+     텍스트로 받아 해석하면 된다. 성별만 버튼이다(남/여 토글).
+
+     [기존 한 명 폼(#ps-mode)은 수정 전용이 됐다] 사람을 클릭해 고치는 경로다. -->
+<div id="pt-mode">
+  <h3 class="pt-h3">여러 명 추가</h3>
+
+  <!-- [그룹 열의 짝] 표에서는 그룹 **유형**(가족·부부·…)을 받을 수 없어 새 그룹을 만들 수
+       없다. 그래서 없는 이름은 오류로 막고, 대신 **쓸 수 있는 이름을 여기 펼쳐 둔다**
+       (사용자 지시). 아래 그룹 칸의 자동완성 목록도 이것과 같은 출처다. -->
+  <div class="pt-groups" id="pt-groups"></div>
+
+  <!-- [★ 양식 안내, 2026-08-28] **표 위**에 둔다(사용자 지시). 전에는 "복사해 붙여넣을 수
+       있습니다"만 있어서 **어떤 순서로 적어야 하는지 알 수 없었다.** 붙여넣기 문구(#pt-paste)와
+       한 자리를 쓰지 않는 이유: 그 자리는 붙여넣은 뒤 "5줄을 받았습니다"가 덮어쓴다 —
+       양식이 필요한 순간은 붙여넣기 **전후 모두**라 덮이면 안 된다.
+       열 순서는 PT_COLS와 같은 출처를 봐야 어긋나지 않으므로 ptRenderFormat()이 채운다. -->
+  <div class="pt-format" id="pt-format"></div>
+
+  <div class="pt-wrap">
+    <div class="pt-head">
+      <div>이름</div><div>그룹</div><div>생년월일</div>
+      <div>성별</div><div>시각</div><div>도시</div><div class="pt-stem">일간</div><div></div>
+    </div>
+    <div id="pt-body"></div>
+  </div>
+
+  <!-- 도시 자동완성 — 목록에 **없어도 그대로 저장**한다(경도만 빈다).
+       "춘천이 없다"는 지적이 있었고, 지금 경도는 어떤 계산에도 안 쓰인다. -->
+  <!-- 도시만 native datalist를 쓴다 — 쉼표를 안 쓰고 목록 밖도 그대로 저장되므로 충분하다.
+       그룹은 #pt-sugg(직접 만든 후보)로 간다. -->
+  <datalist id="pt-citylist"></datalist>
+
+  <div class="pt-sugg" id="pt-sugg" style="display:none"></div>
+  <!-- [2026-08-28] 안내를 둘로 갈랐다. 한 줄에 생년월일 형식·시각 형식·붙여넣기를 다 넣었더니
+       읽히지 않았다(사용자 지적). 형식은 흐린 한 줄로 줄이고 — 입력칸 흐린 글씨와 겹치는
+       예시는 뺐다 — 붙여넣기는 **따로 세운다.** 유용한데 문장 끝에 묻혀 있었다.
+       #pt-paste는 붙여넣기 뒤 결과 문구("5줄을 받았습니다")도 같은 자리에서 받는다. -->
+  <div class="pt-paste" id="pt-paste"></div>
+  <div class="pt-note" id="pt-note"></div>
+  <div class="pt-summary" id="pt-summary"></div>
+  <div class="pt-confirm" id="pt-confirm" style="display:none"></div>
+  <button class="primary" id="pt-save">저장</button>
+  <div class="sheetnote">일간은 실계산됩니다 · 시·도시는 정밀 엔진(진태양시 보정) 연결 시 사용
+    <br>· 이분들의 생년월일도 <b style="color:var(--ink)">이 브라우저 안에만</b> 남습니다 — 어디로도 전송되지 않습니다</div>
 </div>
 </div>
 <div id="tab-group" hidden>
@@ -5899,17 +5943,54 @@ function closeSheets(){createsheet.classList.remove('open');relsheet.classList.r
      빼먹으면 첫 화면 위에 뜬 시트가 닫히지 않고 남는다. */
   const bs=document.getElementById('backupsheet');
   if(bs)bs.classList.remove('open');
-  dim.classList.remove('on');}
-/* which: 'person' | 'group'. editing이 참이면 탭 줄을 감추고 그 탭의 제목만 남긴다 —
-   무언가를 고치는 중에 다른 탭으로 넘어가면 입력이 그대로 날아가기 때문이다. */
-/* [2026-08-28] 탭이 사라져 화면 전환과 제목만 남았다. 인자 editing은 제목 문구를 정하는
-   호출부가 이미 쓰고 있어 시그니처를 그대로 둔다. */
+  dim.classList.remove('on');
+  /* [2026-08-28] 창을 닫으면 세 탭 모두 "준비 안 됨"으로 되돌린다 — 다시 열 때 지난 입력이
+     남아 있으면 "왜 옛날 표가 나오지?"가 된다. 입력 유지는 **창을 연 동안**의 약속이다. */
+  tabReady.person=tabReady.bulk=tabReady.group=false;
+  gsWantMember=false;}
+/* which: 'person' | 'bulk' | 'group'.
+   [★ 2026-08-28] **이 함수는 표시만 한다 — 아무것도 지우지 않는다.**
+   하루 전(e17ccb1) 탭을 걷어낸 이유가 "탭을 오가면 입력이 날아간다"였는데, 원인은 탭이 아니라
+   open*Sheet 셋이 **"표시"와 "초기화"를 한 몸으로** 하고 있던 것이었다. 셋을 reset·open 짝으로
+   가르고 탭 줄은 이 함수만 부른다 — 그러면 DOM 값도 전역 상태(ptModel·pickedMembers·
+   fGroups·fNewGroups·fSijin·fSex·pickedType)도 그대로 남는다. 따로 보관소를 둘 필요가 없다.
+
+   editing이 참이면 탭 줄을 감춘다 — 사람/그룹을 **고치는 중**에 탭으로 새 것을 만들면
+   editTarget·editGroup이 엉킨다. */
+const tabReady={person:false,bulk:false,group:false};
 function setCreateTab(which,editing){
+  /* [지연 초기화] 이번에 창을 연 뒤 한 번도 준비된 적 없는 탭이면 그때 한 번 채운다 —
+     예: FAB "사람 추가"로 열고 탭으로 그룹에 처음 가면 유형 칩이 아직 안 그려져 있다.
+     이미 준비된 탭은 건드리지 않는다(그게 입력 유지의 핵심이다). */
+  if(!tabReady[which]){
+    if(which==='person')resetPersonForm(null);
+    else if(which==='bulk')resetBulkTable();
+    else resetGroupForm();}
   document.getElementById('tab-person').hidden=which!=='person';
+  document.getElementById('tab-bulk').hidden=which!=='bulk';
   document.getElementById('tab-group').hidden=which!=='group';
+  const strip=document.getElementById('createtabs');
+  if(strip){
+    strip.hidden=!!editing;
+    strip.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===which));}
   document.getElementById('as-title').style.display=which==='person'?'block':'none';
   document.getElementById('gs-title').style.display=which==='group'?'block':'none';
+  /* 표는 열이 여섯이라 기본 시트 폭(560px)으로는 칸이 잘린다. ~~ptShowMode~~ 가 하던 일이다 */
+  createsheet.classList.toggle('wide',which==='bulk');
+  /* [★ 목록만 다시 그린다] 값은 안 건드리고 **선택지**만 갱신한다 — 옆 탭에서 사람이나 그룹이
+     새로 생겼을 수 있다. 셋 다 현재 선택(fGroups·pickedMembers)을 읽어 다시 그리므로
+     체크 상태는 유지된다. */
+  if(which==='person')renderFGroups();
+  else if(which==='bulk'){ptRenderGroups();ptRenderFormat();}
+  else renderGMembers();
   createsheet.scrollTop=0;} /* 탭을 바꾸면 위에서부터 읽어야 한다 — 이전 탭의 스크롤 위치가 남으면 빈 화면처럼 보인다 */
+
+/* 탭 줄 배선. **reset을 부르지 않는다** — 그것이 이 개편의 전부다. */
+document.querySelectorAll('#createtabs .tab').forEach(b=>b.onclick=()=>{
+  /* 손으로 탭을 옮기면 "＋ 새 사람"의 약속은 취소된다 — 그룹을 건드리지 않은 사람이
+     조용히 멤버가 되면 안 된다(아래 gsWantMember 주석 참고) */
+  gsWantMember=false;
+  setCreateTab(b.dataset.tab,false);});
 dim.onclick=closeSheets;
 let editTarget=null;   // null=추가 모드, 노드=수정 모드
 let fSijin=12;         // 기본 '모름'
@@ -5933,9 +6014,9 @@ const selY=document.getElementById('f-y'),selM=document.getElementById('f-m'),se
     +`<optgroup label="그 밖"><option value="${CITY_CUSTOM}">${CITY_CUSTOM}</option>`
     +`<option value="${CITY_UNKNOWN}">${CITY_UNKNOWN}</option></optgroup>`;
   selCity.value='서울';
-  selCity.onchange=()=>{syncCityCustom();updMoreSummary();};
+  selCity.onchange=()=>{syncCityCustom();};
   const cc=document.getElementById('f-city-custom');
-  if(cc)cc.oninput=()=>updMoreSummary();})();
+  })();
 /* ═══ 성별 [2026-08-28] ═══
    [왜 지금 받나] 명리의 **대운 방향**은 성별과 연간(年干)의 음양으로 정해진다(양남음녀 순행,
    음남양녀 역행). 만세력(L2)이 붙는 순간 필수가 되는데, 그때 이미 등록된 사람들에게 다시
@@ -5974,7 +6055,7 @@ function refreshDays(){
   const cur=+selD.value||1;
   let dh='';for(let d=1;d<=dim_;d++)dh+=`<option value="${d}">${d}일</option>`;
   selD.innerHTML=dh;selD.value=Math.min(cur,dim_);}
-function renderFSex(){renderSex('f-sex',fSex,v=>{fSex=v;updMoreSummary();});updMoreSummary();}
+function renderFSex(){renderSex('f-sex',fSex,v=>{fSex=v;});}
 function renderSijin(){
   const el=document.getElementById('f-sijin');
   el.innerHTML=SIJIN_ORDER.map(i=>{const s=SIJIN[i];
@@ -5982,18 +6063,10 @@ function renderSijin(){
   el.querySelectorAll('.sijin').forEach(b=>b.onclick=()=>{fSijin=+b.dataset.i;renderSijin();});
   const un=document.getElementById('f-sijin-unknown');
   un.classList.toggle('on',fSijin===12);
-  un.onclick=()=>{fSijin=12;renderSijin();};
-  updMoreSummary();}
-/* [E, 2026-08-26] 접힘 헤더의 값 요약. 닫힘이 기본이라 안이 안 보이므로, 헤더가 "무엇이
-   들어 있는지(필드 이름)"와 "지금 값이 무엇인지(요약)"를 함께 보여준다. 기본값일 때도
-   요약을 띄운다 — "비어 있다"가 아니라 "이렇게 정해져 있다"를 알아야 열지 말지 판단한다. */
-function updMoreSummary(){
-  const el=document.getElementById('f-moresum');
-  if(!el)return;
-  const s=SIJIN[fSijin];
-  /* [2026-08-28] 성별을 요약에서 뺐다 — 칸이 접힘 밖으로 나가 화면에 상시 보이므로,
-     여기 또 찍으면 같은 값이 두 곳에 뜬다. 이 요약은 **접혀서 안 보이는 것**만 알린다. */
-  el.textContent=`${s&&s[1]?s[1].replace('-','–')+'시':'시간 모름'} · ${currentCity()}`;}
+  un.onclick=()=>{fSijin=12;renderSijin();};}
+/* [2026-08-28 제거] ~~updMoreSummary~~ — 접힘(#f-more) 헤더에 시각·도시 값을 요약해 주던
+   함수다. **접힘을 없애 칸이 상시 보이므로 요약할 것이 없다.** 값이 화면에 그대로 있는데
+   위에 또 적으면 같은 것이 두 곳에 뜬다. */
 function updGrpMoreSummary(){
   const el=document.getElementById('g-moresum'),ps=document.getElementById('g-parent');
   if(!el||!ps)return;
@@ -6039,7 +6112,17 @@ function commitNewGroupRow(){
   nameEl.value='';
   document.getElementById('f-newgrp-row').style.display='none';
   renderFGroups();}
+/* [★ 2026-08-28] **초기화(reset*)와 표시(setCreateTab)를 갈랐다.**
+   탭 줄은 표시만 부르고, FAB와 외부 호출부는 open*을 부른다. 하루 전 탭을 걷어낸 이유가
+   이 둘이 한 몸이라 탭 전환이 곧 초기화였던 것이다. */
 function openAddSheet(node){
+  resetPersonForm(node);
+  setCreateTab('person',!!node);
+  createsheet.classList.add('open');dim.classList.add('on');
+  if(!node)setTimeout(()=>{const el=document.getElementById('f-name');if(el)el.focus();},60);}
+
+function resetPersonForm(node){
+  tabReady.person=true;
   editTarget=node||null;
   document.getElementById('as-title').textContent=node?`${node.name} 정보 수정`:'사람 추가';
   /* [§7.2 가드] 나는 삭제할 수 없다 — 은하의 유일한 항성(§2.1)이라 사라지면 layoutGalaxy가
@@ -6069,9 +6152,6 @@ function openAddSheet(node){
   fSex=(node&&node.birth)?node.birth.sex:undefined;
   renderFSex();
   syncCityCustom();
-  /* [E] 열 때마다 접힘을 닫힌 상태로 되돌린다 — 한 번 펼쳤다고 다음 사람을 추가할 때도
-     펼쳐져 있으면 컴팩트화가 무의미해진다. 값 요약은 헤더가 계속 보여준다. */
-  const fm=document.getElementById('f-more');if(fm)fm.open=false;
   /* [2026-08-27] 새 그룹 줄 초기화 — 시트를 다시 열 때 지난 입력이 남아 있으면 안 된다 */
   fNewGroups.length=0;
   const ngRow=document.getElementById('f-newgrp-row');
@@ -6086,23 +6166,13 @@ function openAddSheet(node){
   /* [2026-08-28 되살림] 한 명 화면이 **추가에도 다시 쓰인다.** 표가 이걸 대신하지 못한다 —
      시각은 12칸 버튼으로 고르는 게, 도시는 목록에서 고르는 게 글로 치는 것보다 낫다(사용자 판단).
      ~~인자 없이 불리면 표를 연다~~ 는 분기를 걷어냈다. */
-  ptShowMode('single');
-  /* [★ 접힘] **추가할 때는 펼친 채로 연다.** 이 화면을 고르는 이유가 12지시 버튼과 도시
-     목록인데 접혀 있으면 그 이유가 화면에 안 보이고, 표와 다를 게 없어진다.
-     수정할 때는 접어 둔다 — 고칠 항목만 보면 되고, E(2026-08-26)에서 접은 근거가 살아 있다. */
-  const fm2=document.getElementById('f-more');
-  if(fm2)fm2.open=!node;
-  setCreateTab('person',!!node);
-  createsheet.classList.add('open');dim.classList.add('on');
-  if(!node)setTimeout(()=>{const el=document.getElementById('f-name');if(el)el.focus();},60);}
+  /* [2026-08-28] ~~ptShowMode('single')~~ · ~~접힘 열고 닫기~~ — 표가 별도 탭이 되고
+     시각·도시 접힘이 사라져 둘 다 할 일이 없어졌다. */
+}
 
-/* 표 / 한 명 폼 전환. 둘 다 #tab-person 안에 있고 한 번에 하나만 보인다. */
-function ptShowMode(which){
-  const t=document.getElementById('pt-mode'),s=document.getElementById('ps-mode');
-  if(t)t.style.display=which==='table'?'block':'none';
-  if(s)s.style.display=which==='single'?'block':'none';
-  /* 표는 열이 일곱이라 기본 시트 폭(560px)으로는 칸이 잘린다 */
-  createsheet.classList.toggle('wide',which==='table');}
+/* [2026-08-28 제거] ~~ptShowMode~~ — 표(#pt-mode)와 한 명 폼(#ps-mode)이 **한 탭 안에서**
+   번갈아 보이던 시절의 전환기다. 둘이 각자 탭(#tab-bulk / #tab-person)이 되면서
+   그 일은 setCreateTab이 가져갔고, 시트 폭(.wide)도 거기서 정한다. */
 
 /* ═══════════════ 표 입력 [2026-08-28] ═══════════════
    [전부 텍스트로 받는다] 앞서 표를 기각한 근거가 "12지시 버튼·도시 셀렉트를 셀에 못 넣는다"
@@ -6295,12 +6365,11 @@ function ptRenderGroups(){
   const el=document.getElementById('pt-groups');
   if(!el)return;
   if(!groups.length){
-    /* [2026-08-28] 탭이 사라진 자리를 여기서 받는다. **그룹이 있을 때는 이 안내가 안 뜨므로**
-       링크도 함께 사라진다 — 필요한 순간에만 보이는 자리다(사용자 판단). */
-    el.innerHTML='<span class="none">아직 그룹이 없습니다 — 그룹 칸은 비워 두세요.</span>'
-      +'<button type="button" class="gmake" id="pt-mkgroup">그룹 만들기</button>';
-    const mk=document.getElementById('pt-mkgroup');
-    if(mk)mk.onclick=()=>openGrpSheet();
+    /* [2026-08-28] ~~"그룹 만들기" 링크~~ 를 뺐다. 탭 줄이 되살아나 **바로 위에 같은 버튼이
+       상시 있다** — 안내문 속 링크와 탭이 하는 일이 100% 같아 하나면 된다.
+       (그룹 탭의 "＋ 새 사람"은 이것과 다르다 — 그쪽은 "돌아오면 자동 체크"라는 약속을
+        더 지므로 탭으로 대체되지 않는다.) */
+    el.innerHTML='<span class="none">아직 그룹이 없습니다 — 그룹 칸은 비워 두세요.</span>';
     return;}
   el.innerHTML='<span>쓸 수 있는 그룹 —</span>'
     +groups.map(g=>`<span class="gchip">${g.name}</span>`).join('')
@@ -6474,7 +6543,10 @@ function ptUpdateSummary(){
   const used=rows.filter(v=>!v.empty);
   const ok=used.filter(v=>v.ok).length, bad=used.length-ok;
   const warns=used.reduce((a,v)=>a+Object.keys(v.warns).length,0);
-  if(!used.length){el.innerHTML='<span style="color:var(--mut)">이름과 생년월일만 있으면 등록됩니다. 나머지는 비워 두셔도 됩니다.</span>';return;}
+  /* [2026-08-28] 빈 상태 문구에서 "이름과 생년월일만 있으면…"을 뺐다 — **표 위 양식 안내
+     (#pt-format)가 같은 말을 이미 한다.** 한 화면에 같은 문장이 둘 있으면 어느 쪽이 기준인지
+     흐려지고, 필수 항목은 한 곳에서만 말해야 나중에 고칠 때도 안 어긋난다. */
+  if(!used.length){el.innerHTML='<span style="color:var(--mut)">아직 입력한 줄이 없습니다 — 위 <b>양식</b>대로 한 줄만 채워도 저장됩니다.</span>';return;}
   let h=`<b>${ok}명</b>이 등록됩니다`;
   if(bad)h+=` · <span class="bad">${bad}줄은 빨간 칸을 고쳐 주세요</span>`;
   if(warns)h+=` · <span class="warn">확인 ${warns}곳</span>`;
@@ -6527,6 +6599,27 @@ function ptOnPaste(e,row,key){
       +(sep==='	'?' (탭 기준)':' (쉼표 기준)')
       +' — 빨간 칸이 있으면 고친 뒤 저장하세요.';}}
 
+/* [★ 양식 안내, 2026-08-28] 표 **위**에 열 순서와 예시 한 줄을 세운다(사용자 지시).
+   전에는 "복사해 붙여넣을 수 있습니다"만 있어서 **어떤 순서로 적어야 하는지 알 수 없었다.**
+
+   [왜 PT_COLS에서 뽑나] 열 순서를 글로 박아 두면 열이 바뀔 때 안내만 낡는다.
+   붙여넣기 파서(ptOnPaste)가 `PT_COLS[startCol+ci]`로 열을 정하므로, **파서와 같은 배열**을
+   읽어야 안내와 실제 동작이 갈리지 않는다. 표 머리글 순서와도 같다.
+
+   [예시 이름] `김OO` 같은 중립 표현을 쓴다 — 파일을 여는 사람이 실제 인물로 오해하면 안 된다
+   (CLAUDE.md 개인정보 규칙). 값은 전부 파서가 실제로 받는 형태다. */
+function ptRenderFormat(){
+  const el=document.getElementById('pt-format');
+  if(!el)return;
+  const ex={name:'김OO',grp:'가족',date:'1990-01-01',sex:'남',time:'3시',city:'서울'};
+  el.innerHTML='<div><span class="k">열 순서</span>'
+      +PT_COLS.map(c=>'<b>'+PT_LABELS[c]+'</b>').join(' · ')+'</div>'
+    +'<div><span class="k">예시</span>'
+      +PT_COLS.map(c=>'<code>'+ex[c]+'</code>').join(' ')+'</div>'
+    +'<div><span class="k">필수</span><b>이름</b> · <b>생년월일</b>'
+      +' — 나머지는 비워 둬도 됩니다. 다만 <b>성별·시각·도시</b>는 나중에 만세력이 붙으면'
+      +' 쓰이므로, 아는 것은 지금 채워 두시는 편이 낫습니다.</div>';}
+
 /* 붙여넣기 안내를 기본 문구로 되돌린다. 시트를 새로 열 때마다 부른다 —
    지난번 "5줄을 받았습니다"가 남아 있으면 이번에 붙여넣은 것으로 오해한다. */
 function ptResetPasteHint(){
@@ -6537,12 +6630,19 @@ function ptResetPasteHint(){
     +' — 줄이 그대로 나뉩니다.';}
 
 function openBulkSheet(){
+  resetBulkTable();
+  setCreateTab('bulk',false);
+  createsheet.classList.add('open');dim.classList.add('on');
+  setTimeout(()=>{
+    const f=document.querySelector('#pt-body .pt-cell input');if(f)f.focus();},60);}
+
+function resetBulkTable(){
+  tabReady.bulk=true;
   ptModel=[ptBlank()];
   ptGrpConfirmed=false;
   const cb=document.getElementById('pt-confirm');if(cb)cb.style.display='none';
   ptSuggClose();
-  ptShowMode('table');
-  ptRenderGroups();ptRenderLists();ptRenderAll();
+  ptRenderGroups();ptRenderLists();ptRenderAll();ptRenderFormat();
   const note=document.getElementById('pt-note');
   /* [문구 정리 2026-08-28] 입력칸 흐린 글씨에 이미 있는 예시(1990-01-01 · 모름)는 뺐다.
      남긴 것은 **거기서 알 수 없는 것**뿐이다 — 다른 형식도 받는다는 사실, 두 자리 연도를
@@ -6551,11 +6651,7 @@ function openBulkSheet(){
   if(note)note.innerHTML='<b>19900101</b> · <b>90.1.1</b> 처럼 적어도 됩니다'
     +' (두 자리 연도는 00~'+String(new Date().getFullYear()%100).padStart(2,'0')+'을 2000년대로)'
     +' &nbsp;·&nbsp; 시각은 <b>3시</b> · <b>0300</b> · <b>15:30</b> — 분은 저장하지 않습니다';
-  ptResetPasteHint();
-  setCreateTab('person',false);
-  createsheet.classList.add('open');dim.classList.add('on');
-  setTimeout(()=>{
-    const f=document.querySelector('#pt-body .pt-cell input');if(f)f.focus();},60);}
+  ptResetPasteHint();}
 
 /* 저장 — **재배치는 마지막에 한 번만.** 한 명씩 layoutGalaxy를 부르면 100명이면 100번 돈다. */
 let ptGrpConfirmed=false;
@@ -6861,8 +6957,19 @@ function savePerson(){
     if(effectiveMembers(groups[i]).length<2)removeGroupAt(i);}
   layoutGalaxy();rebuildRings();renderNav();
   editTarget=null;
-  /* [2026-08-28] 그룹 시트에서 넘어온 것이면 **닫지 않고 돌아간다.** */
-  if(gsStash){gsRestore(n);renderNextStep();return;}
+  /* [2026-08-28] 그룹 탭에서 "＋ 새 사람"으로 넘어온 것이면 **닫지 않고 돌아간다.**
+     그룹 입력은 탭이 들고 있으므로 복원할 것이 없고, 방금 만든 사람을 체크만 한다.
+     순서 주의 — setCreateTab이 먼저다. 아직 그룹 탭이 준비 전이면 거기서 초기화가 돌아
+     pickedMembers를 비우므로, 체크는 그 뒤에 넣어야 살아남는다. */
+  if(gsWantMember){
+    gsWantMember=false;
+    setCreateTab('group',false);
+    pickedMembers.add(n.id);
+    renderGMembers();
+    const box=document.getElementById('gs-added');
+    if(box){box.innerHTML='<b>'+bkEsc(n.name)+'</b>'+particle(n.name,'을를')
+        +' 추가하고 멤버로 넣었습니다';box.style.display='block';}
+    renderNextStep();return;}
   closeSheets();
   if(activeGroup){showGroup(activeGroup);fitGroup(activeGroup);}
   else{selectGroup(null);showNode(n);focusNode(n);}
@@ -6917,31 +7024,23 @@ let pickedType='가족';const pickedMembers=new Set();
    삭제가 한 번에 붙는다. 기존 호출부(+새 그룹, 그룹으로 저장, 은하로 가져오기)는 두 번째
    인자를 안 넘기므로 전부 무변경으로 생성 모드 그대로 동작한다. */
 let editGroup=null;
-/* 그룹 시트에서 "+ 새 사람"으로 빠져나갈 때 입력을 담아 두는 자리. 돌아오면 비운다. */
-let gsStash=null;
-/* 사람 저장이 끝나면 여기로 돌아온다. 새로 만든 사람은 체크된 채로 붙는다. */
-function gsRestore(newNode){
-  const st=gsStash;gsStash=null;
-  if(!st)return false;
-  const g=st.editId?groups.find(x=>x.id===st.editId):null;
-  openGrpSheet(null,g||undefined);
-  document.getElementById('g-name').value=st.name;
-  pickedType=st.type;
-  const tg=document.getElementById('g-types');
-  if(tg)tg.querySelectorAll('.selchip').forEach(x=>x.classList.toggle('on',x.dataset.t===pickedType));
-  const ps=document.getElementById('g-parent');
-  if(ps&&st.parent)ps.value=st.parent;
-  pickedMembers.clear();
-  st.members.forEach(id=>{if(nodes.some(x=>x.id===id))pickedMembers.add(id);});
-  if(newNode)pickedMembers.add(newNode.id);   /* ★ 방금 만든 사람을 자동 체크 */
-  renderGMembers();updGrpMoreSummary();
-  if(newNode){
-    const box=document.getElementById('gs-added');
-    if(box){box.innerHTML='<b>'+bkEsc(newNode.name)+'</b>'+particle(newNode.name,'을를')
-        +' 추가하고 멤버로 넣었습니다';box.style.display='block';}}
-  return true;}
+/* [★ 2026-08-28] ~~gsStash / gsRestore~~ — 그룹 시트에서 "＋ 새 사람"으로 빠져나갈 때
+   이름·유형·상위·체크한 멤버를 **통째로 복사해 뒀다가 돌아와 되붙이던** 자리다.
+   탭이 상태를 보존하므로 복사할 것도 되붙일 것도 없어졌다 — 남는 약속은 하나뿐이다:
+   **"＋ 새 사람"으로 넘어갔다 돌아오면 방금 만든 사람이 체크돼 있어야 한다.**
+   그 하나는 플래그로 충분하다.
+
+   ★ 손으로 탭을 옮겨 사람을 추가한 경우에는 이 플래그가 서지 않아 **자동 체크하지 않는다.**
+   그룹을 건드릴 뜻이 없던 사람이 조용히 멤버가 되면 안 된다. 그 사람도 멤버 목록에는
+   나타난다(체크만 안 된 채로) — setCreateTab이 탭을 보일 때 renderGMembers를 다시 돌린다. */
+let gsWantMember=false;
 function openGrpSheet(presetIds,editTarget){
-  ptShowMode('single'); /* 그룹 탭으로 넘어가면 표 폭을 되돌린다 */
+  resetGroupForm(presetIds,editTarget);
+  setCreateTab('group',!!editTarget);
+  createsheet.classList.add('open');dim.classList.add('on');}
+
+function resetGroupForm(presetIds,editTarget){
+  tabReady.group=true;
   editGroup=editTarget||null;
   pickedMembers.clear();
   if(editGroup)editGroup.members.forEach(n=>pickedMembers.add(n.id));
@@ -6976,9 +7075,7 @@ function openGrpSheet(presetIds,editTarget){
   const gAdded=document.getElementById('gs-added');
   if(gAdded){gAdded.style.display='none';gAdded.innerHTML='';}
   const gCont=document.getElementById('grpcontbtn');
-  if(gCont)gCont.style.display=editGroup?'none':'block';
-  setCreateTab('group',!!editGroup); /* [2026-08-27] */
-  createsheet.classList.add('open');dim.classList.add('on');}
+  if(gCont)gCont.style.display=editGroup?'none':'block';}
 
 /* 멤버 격자. **다시 그릴 일이 생겨 함수로 뽑았다** — "+ 새 사람"으로 사람이 늘면 그 자리에서
    목록을 갱신해야 하고, 안 그러면 방금 만든 사람이 안 보인다. */
@@ -6999,12 +7096,12 @@ function renderGMembers(){
          [입력을 잃지 않는다] 그룹 시트를 떠나므로 이름·유형·상위·체크한 멤버를 챙겨 두고,
          사람을 저장하면 되돌아와 **새 사람을 체크한 채로** 복원한다. 백로그가 이 항목을
          어렵다고 본 이유가 바로 이 보존인데, 시트를 겹치지 않고 오갔다 오는 것으로 풀린다. */
-      gsStash={name:document.getElementById('g-name').value,
-        type:pickedType,
-        parent:document.getElementById('g-parent').value||'',
-        members:[...pickedMembers],
-        editId:editGroup?editGroup.id:null};
-      openAddSheet(null);
+      /* [2026-08-28] ~~gsStash로 그룹 입력을 통째로 챙겨 두기~~ → **탭 전환 두 줄.**
+         새 사람을 만들러 온 것이므로 사람 폼은 비우고 간다(지난 입력이 남아 있으면 안 된다). */
+      gsWantMember=true;
+      resetPersonForm(null);
+      setCreateTab('person',false);
+      setTimeout(()=>{const el=document.getElementById('f-name');if(el)el.focus();},60);
       return;}
     const id=row.dataset.id;
     /* [§7.2 가드] 나를 누르면 해제하지 않고 이유 문구를 깜빡인다(문구는 상시 노출) */
@@ -7015,7 +7112,7 @@ function renderGMembers(){
 /* [2026-08-28 제거] ~~initNewPersonRow / addNewPersonInline~~ — 그룹 시트의 "+ 새 사람"이
    인라인 한 줄(이름+생년월일)로 사람을 만들던 코드다. **한 명 화면으로 바꾸면서 지웠다** —
    그 줄은 시각·도시·성별을 못 받아 거기서 만든 사람만 반쪽으로 들어갔다.
-   지금은 gsStash에 그룹 입력을 담고 openAddSheet(null)로 넘어갔다가 gsRestore로 돌아온다. */
+   지금은 사람 탭으로 넘어갔다가 gsWantMember 플래그를 보고 그룹 탭으로 돌아온다. */
 
 function saveGroup(keepOpen){
   const name=document.getElementById('g-name').value.trim();
