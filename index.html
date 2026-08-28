@@ -194,12 +194,7 @@
      그대로 옮겼다 — 기존 핸들러가 전부 id로 잡고 있어 건드리면 회귀 위험이 크다.
      탭은 **생성 모드에서만** 보인다. 수정 모드(사람 수정·그룹 수정)에서는 탭을 감추고 제목만
      남긴다 — 무언가를 고치는 중에 다른 탭으로 넘어가면 입력이 그대로 날아간다. */
-  .tabs{display:flex;gap:6px;margin:-2px 0 16px;border-bottom:1px solid var(--line)}
-  .tabs .tab{flex:1 1 0;padding:11px 8px 12px;background:none;border:none;border-bottom:2px solid transparent;
-    margin-bottom:-1px;font-family:inherit;font-size:var(--fs-md);font-weight:600;
-    color:var(--mut);cursor:pointer}
-  .tabs .tab.on{color:var(--ink);border-bottom-color:var(--ink)}
-  .tabs .tab:not(.on):hover{color:var(--ink);opacity:.75}
+  /* .tabs — [2026-08-28] 탭 줄을 없애 쓰는 곳이 사라졌다. 규칙은 지웠다 */
   .sijingrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
   /* [2026-08-24] 주/보조를 뒤집었다 — 사용자는 "몇 시에 태어났는지"로 기억하지 자시·축시로
      기억하지 않는다. 시간 표기가 주(13px/600), 지지가 보조(9.5px/--mut). 구 값은 지지 12.5px에
@@ -229,6 +224,12 @@
   .pt-groups .gchip{padding:3px 8px;border-radius:11px;border:1px solid var(--line);
     background:rgba(255,255,255,.06);color:var(--ink);font-size:var(--fs-xs)}
   .pt-groups .none{color:var(--mut)}
+  /* 그룹이 없을 때만 뜨는 링크 — 탭이 사라진 자리를 여기서 받는다.
+     그룹이 생기면 위 안내와 함께 사라지므로 상시 노출이 아니다. */
+  .pt-groups .gmake{padding:3px 9px;border-radius:11px;border:1px solid rgba(212,175,90,.45);
+    background:rgba(212,175,90,.1);color:var(--gold);font-size:var(--fs-xs);
+    font-weight:600;cursor:pointer;font-family:inherit}
+  .pt-groups .gmake:hover{background:rgba(212,175,90,.18)}
   .pt-wrap{border:1px solid var(--line);border-radius:8px;overflow:hidden}
   .pt-head,.pt-row{display:grid;
     grid-template-columns:1.15fr 1fr 1.15fr 88px .8fr 1fr 52px 26px;gap:0}
@@ -724,8 +725,12 @@
      항목 순서: 아래쪽(FAB에 가까운 쪽)이 손이 먼저 닿는 자리라 기존 FAB 동작이던
      "사람 추가"를 그쪽에 둔다. -->
 <button id="fab" aria-label="만들기" aria-haspopup="true" aria-expanded="false">+</button>
+<!-- [2026-08-28] 세 화면을 각각 연다. 전에는 둘이었고 "사람 추가"가 표로 갔는데,
+     한 명만 넣을 때 필요한 화면(12지시 버튼·도시 목록)에 닿을 길이 없었다.
+     항목 순서: 아래쪽이 손에 가까우므로 가장 흔한 "사람 추가"를 맨 아래 둔다. -->
 <div id="fabmenu" role="menu" aria-label="만들기">
   <button type="button" id="fm-group" role="menuitem">그룹 만들기</button>
+  <button type="button" id="fm-bulk" role="menuitem">여러 명 추가</button>
   <button type="button" id="fm-person" role="menuitem">사람 추가</button>
 </div>
 <div id="panel"><button id="panelclose" aria-label="패널 닫기">✕</button><div class="draghandle" id="draghandle"><div class="grip"></div></div><div id="grouptree"></div><div id="panelbody"></div></div>
@@ -787,10 +792,10 @@
 <!-- 사람 추가/수정 시트 -->
 <!-- [2026-08-27] 생성 모달 하나 — 사람/그룹 탭 -->
 <div class="sheet" id="createsheet">
-<div class="tabs" id="cs-tabs">
-  <button type="button" class="tab on" data-tab="person">사람 추가</button>
-  <button type="button" class="tab" data-tab="group">그룹 만들기</button>
-</div>
+<!-- [2026-08-28] 탭 줄을 없앴다. FAB가 세 화면을 각각 열므로 이름도 기능도 겹쳤고,
+     무엇보다 **탭을 오가면 입력이 날아갔다** — openBulkSheet/openGrpSheet가 상태를
+     초기화하기 때문이다(실측: 표에 "유지검사" 입력 → 그룹 탭 → 사람 탭 → 사라짐).
+     즉 "닫지 않고 오간다"는 이점이 실제로는 없었다. 코드 주석은 반대로 적혀 있었다. -->
 <div id="tab-person">
 
 <!-- ═══ 표 모드 — 사람 **추가**는 전부 여기로 [2026-08-28] ═══
@@ -805,7 +810,7 @@
 
      [기존 한 명 폼(#ps-mode)은 수정 전용이 됐다] 사람을 클릭해 고치는 경로다. -->
 <div id="pt-mode">
-  <h3 class="pt-h3">사람 추가</h3>
+  <h3 class="pt-h3">여러 명 추가</h3>
 
   <!-- [그룹 열의 짝] 표에서는 그룹 **유형**(가족·부부·…)을 받을 수 없어 새 그룹을 만들 수
        없다. 그래서 없는 이름은 오류로 막고, 대신 **쓸 수 있는 이름을 여기 펼쳐 둔다**
@@ -841,7 +846,7 @@
 </div>
 
 <div id="ps-mode">
-  <h3 id="as-title" style="display:none">사람 추가</h3>
+  <h3 id="as-title">사람 추가</h3>
   <div class="field"><label>이름</label><input id="f-name" type="text" placeholder="예: 어머니, 김OO"></div>
   <div class="field"><label>그룹 (없으면 선택 안 해도 됨)</label><div class="typegrid" id="f-groups"></div>
     <div class="newgrp-row" id="f-newgrp-row" style="display:none">
@@ -899,7 +904,7 @@
 </div>
 </div>
 <div id="tab-group" hidden>
-  <h3 id="gs-title" style="display:none">그룹 만들기</h3>
+  <h3 id="gs-title">그룹 만들기</h3>
   <div class="field"><label>그룹 이름</label><input id="g-name" type="text" placeholder="예: 대학 동아리, 스터디, 디자인팀"></div>
   <!-- [E] 순서 통일 — **관계 필드를 두 시트 모두 2번째**에 둔다. 사람 시트는 "그룹 선택"이
        이미 2번째였는데 그룹 시트는 "멤버 선택"이 4번째였다. 이유 없는 차이였다. -->
@@ -911,11 +916,6 @@
          **이름과 생년월일만 받는다** — dayStem(y,m,d)이 날짜만 쓰므로 시각·도시·성별은 지금
          어떤 계산에도 안 들어간다(이 시트가 그 셋을 접어 둔 것과 같은 근거). 나머지는
          나중에 그 사람 카드에서 채운다. -->
-    <div class="newgrp-row" id="g-newp-row" style="display:none">
-      <input id="g-newp-name" type="text" placeholder="새 사람 이름" maxlength="20">
-      <select id="g-newp-y"></select><select id="g-newp-m"></select><select id="g-newp-d"></select>
-      <button type="button" class="pbtn" id="g-newp-add">추가</button>
-    </div>
     <div class="guardnote" id="g-guard"><b>나</b>는 항상 포함됩니다 —
       내가 은하의 유일한 항성이라, 빠지면 그 항성계의 중심이 빕니다.
       <b>나 없는 조합은 가상 성계에서 볼 수 있습니다.</b></div></div>
@@ -5902,18 +5902,14 @@ function closeSheets(){createsheet.classList.remove('open');relsheet.classList.r
   dim.classList.remove('on');}
 /* which: 'person' | 'group'. editing이 참이면 탭 줄을 감추고 그 탭의 제목만 남긴다 —
    무언가를 고치는 중에 다른 탭으로 넘어가면 입력이 그대로 날아가기 때문이다. */
+/* [2026-08-28] 탭이 사라져 화면 전환과 제목만 남았다. 인자 editing은 제목 문구를 정하는
+   호출부가 이미 쓰고 있어 시그니처를 그대로 둔다. */
 function setCreateTab(which,editing){
   document.getElementById('tab-person').hidden=which!=='person';
   document.getElementById('tab-group').hidden=which!=='group';
-  document.querySelectorAll('#cs-tabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===which));
-  document.getElementById('cs-tabs').style.display=editing?'none':'flex';
-  document.getElementById('as-title').style.display=(editing&&which==='person')?'block':'none';
-  document.getElementById('gs-title').style.display=(editing&&which==='group')?'block':'none';
+  document.getElementById('as-title').style.display=which==='person'?'block':'none';
+  document.getElementById('gs-title').style.display=which==='group'?'block':'none';
   createsheet.scrollTop=0;} /* 탭을 바꾸면 위에서부터 읽어야 한다 — 이전 탭의 스크롤 위치가 남으면 빈 화면처럼 보인다 */
-document.querySelectorAll('#cs-tabs .tab').forEach(b=>b.onclick=()=>{
-  /* 탭 자체는 입력을 지우지 않는다 — 두 탭의 DOM이 동시에 살아 있어 되돌아오면 그대로다.
-     초기화는 openAddSheet/openGrpSheet가 열릴 때만 한다. */
-  if(b.dataset.tab==='group')openGrpSheet();else openPersonTable();});
 dim.onclick=closeSheets;
 let editTarget=null;   // null=추가 모드, 노드=수정 모드
 let fSijin=12;         // 기본 '모름'
@@ -6087,12 +6083,18 @@ function openAddSheet(node){
   renderSijin();renderFGroups();
   const addedBox=document.getElementById('as-added');
   if(addedBox){addedBox.style.display='none';addedBox.innerHTML='';}
-  /* [2026-08-28] 이 폼은 **수정 전용**이 됐다 — 추가는 전부 표(#pt-mode)로 간다.
-     인자 없이 불리면 표를 연다(옛 호출부가 남아 있어도 안전하게). */
-  ptShowMode(node?'single':'table');
-  if(!node){openPersonTable();return;}
-  setCreateTab('person',true); /* 수정 모드면 탭을 감추고 제목만 */
-  createsheet.classList.add('open');dim.classList.add('on');}
+  /* [2026-08-28 되살림] 한 명 화면이 **추가에도 다시 쓰인다.** 표가 이걸 대신하지 못한다 —
+     시각은 12칸 버튼으로 고르는 게, 도시는 목록에서 고르는 게 글로 치는 것보다 낫다(사용자 판단).
+     ~~인자 없이 불리면 표를 연다~~ 는 분기를 걷어냈다. */
+  ptShowMode('single');
+  /* [★ 접힘] **추가할 때는 펼친 채로 연다.** 이 화면을 고르는 이유가 12지시 버튼과 도시
+     목록인데 접혀 있으면 그 이유가 화면에 안 보이고, 표와 다를 게 없어진다.
+     수정할 때는 접어 둔다 — 고칠 항목만 보면 되고, E(2026-08-26)에서 접은 근거가 살아 있다. */
+  const fm2=document.getElementById('f-more');
+  if(fm2)fm2.open=!node;
+  setCreateTab('person',!!node);
+  createsheet.classList.add('open');dim.classList.add('on');
+  if(!node)setTimeout(()=>{const el=document.getElementById('f-name');if(el)el.focus();},60);}
 
 /* 표 / 한 명 폼 전환. 둘 다 #tab-person 안에 있고 한 번에 하나만 보인다. */
 function ptShowMode(which){
@@ -6293,8 +6295,13 @@ function ptRenderGroups(){
   const el=document.getElementById('pt-groups');
   if(!el)return;
   if(!groups.length){
-    el.innerHTML='<span class="none">아직 그룹이 없습니다 — 그룹 칸은 비워 두세요. '
-      +'그룹은 "그룹 만들기" 탭에서 먼저 만듭니다.</span>';return;}
+    /* [2026-08-28] 탭이 사라진 자리를 여기서 받는다. **그룹이 있을 때는 이 안내가 안 뜨므로**
+       링크도 함께 사라진다 — 필요한 순간에만 보이는 자리다(사용자 판단). */
+    el.innerHTML='<span class="none">아직 그룹이 없습니다 — 그룹 칸은 비워 두세요.</span>'
+      +'<button type="button" class="gmake" id="pt-mkgroup">그룹 만들기</button>';
+    const mk=document.getElementById('pt-mkgroup');
+    if(mk)mk.onclick=()=>openGrpSheet();
+    return;}
   el.innerHTML='<span>쓸 수 있는 그룹 —</span>'
     +groups.map(g=>`<span class="gchip">${g.name}</span>`).join('')
     +'<span>· 여럿이면 쉼표로</span>';}
@@ -6529,7 +6536,7 @@ function ptResetPasteHint(){
   pv.innerHTML='엑셀·구글시트에서 <b>여러 줄을 복사해 이 표에 붙여넣을 수 있습니다</b>'
     +' — 줄이 그대로 나뉩니다.';}
 
-function openPersonTable(){
+function openBulkSheet(){
   ptModel=[ptBlank()];
   ptGrpConfirmed=false;
   const cb=document.getElementById('pt-confirm');if(cb)cb.style.display='none';
@@ -6725,7 +6732,7 @@ function renderNextStep(){
     +'<p>가족이나 친구를 추가해 보세요. 그 사람이 당신 주위를 도는 행성이 되고, '
     +'둘 사이의 관계가 자동으로 계산됩니다.</p>'
     +'<button type="button">사람 추가</button>';
-  d.querySelector('button').onclick=()=>openPersonTable();
+  d.querySelector('button').onclick=()=>openBulkSheet();
   body.appendChild(d);
   /* [2026-08-28] 모바일은 패널이 하단 시트라 기본 높이에서는 이 카드가 **접힌 아래로
      밀려 안 보인다**(390x844 실측). 혼자일 때만 시트를 높이기로 열어 안내를 보이게 한다 —
@@ -6743,7 +6750,8 @@ function renderNextStep(){
     document.body.classList.toggle('fabopen',v);}
   fab.onclick=e=>{e.stopPropagation();setOpen(!open);};
   menu.onclick=e=>e.stopPropagation();
-  document.getElementById('fm-person').onclick=()=>{setOpen(false);openPersonTable();};
+  document.getElementById('fm-person').onclick=()=>{setOpen(false);openAddSheet(null);};
+  document.getElementById('fm-bulk').onclick=()=>{setOpen(false);openBulkSheet();};
   document.getElementById('fm-group').onclick=()=>{setOpen(false);openGrpSheet();};
   document.addEventListener('click',()=>{if(open)setOpen(false);});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&open)setOpen(false);});
@@ -6852,10 +6860,12 @@ function savePerson(){
   for(let i=groups.length-1;i>=0;i--){
     if(effectiveMembers(groups[i]).length<2)removeGroupAt(i);}
   layoutGalaxy();rebuildRings();renderNav();
+  editTarget=null;
+  /* [2026-08-28] 그룹 시트에서 넘어온 것이면 **닫지 않고 돌아간다.** */
+  if(gsStash){gsRestore(n);renderNextStep();return;}
   closeSheets();
   if(activeGroup){showGroup(activeGroup);fitGroup(activeGroup);}
   else{selectGroup(null);showNode(n);focusNode(n);}
-  editTarget=null;
   renderNextStep();}   /* 둘째가 들어오면 안내 카드와 ＋ 강조가 여기서 꺼진다 */
 document.getElementById('addbtn').onclick=()=>savePerson();
 document.getElementById('pt-save').onclick=ptSave;
@@ -6907,6 +6917,29 @@ let pickedType='가족';const pickedMembers=new Set();
    삭제가 한 번에 붙는다. 기존 호출부(+새 그룹, 그룹으로 저장, 은하로 가져오기)는 두 번째
    인자를 안 넘기므로 전부 무변경으로 생성 모드 그대로 동작한다. */
 let editGroup=null;
+/* 그룹 시트에서 "+ 새 사람"으로 빠져나갈 때 입력을 담아 두는 자리. 돌아오면 비운다. */
+let gsStash=null;
+/* 사람 저장이 끝나면 여기로 돌아온다. 새로 만든 사람은 체크된 채로 붙는다. */
+function gsRestore(newNode){
+  const st=gsStash;gsStash=null;
+  if(!st)return false;
+  const g=st.editId?groups.find(x=>x.id===st.editId):null;
+  openGrpSheet(null,g||undefined);
+  document.getElementById('g-name').value=st.name;
+  pickedType=st.type;
+  const tg=document.getElementById('g-types');
+  if(tg)tg.querySelectorAll('.selchip').forEach(x=>x.classList.toggle('on',x.dataset.t===pickedType));
+  const ps=document.getElementById('g-parent');
+  if(ps&&st.parent)ps.value=st.parent;
+  pickedMembers.clear();
+  st.members.forEach(id=>{if(nodes.some(x=>x.id===id))pickedMembers.add(id);});
+  if(newNode)pickedMembers.add(newNode.id);   /* ★ 방금 만든 사람을 자동 체크 */
+  renderGMembers();updGrpMoreSummary();
+  if(newNode){
+    const box=document.getElementById('gs-added');
+    if(box){box.innerHTML='<b>'+bkEsc(newNode.name)+'</b>'+particle(newNode.name,'을를')
+        +' 추가하고 멤버로 넣었습니다';box.style.display='block';}}
+  return true;}
 function openGrpSheet(presetIds,editTarget){
   ptShowMode('single'); /* 그룹 탭으로 넘어가면 표 폭을 되돌린다 */
   editGroup=editTarget||null;
@@ -6944,10 +6977,6 @@ function openGrpSheet(presetIds,editTarget){
   if(gAdded){gAdded.style.display='none';gAdded.innerHTML='';}
   const gCont=document.getElementById('grpcontbtn');
   if(gCont)gCont.style.display=editGroup?'none':'block';
-  /* [+ 새 사람] 줄은 접은 채로 연다 — 지난 입력이 남아 있으면 안 된다 */
-  const npRow=document.getElementById('g-newp-row');
-  if(npRow){npRow.style.display='none';document.getElementById('g-newp-name').value='';}
-  initNewPersonRow();
   setCreateTab('group',!!editGroup); /* [2026-08-27] */
   createsheet.classList.add('open');dim.classList.add('on');}
 
@@ -6964,9 +6993,18 @@ function renderGMembers(){
     +`<div class="memrow newp" id="g-newp-open">＋ 새 사람</div>`;
   mg.querySelectorAll('.memrow').forEach(row=>row.onclick=()=>{
     if(row.id==='g-newp-open'){
-      const r=document.getElementById('g-newp-row');
-      r.style.display=r.style.display==='none'?'flex':'none';
-      if(r.style.display==='flex')document.getElementById('g-newp-name').focus();
+      /* [2026-08-28] ~~인라인 한 줄(이름+생년월일)~~ → **한 명 화면**으로 바꿨다.
+         그룹을 만들다 한 사람이 빠진 상황이므로 제대로 된 입력 화면이 맞다(사용자 판단).
+         인라인 줄은 시각·도시·성별을 못 받아 그 사람만 반쪽으로 들어갔다.
+         [입력을 잃지 않는다] 그룹 시트를 떠나므로 이름·유형·상위·체크한 멤버를 챙겨 두고,
+         사람을 저장하면 되돌아와 **새 사람을 체크한 채로** 복원한다. 백로그가 이 항목을
+         어렵다고 본 이유가 바로 이 보존인데, 시트를 겹치지 않고 오갔다 오는 것으로 풀린다. */
+      gsStash={name:document.getElementById('g-name').value,
+        type:pickedType,
+        parent:document.getElementById('g-parent').value||'',
+        members:[...pickedMembers],
+        editId:editGroup?editGroup.id:null};
+      openAddSheet(null);
       return;}
     const id=row.dataset.id;
     /* [§7.2 가드] 나를 누르면 해제하지 않고 이유 문구를 깜빡인다(문구는 상시 노출) */
@@ -6974,61 +7012,11 @@ function renderGMembers(){
     if(pickedMembers.has(id)){pickedMembers.delete(id);row.classList.remove('on');row.querySelector('.chk').textContent='';}
     else{pickedMembers.add(id);row.classList.add('on');row.querySelector('.chk').textContent='✓';}});}
 
-/* 년·월·일 셀렉트를 한 번만 채운다(사람 시트와 같은 범위). 매번 채우면 사용자가 고른 값이
-   초기화돼 연속 추가에서 생년월일을 매번 다시 골라야 한다. */
-let gNewPersonReady=false;
-function initNewPersonRow(){
-  if(gNewPersonReady)return;
-  const y=document.getElementById('g-newp-y'),m=document.getElementById('g-newp-m'),
-        d=document.getElementById('g-newp-d');
-  if(!y||!m||!d)return;
-  let yh='';for(let v=2026;v>=1930;v--)yh+=`<option value="${v}">${v}년</option>`;
-  y.innerHTML=yh;y.value='1990';
-  let mh='';for(let v=1;v<=12;v++)mh+=`<option value="${v}">${v}월</option>`;
-  m.innerHTML=mh;m.value='1';
-  const days=()=>{
-    const dim_=new Date(+y.value,+m.value,0).getDate();
-    const cur=+d.value||1;
-    let h='';for(let v=1;v<=dim_;v++)h+=`<option value="${v}">${v}일</option>`;
-    d.innerHTML=h;d.value=Math.min(cur,dim_);};
-  days();y.onchange=days;m.onchange=days;
-  document.getElementById('g-newp-add').onclick=addNewPersonInline;
-  document.getElementById('g-newp-name').addEventListener('keydown',e=>{
-    if(e.key==='Enter'){e.preventDefault();addNewPersonInline();}});
-  gNewPersonReady=true;}
+/* [2026-08-28 제거] ~~initNewPersonRow / addNewPersonInline~~ — 그룹 시트의 "+ 새 사람"이
+   인라인 한 줄(이름+생년월일)로 사람을 만들던 코드다. **한 명 화면으로 바꾸면서 지웠다** —
+   그 줄은 시각·도시·성별을 못 받아 거기서 만든 사람만 반쪽으로 들어갔다.
+   지금은 gsStash에 그룹 입력을 담고 openAddSheet(null)로 넘어갔다가 gsRestore로 돌아온다. */
 
-/* 그 자리에서 사람을 만들고 **자동으로 체크한다.**
-   [왜 즉시 만드나 — 사람 시트의 새 그룹과 반대다] 그쪽은 이름·유형 두 값뿐이라 저장까지
-   대기시킬 수 있었지만, 사람은 만들자마자 3D 천체·라벨·관계선이 붙는 실체다. 대기 목록으로
-   들고 있으면 "저장 안 된 사람"이라는 상태가 새로 생긴다. 즉시 만들면 그룹 만들기를 취소해도
-   사람은 남는데, **그게 맞다** — 사용자가 하려던 일이 "이 사람을 등록하는 것"이었다. */
-function addNewPersonInline(){
-  const el=document.getElementById('g-newp-name');
-  const name=el.value.trim();
-  if(!name){el.focus();return;}
-  const y=+document.getElementById('g-newp-y').value,
-        m=+document.getElementById('g-newp-m').value,
-        d=+document.getElementById('g-newp-d').value;
-  const t0=nowISO();
-  /* 시각·도시·성별은 안 받는다 — dayStem(y,m,d)이 날짜만 쓰므로 지금 계산에 안 들어간다.
-     "모름"과 null로 두면 나중에 그 사람 카드에서 채울 수 있다(빈 값과 지어낸 값의 구분). */
-  const n=addNode({name,stemIdx:dayStem(y,m,d),isMe:false,createdAt:t0,updatedAt:t0,
-    birth:{y,m,d,sijin:12,city:CITY_UNKNOWN,lon:null,sex:null}});
-  nodes.forEach(o=>{if(o!==n)addEdge(n,o);});
-  pickedMembers.add(n.id);          /* ★ 자동 체크 — 이걸 하려고 이 줄을 만들었다 */
-  layoutGalaxy();rebuildRings();renderNav();
-  el.value='';renderGMembers();     /* 목록을 다시 그려야 방금 만든 사람이 보인다 */
-  const box=document.getElementById('gs-added');
-  /* [2026-08-28] 조사를 하드코딩하지 않는다 — 받침 없는 이름에 "…을(를)"이 붙어 어긋난다.
-     코드베이스에 이미 있는 josa()를 쓴다(EL_PAIR 카피가 쓰는 것과 같은 함수). */
-  if(box){box.innerHTML='<b>'+bkEsc(name)+'</b>'+particle(name,'을를')
-      +' 추가하고 멤버로 넣었습니다 · 전체 '+nodes.length+'명';
-    box.style.display='block';}
-  el.focus();
-  renderNextStep();}
-/* [연속 입력, 2026-08-28] 사람 시트와 대칭. 그룹은 보통 두세 개라 이득이 사람만큼 크지는
-   않지만, **유형을 남긴다**는 점이 실질적이다 — "친구" 그룹을 여럿 만드는 흐름이 흔하다.
-   멤버 체크는 비운다(그룹마다 다른 것이 당연하고, 남기면 앞 그룹 멤버가 딸려 들어간다). */
 function saveGroup(keepOpen){
   const name=document.getElementById('g-name').value.trim();
   if(!name){alert('그룹 이름을 입력해주세요');return;}
