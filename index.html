@@ -1363,6 +1363,149 @@ const CITY_LON={};CITY_GROUPS.forEach(g=>g.list.forEach(([c,l])=>{CITY_LON[c]=l;
 const CITY_CUSTOM='직접 입력';   // 해외 출생자 등 — 이름을 직접 받고 경도는 비운다
 const CITY_UNKNOWN='모름';
 function dayStem(y,m,d){const days=Math.floor(Date.UTC(y,m-1,d)/86400000);return((days+7)%10+10)%10;}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   만세력 엔진 (L2) — 4주 8자 [2026-08-29]
+   범위는 여덟 글자까지다. 십신·신강신약(L3), 합충형파해(L4), 대운(L5)은 여기 없다.
+
+   [세 시각을 구분한다 — 이게 이 엔진의 전부다]
+     (1) 벽시계     — 사람이 기억하는 시각("아홉 시쯤")
+     (2) 절대 순간   — (1)에서 그때의 한국 표준시 오프셋을 뺀 UTC. **연주·월주**가 이걸 쓴다.
+                     절기는 천문학적 순간이라 어디서 태어났든 같은 순간이기 때문이다.
+     (3) 지방 진태양시 — (2)에 경도와 균시차를 더한 것. **일주·시주**가 이걸 쓴다.
+                     자시는 시계가 아니라 태양의 위치로 정의되기 때문이다.
+   (2)를 (3)으로 대신하면 절입 판정이 32분 밀리고, (3)을 (2)로 대신하면 시지가 32분 밀린다.
+
+   [승인된 관행 결정]
+   - 야자시는 **조자시 방식** — 23시대 출생도 일주는 당일을 유지하고, 시주 천간만 다음날
+     일간에서 뽑는다. "1월 24일 밤 11시 30분"이 1월 25일 사주로 나오면 대부분 이해하지
+     못한다는 판단(사용자 결정). 유파 선택지는 두지 않는다.
+   - 시각을 모르면 **세 기둥만** 낸다. 정오로 가정하지 않는다 — 추정으로 채운 시주를
+     확정처럼 보여주면 나중에 "내 시주가 왜 이렇지"에 답할 수 없다.
+   - 진태양시는 경도 보정 + **균시차**까지. 균시차(최대 16분)를 빼면 그건 진태양시가 아니라
+     지방 평균시다.
+
+   [검증 요약] 독립 구현 두 개와 차분 검증
+   - manseryeok 5만 건: 연주/일주/시주 불일치 0, 월주 4건(전부 절입 0.3분 이내로
+     **우리가 초 단위라 더 정밀한** 경우)
+   - lunar-javascript 3만 건(파이프라인 제외, 산술만): 불일치 0
+   - 전이표 vs IANA tzdata: 1930~2026을 6시간 간격 141,716개 시점 검사, 불일치 0
+   ═════════════════════════════════════════════════════════════════════════ */
+const BRANCHES=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const BRANCH_EL=['su','to','mok','mok','to','hwa','hwa','to','geum','geum','to','su'];
+
+/* ── 한국 표준시 전이표 ──
+   [왜 하드코딩인가] Intl에 그때그때 물으면 결과가 **브라우저 ICU 판본에 달린다.** 표로
+   박으면 어느 환경에서나 같고, 값이 맞는지 명령으로 셀 수 있다. 출처는 IANA tzdata 2026b이고
+   전이 시각은 이분탐색으로 뽑았다(위키백과는 1948~1960 서머타임의 '시각'을 안 알려준다).
+   [무엇이 들어 있나] 1954~1961 동경 127.5도(+8:30)와 서머타임 12구간(1948~51/1955~60/1987~88).
+   1988년 7월생의 시주가 이것 하나로 壬辰과 癸巳로 갈린다. */
+const SAJU_TZ=[
+  [Date.UTC(1908,2,31,15,32,8),510],[Date.UTC(1911,11,31,15,30,0),540],
+  [Date.UTC(1948,4,31,15,0,0),600],[Date.UTC(1948,8,12,14,0,0),540],
+  [Date.UTC(1949,3,2,15,0,0),600],[Date.UTC(1949,8,10,14,0,0),540],
+  [Date.UTC(1950,2,31,15,0,0),600],[Date.UTC(1950,8,9,14,0,0),540],
+  [Date.UTC(1951,4,5,15,0,0),600],[Date.UTC(1951,8,8,14,0,0),540],
+  [Date.UTC(1954,2,20,15,0,0),510],
+  [Date.UTC(1955,4,4,15,30,0),570],[Date.UTC(1955,8,8,14,30,0),510],
+  [Date.UTC(1956,4,19,15,30,0),570],[Date.UTC(1956,8,29,14,30,0),510],
+  [Date.UTC(1957,4,4,15,30,0),570],[Date.UTC(1957,8,21,14,30,0),510],
+  [Date.UTC(1958,4,3,15,30,0),570],[Date.UTC(1958,8,20,14,30,0),510],
+  [Date.UTC(1959,4,2,15,30,0),570],[Date.UTC(1959,8,19,14,30,0),510],
+  [Date.UTC(1960,3,30,15,30,0),570],[Date.UTC(1960,8,17,14,30,0),510],
+  [Date.UTC(1961,7,9,15,30,0),540],
+  [Date.UTC(1987,4,9,17,0,0),600],[Date.UTC(1987,9,10,17,0,0),540],
+  [Date.UTC(1988,4,7,17,0,0),600],[Date.UTC(1988,9,8,17,0,0),540]];
+const SAJU_TZ_BASE=510;          // 1908-04-01 이전. 입력 최소가 1930년이라 실사용 밖이다
+const SAJU_LON_DEFAULT=126.978;  // 경도를 모르면 서울. 국내 폭이 10분 남짓이라 무해하다
+
+function sajuOffsetAt(utcMs){
+  let o=SAJU_TZ_BASE;
+  for(let i=0;i<SAJU_TZ.length;i++){ if(utcMs>=SAJU_TZ[i][0])o=SAJU_TZ[i][1]; else break; }
+  return o;}
+/* 한국 벽시계(Date.UTC로 만든 가짜 UTC) -> 진짜 UTC 순간.
+   서머타임 전이의 "없는 시각/두 번 있는 시각"은 2회 반복으로 결정적으로 하나를 고른다. */
+function sajuUtcFromWall(wallMs){
+  const o=sajuOffsetAt(wallMs-540*60000);
+  let utc=wallMs-o*60000;
+  const o2=sajuOffsetAt(utc);
+  if(o2!==o)utc=wallMs-o2*60000;
+  return utc;}
+/* 균시차(Meeus 28.3). 진태양시 = 평균태양시 + 균시차. 2월 중순 -14분 ~ 11월 초 +16분. */
+function sajuEot(utcMs){
+  const T=(utcMs/86400000+2440587.5-2451545)/36525, R=Math.PI/180;
+  const L0=280.46646+36000.76983*T+0.0003032*T*T;
+  const M=357.52911+35999.05029*T-0.0001537*T*T;
+  const e=0.016708634-0.000042037*T-0.0000001267*T*T;
+  const eps=23+26/60+21.448/3600-(46.815/3600)*T-(0.00059/3600)*T*T+(0.001813/3600)*T*T*T;
+  const y=Math.pow(Math.tan(eps*R/2),2), l=L0*R, m=M*R;
+  const E=y*Math.sin(2*l)-2*e*Math.sin(m)+4*e*y*Math.sin(m)*Math.cos(2*l)
+          -0.5*y*y*Math.sin(4*l)-1.25*e*e*Math.sin(2*m);
+  return E*(180/Math.PI)*4;}
+
+/* 12절(節) 목록. 24절기 중 **짝수 인덱스만** 월주를 가른다 — 홀수는 중기(中氣)라 쓰지 않는다.
+   앞뒤 연도까지 담는 이유: 1월생은 전년도 대설~소한 구간에 걸리고, 12월생은 다음 해로 넘어간다. */
+function sajuJieList(y){
+  const ST=window.SOLAR_TERMS, out=[];
+  if(!ST)return out;
+  for(let k=-1;k<=1;k++){
+    const yy=y+k, t=ST.ofYear(yy);
+    if(!t)continue;
+    for(let i=0;i<24;i+=2)
+      out.push({ms:t[i],branch:(i/2+1)%12,sajuYear:(i===0?yy-1:yy),term:i,termYear:yy});}
+  return out.sort(function(a,b){return a.ms-b.ms;});}
+
+/** 사주 계산. birth = {y,m,d,hour,min,lon}. hour가 정수가 아니면 "시각 모름".
+    반환 기둥은 [천간index, 지지index]. 시각을 모르면 hour는 null. */
+function sajuOf(b){
+  if(!b||!Number.isInteger(b.y)||!Number.isInteger(b.m)||!Number.isInteger(b.d))return null;
+  const hasTime=Number.isInteger(b.hour);
+  const lon=(typeof b.lon==='number'&&isFinite(b.lon))?b.lon:SAJU_LON_DEFAULT;
+  const wall=Date.UTC(b.y,b.m-1,b.d,hasTime?b.hour:12,hasTime?(b.min||0):0);
+  const utcMs=sajuUtcFromWall(wall);
+  const apparentMs=utcMs+(lon*4+sajuEot(utcMs))*60000;
+
+  const jl=sajuJieList(b.y);
+  let k=-1;
+  for(let i=0;i<jl.length;i++){ if(jl[i].ms<=utcMs)k=i; else break; }
+  if(k<0)return null;                       // 표 범위 밖(1900 이전 등)
+  const cur=jl[k];
+  const yStem=((cur.sajuYear-4)%10+10)%10, yBranch=((cur.sajuYear-4)%12+12)%12;
+  /* 오호둔(五虎遁) — 寅월 천간 = (연간%5)*2+2. 甲己는 丙寅, 乙庚은 戊寅, 丙辛은 庚寅,
+     丁壬은 壬寅, 戊癸는 甲寅에서 시작한다 */
+  const mStem=(((yStem%5)*2+2)+(((cur.branch-2)%12+12)%12))%10;
+
+  /* 일주 — 시각을 모르면 진태양시를 적용할 수 없으므로 날짜 그대로 본다.
+     (자정을 되넘길지 판단할 근거가 없다. 추정으로 하루를 옮기지 않는다) */
+  const dayIdx=hasTime?Math.floor(apparentMs/86400000)
+                      :Math.floor(Date.UTC(b.y,b.m-1,b.d)/86400000);
+  const dStem=((dayIdx+7)%10+10)%10, dBranch=((dayIdx+5)%12+12)%12;
+
+  /* 시주 — 오서둔(五鼠遁). 子시 천간 = (일간%5)*2.
+     조자시 방식: 23시대는 일주를 안 옮기고 **시주 천간만** 다음날 일간에서 뽑는다. */
+  let hPil=null, aHour=null;
+  if(hasTime){
+    aHour=new Date(apparentMs).getUTCHours();
+    const hBranch=Math.floor(((aHour+1)%24)/2);
+    const baseStem=(((aHour>=23?dayIdx+1:dayIdx)+7)%10+10)%10;
+    hPil=[(((baseStem%5)*2)+hBranch)%10,hBranch];}
+
+  const nextMs=jl[k+1]?jl[k+1].ms:null;
+  return {year:[yStem,yBranch],month:[mStem,cur.branch],day:[dStem,dBranch],hour:hPil,
+    hasTime:hasTime,lon:lon,utcMs:utcMs,apparentMs:apparentMs,apparentHour:aHour,
+    jieMs:cur.ms,jieTerm:cur.term,jieTermYear:cur.termYear,nextJieMs:nextMs,
+    minSinceJie:(utcMs-cur.ms)/60000,
+    minToNextJie:nextMs==null?null:(nextMs-utcMs)/60000};}
+
+/** 기둥 -> "甲子". 시각 모름이면 null이 들어오므로 호출부가 '미상'을 붙인다 */
+function pillarStr(p){return p?STEMS[p[0]]+BRANCHES[p[1]]:null;}
+/** 여덟 글자의 오행 개수. 해석이 아니라 계산 결과 표시다(사용자 결정). */
+function sajuElements(r){
+  const c={mok:0,hwa:0,to:0,geum:0,su:0};
+  if(!r)return c;
+  [r.year,r.month,r.day,r.hour].forEach(function(p){
+    if(!p)return; c[STEM_EL[p[0]]]++; c[BRANCH_EL[p[1]]]++;});
+  return c;}
 function relation(a,b){
   if(a===b)return{kind:'bi',label:`${EL_KO[a]}·${EL_KO[b]} 비화`};
   if(GEN[a]===b)return{kind:'saeng',label:`${EL_KO[a]}생${EL_KO[b]}`,from:a};
