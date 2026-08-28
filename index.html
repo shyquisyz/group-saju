@@ -215,6 +215,85 @@
   .primary{width:100%;padding:14px;margin-top:6px;border:0;border-radius:6px;background:var(--ink);
     color:#101018;font-size:var(--fs-base);font-weight:700;cursor:pointer;font-family:inherit}
   .primary:active{opacity:.85}
+  /* ═══════ 표 입력 [2026-08-28] ═══════
+     데스크톱은 격자(7열 + 삭제), **768px 미만에서는 각 줄이 카드로 접힌다.**
+     가로 스크롤로 처리하지 않은 이유: "여러 줄을 한눈에 본다"가 표의 유일한 이점인데
+     가로로 밀면 그게 사라진다. 카드로 접으면 한 화면에 두세 명이 남는다. */
+  /* 표 모드에서만 시트를 넓힌다 — 기본 560px에 7열을 넣으면 생년월일 칸이 잘린다(실측).
+     한 명 폼(수정)은 종전 폭 그대로다. 모바일에서는 카드로 접히므로 폭이 의미 없다. */
+  #createsheet.wide{width:min(920px,calc(100vw - 28px))}
+  .pt-h3{font-size:var(--fs-lg);font-weight:700;margin-bottom:12px}
+  /* 쓸 수 있는 그룹 이름 — 표에서는 유형을 못 받아 새 그룹을 만들 수 없다(§ 아래 주석) */
+  .pt-groups{display:flex;flex-wrap:wrap;gap:5px;align-items:center;
+    margin-bottom:12px;font-size:var(--fs-xs);color:var(--mut);line-height:1.7}
+  .pt-groups .gchip{padding:3px 8px;border-radius:11px;border:1px solid var(--line);
+    background:rgba(255,255,255,.06);color:var(--ink);font-size:var(--fs-xs)}
+  .pt-groups .none{color:var(--mut)}
+  .pt-wrap{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .pt-head,.pt-row{display:grid;
+    grid-template-columns:1.15fr 1fr 1.15fr 88px .8fr 1fr 52px 26px;gap:0}
+  .pt-head{background:rgba(255,255,255,.05);border-bottom:1px solid var(--line)}
+  .pt-head>div{padding:7px 8px;font-family:'Space Mono',monospace;
+    font-size:var(--fs-xs);letter-spacing:.08em;color:var(--mut)}
+  .pt-row{border-bottom:1px solid rgba(255,255,255,.06)}
+  .pt-row:last-child{border-bottom:0}
+  .pt-cell{position:relative;border-right:1px solid rgba(255,255,255,.06)}
+  .pt-cell:last-child{border-right:0}
+  .pt-cell input{width:100%;padding:9px 8px;border:0;background:transparent;
+    color:var(--ink);font-family:inherit;font-size:var(--fs-sm);outline:0}
+  .pt-cell input:focus{background:rgba(255,255,255,.07)}
+  .pt-cell input::placeholder{color:rgba(255,255,255,.22)}
+  /* 셀 3상태 — 정상 / 추정(노랑) / 오류(빨강). 추정은 **등록된다**, 오류는 그 줄만 빠진다 */
+  .pt-cell.warn{background:rgba(212,175,90,.13);box-shadow:inset 0 0 0 1px rgba(212,175,90,.4)}
+  .pt-cell.bad{background:rgba(255,138,106,.13);box-shadow:inset 0 0 0 1px rgba(255,138,106,.45)}
+  .pt-badge{position:absolute;right:4px;top:50%;transform:translateY(-50%);
+    font-size:9.5px;padding:1px 4px;border-radius:3px;pointer-events:none;
+    background:rgba(0,0,0,.45);color:var(--gold)}
+  .pt-cell.bad .pt-badge{color:#ff9a86}
+  .pt-sexcell{display:flex;gap:3px;padding:5px 6px;align-items:center}
+  .pt-sexcell button{flex:1;padding:5px 0;border-radius:4px;border:1px solid var(--line);
+    background:rgba(255,255,255,.05);color:var(--mut);font-size:var(--fs-xs);
+    cursor:pointer;font-family:inherit}
+  .pt-sexcell button.on{background:var(--ink);color:#101018;border-color:var(--ink);font-weight:700}
+  /* 일간 — 입력이 아니라 **계산 결과를 되비추는 칸**이다. 날짜를 잘못 읽었으면 여기서 드러난다 */
+  .pt-stemcell{padding:9px 6px;font-size:var(--fs-sm);color:var(--gold);
+    text-align:center;font-weight:600}
+  .pt-del{background:none;border:0;color:var(--mut);cursor:pointer;font-size:var(--fs-md);
+    padding:0;width:100%;height:100%;font-family:inherit}
+  .pt-del:hover{color:#ff9a86}
+  .pt-lab{display:none}
+  .pt-note{font-size:var(--fs-xs);color:var(--mut);line-height:1.6;margin-top:9px}
+  .pt-summary{margin-top:10px;font-size:var(--fs-sm);color:var(--ink);line-height:1.6}
+  .pt-summary .bad{color:#ff9a86;font-weight:600}
+  .pt-summary .warn{color:var(--gold);font-weight:600}
+
+  @media (max-width:767px){
+    /* 한 줄 = 한 카드. 머리줄이 사라지므로 라벨을 셀 안에 되살린다.
+       [★ 2열로 접는다 — 실측 근거] 처음엔 여섯 칸을 세로로 쌓았더니 **카드 하나가 360px**
+       였다(386x840에서 실측). 시트 높이 상한(86vh≈722px)에서 헤더·그룹칩·안내·저장을 빼면
+       한 명밖에 안 보여 "여러 줄을 한눈에"라는 표의 이점이 사라진다.
+       이름과 도시만 전폭, 나머지를 둘씩 묶어 높이를 절반 아래로 줄였다. */
+    .pt-head{display:none}
+    .pt-wrap{border:0;overflow:visible}
+    .pt-row{display:grid;grid-template-columns:1fr 1fr;gap:6px 7px;
+      border:1px solid var(--line);border-radius:8px;
+      padding:8px 32px 9px 9px;margin-bottom:9px;position:relative;
+      background:rgba(255,255,255,.03)}
+    .pt-cell{border-right:0}
+    .pt-lab{display:block;font-family:'Space Mono',monospace;font-size:9.5px;
+      letter-spacing:.08em;color:var(--mut);margin-bottom:2px}
+    .pt-cell input{border:1px solid var(--line);border-radius:5px;
+      background:rgba(255,255,255,.05);padding:7px 8px}
+    .pt-row>.pt-cell:nth-child(1){grid-column:1 / -1}   /* 이름 — 전폭 */
+    .pt-row>.pt-cell:nth-child(6){grid-column:1 / -1}   /* 도시 — 전폭(자동완성 목록이 길다) */
+    .pt-sexcell{padding:0}
+    .pt-sexcell button{padding:7px 0}
+    /* 일간은 칸을 따로 쓰지 않고 카드 우상단에 얹는다 — 높이를 더 먹지 않게 */
+    .pt-stemcell{position:absolute;right:30px;top:7px;padding:0;
+      font-size:var(--fs-md);text-align:right}
+    .pt-delcell{position:absolute;right:5px;top:4px;width:24px;height:24px}
+  }
+
   /* ═══ 연속 입력 [2026-08-28] ═══ "저장" 옆에 "저장하고 계속".
      두 번째는 **부차 버튼**이라 채우지 않는다 — 한 명만 넣는 사람이 대다수이므로 주 동작이
      흐려지면 안 된다. 좁은 화면에서는 세로로 접힌다(모바일 하단 시트 폭 기준). */
@@ -679,6 +758,47 @@
   <button type="button" class="tab" data-tab="group">그룹 만들기</button>
 </div>
 <div id="tab-person">
+
+<!-- ═══ 표 모드 — 사람 **추가**는 전부 여기로 [2026-08-28] ═══
+     [왜 표가 기본인가] 여러 명을 넣는 게 더 흔한 상황이다(사용자 판단). 한 명만 넣을 때는
+     **한 줄만 채우고 저장**하면 되므로 한 명 흐름이 손해 보지 않는다.
+     줄이 하나뿐일 때 어색하지 않게 — **빈 줄을 미리 깔지 않고**, 마지막 줄에 글자가 들어가면
+     그때 다음 줄이 자동으로 생긴다(스프레드시트와 같은 감각). 처음엔 한 줄뿐이다.
+
+     [전부 텍스트로 받는다] 앞서 표를 기각한 근거가 "12지시 버튼과 도시 셀렉트를 셀에 넣을 수
+     없다"였는데 **그 전제가 틀렸다**(사용자 지적). 위젯을 셀 안에 재현할 이유가 없었다 —
+     텍스트로 받아 해석하면 된다. 성별만 버튼이다(남/여 토글).
+
+     [기존 한 명 폼(#ps-mode)은 수정 전용이 됐다] 사람을 클릭해 고치는 경로다. -->
+<div id="pt-mode">
+  <h3 class="pt-h3">사람 추가</h3>
+
+  <!-- [그룹 열의 짝] 표에서는 그룹 **유형**(가족·부부·…)을 받을 수 없어 새 그룹을 만들 수
+       없다. 그래서 없는 이름은 오류로 막고, 대신 **쓸 수 있는 이름을 여기 펼쳐 둔다**
+       (사용자 지시). 아래 그룹 칸의 자동완성 목록도 이것과 같은 출처다. -->
+  <div class="pt-groups" id="pt-groups"></div>
+
+  <div class="pt-wrap">
+    <div class="pt-head">
+      <div>이름</div><div>그룹</div><div>생년월일</div>
+      <div>성별</div><div>시각</div><div>도시</div><div class="pt-stem">일간</div><div></div>
+    </div>
+    <div id="pt-body"></div>
+  </div>
+
+  <!-- 도시 자동완성 — 목록에 **없어도 그대로 저장**한다(경도만 빈다).
+       "춘천이 없다"는 지적이 있었고, 지금 경도는 어떤 계산에도 안 쓰인다. -->
+  <datalist id="pt-citylist"></datalist>
+  <datalist id="pt-grouplist"></datalist>
+
+  <div class="pt-note" id="pt-note"></div>
+  <div class="pt-summary" id="pt-summary"></div>
+  <button class="primary" id="pt-save">저장</button>
+  <div class="sheetnote">일간은 실계산됩니다 · 시·도시는 정밀 엔진(진태양시 보정) 연결 시 사용
+    <br>· 이분들의 생년월일도 <b style="color:var(--ink)">이 브라우저 안에만</b> 남습니다 — 어디로도 전송되지 않습니다</div>
+</div>
+
+<div id="ps-mode">
   <h3 id="as-title" style="display:none">사람 추가</h3>
   <div class="field"><label>이름</label><input id="f-name" type="text" placeholder="예: 어머니, 김OO"></div>
   <div class="field"><label>그룹 (없으면 선택 안 해도 됨)</label><div class="typegrid" id="f-groups"></div>
@@ -726,18 +846,15 @@
         <br>· 이분의 생년월일도 <b style="color:var(--ink)">이 브라우저 안에만</b> 남습니다 — 어디로도 전송되지 않습니다</div>
     </div>
   </details>
-  <!-- [연속 입력, 2026-08-28] 열 명을 넣으려면 시트를 열 번 열고 닫아야 했다.
-       "저장하고 계속"은 시트를 닫지 않고 **이름만 비운다** — 생년월일과 그룹 체크는 남는다.
-       수정 모드에서는 감춘다(연속으로 고칠 대상이 없다). -->
+  <!-- [2026-08-28] "저장하고 계속"을 뺐다 — **표가 그 일을 대신한다.**
+       이 폼은 이제 수정 전용이라(추가는 전부 #pt-mode로 간다) 연속으로 고칠 대상이 없다. -->
   <div class="savedwith" id="as-added" style="display:none"></div>
-  <div class="btnrow">
-    <button class="primary" id="addbtn">저장</button>
-    <button class="primary ghost" id="addcontbtn">저장하고 계속</button>
-  </div>
+  <button class="primary" id="addbtn">저장</button>
   <button class="danger-full" id="delbtn" style="display:none">이 사람 삭제</button>
   <div class="guardnote" id="del-guard" style="display:none"><b>나</b>는 삭제할 수 없습니다 —
     내가 은하의 유일한 항성이라, 사라지면 모든 항성계의 중심이 빕니다.
     <b>이름·생년월일은 위에서 수정할 수 있습니다.</b></div>
+</div>
 </div>
 <div id="tab-group" hidden>
   <h3 id="gs-title" style="display:none">그룹 만들기</h3>
@@ -5754,7 +5871,7 @@ function setCreateTab(which,editing){
 document.querySelectorAll('#cs-tabs .tab').forEach(b=>b.onclick=()=>{
   /* 탭 자체는 입력을 지우지 않는다 — 두 탭의 DOM이 동시에 살아 있어 되돌아오면 그대로다.
      초기화는 openAddSheet/openGrpSheet가 열릴 때만 한다. */
-  if(b.dataset.tab==='group')openGrpSheet();else openAddSheet(null);});
+  if(b.dataset.tab==='group')openGrpSheet();else openPersonTable();});
 dim.onclick=closeSheets;
 let editTarget=null;   // null=추가 모드, 노드=수정 모드
 let fSijin=12;         // 기본 '모름'
@@ -5926,14 +6043,390 @@ function openAddSheet(node){
     ngType.innerHTML=GTYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
     ngType.value='가족';}
   renderSijin();renderFGroups();
-  /* [연속 입력, 2026-08-28] 지난 세션의 "추가됐습니다" 줄을 지우고, 수정 모드에서는
-     "저장하고 계속"을 감춘다 — 연속으로 고칠 대상이 없다(다음 사람이 무엇인지 정의되지 않는다). */
   const addedBox=document.getElementById('as-added');
   if(addedBox){addedBox.style.display='none';addedBox.innerHTML='';}
-  const contBtn=document.getElementById('addcontbtn');
-  if(contBtn)contBtn.style.display=node?'none':'block';
-  setCreateTab('person',!!node); /* [2026-08-27] 수정 모드면 탭을 감추고 제목만 */
+  /* [2026-08-28] 이 폼은 **수정 전용**이 됐다 — 추가는 전부 표(#pt-mode)로 간다.
+     인자 없이 불리면 표를 연다(옛 호출부가 남아 있어도 안전하게). */
+  ptShowMode(node?'single':'table');
+  if(!node){openPersonTable();return;}
+  setCreateTab('person',true); /* 수정 모드면 탭을 감추고 제목만 */
   createsheet.classList.add('open');dim.classList.add('on');}
+
+/* 표 / 한 명 폼 전환. 둘 다 #tab-person 안에 있고 한 번에 하나만 보인다. */
+function ptShowMode(which){
+  const t=document.getElementById('pt-mode'),s=document.getElementById('ps-mode');
+  if(t)t.style.display=which==='table'?'block':'none';
+  if(s)s.style.display=which==='single'?'block':'none';
+  /* 표는 열이 일곱이라 기본 시트 폭(560px)으로는 칸이 잘린다 */
+  createsheet.classList.toggle('wide',which==='table');}
+
+/* ═══════════════ 표 입력 [2026-08-28] ═══════════════
+   [전부 텍스트로 받는다] 앞서 표를 기각한 근거가 "12지시 버튼·도시 셀렉트를 셀에 못 넣는다"
+   였는데 **전제가 틀렸다**(사용자 지적). 위젯을 셀 안에 재현할 이유가 없다 — 글로 받아
+   해석하면 된다. 성별만 버튼이다.
+   [해석은 조용히 하지 않는다] 추측한 값(두 자리 연도)은 **펼쳐서 셀에 써 넣고 "추정" 표시**를
+   단다. 값을 몰래 고치면 사용자는 틀린 줄도 모른다(CLAUDE.md "유추라고 명시").
+   [일간 칸이 검산 장치다] `dayStem`은 60일 주기라 **틀린 날짜도 그럴듯한 일간**을 낸다.
+   등록 뒤에는 알 방법이 없으므로 입력 옆에 결과를 나란히 놓는다. */
+const PT_MAX_ROWS=100;   /* 폭주 방지. 임의값이지만 한 번에 100명을 손으로 넣는 일은 없다 */
+const PT_COLS=['name','grp','date','sex','time','city'];
+const PT_LABELS={name:'이름',grp:'그룹',date:'생년월일',sex:'성별',time:'시각',city:'도시'};
+let ptModel=[];
+
+function ptBlank(){return {name:'',grp:'',date:'',sex:undefined,time:'',city:''};}
+/* 표시되는 칸만 본다 — `_dateGuessed` 같은 내부 흔적은 "빈 줄"을 좌우하지 않는다 */
+function ptIsEmpty(m){
+  return !m.name.trim()&&!m.grp.trim()&&!m.date.trim()&&!m.time.trim()&&!m.city.trim()
+    &&m.sex===undefined;}
+
+/* ── 해석기 ── 전부 {ok:…} 형태로 돌려주고 **던지지 않는다.** */
+function ptNormNum(s){ /* 전각 숫자를 반각으로 — 엑셀·한글에서 붙여넣으면 섞여 들어온다 */
+  return String(s==null?'':s).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));}
+
+/* 두 자리 연도 펼치기. 오늘이 2026년이므로 **미래 생일은 없다**고 본다:
+   00~26 → 2000년대, 27~99 → 1900년대. 이 규칙을 화면에도 적는다. */
+function ptExpandYear(v){
+  const cut=new Date().getFullYear()%100;
+  return v<=cut?2000+v:1900+v;}
+
+function ptParseDate(raw){
+  const t=ptNormNum(raw).trim();
+  if(!t)return {ok:false,why:'생년월일이 비었습니다'};
+  const s=t.replace(/[년월]/g,'-').replace(/일/g,'').replace(/\s+/g,'');
+  const parts=s.split(/[-./]+/).filter(x=>x!=='');
+  let y,m,d,guessed=false;
+  if(parts.length===3){
+    if(!parts.every(x=>/^\d{1,4}$/.test(x)))return {ok:false,why:'숫자가 아닌 값이 섞여 있습니다'};
+    y=+parts[0];m=+parts[1];d=+parts[2];
+    if(parts[0].length<=2){y=ptExpandYear(y);guessed=true;}
+  }else if(parts.length===1&&/^\d+$/.test(parts[0])){
+    const n=parts[0];
+    if(n.length===8){y=+n.slice(0,4);m=+n.slice(4,6);d=+n.slice(6,8);}
+    else if(n.length===6){y=ptExpandYear(+n.slice(0,2));m=+n.slice(2,4);d=+n.slice(4,6);guessed=true;}
+    else return {ok:false,why:'8자리(19900101) 또는 6자리(900101)로 적어 주세요'};
+  }else return {ok:false,why:'1990-01-01 · 19900101 · 90.1.1 같은 형식으로 적어 주세요'};
+  /* 실재하는 날짜인지 — 여기서 막는 것이 유일한 기회다(dayStem은 안 던진다) */
+  if(!validYMD(y,m,d)){
+    /* 여섯 자리인데 월이 범위 밖이면 "1990년 1월"처럼 일자를 뺀 경우다. 그대로 "없는 날짜"
+       라고만 하면(199001 → "2019-90-1") 사용자가 무엇이 틀렸는지 못 읽는다. */
+    if(m>12||m<1)return {ok:false,why:'월이 '+m+'입니다 — 여섯 자리는 900101처럼 연·월·일 순서입니다'};
+    return {ok:false,why:'실제로 없는 날짜입니다 ('+y+'-'+m+'-'+d+')'};}
+  return {ok:true,y,m,d,guessed};}
+
+const PT_JIJI={'자':0,'축':1,'인':2,'묘':3,'진':4,'사':5,'오':6,'미':7,'신':8,'유':9,'술':10,'해':11,
+  '子':0,'丑':1,'寅':2,'卯':3,'辰':4,'巳':5,'午':6,'未':7,'申':8,'酉':9,'戌':10,'亥':11};
+/* 시 → 시진 인덱스. 자시가 23시에 시작하므로 한 시간 밀어서 2로 나눈다
+   (23·0시→자, 1시→축, 3시→인, 15시→신 … 네 지점으로 검산했다). */
+function ptHourToSijin(h){return Math.floor(((h+1)%24)/2);}
+function ptParseTime(raw){
+  let t=ptNormNum(raw).trim();
+  if(!t||/^(모름|모릅니다|미상|없음|\?|-|—)$/.test(t))return {ok:true,sijin:12};
+  const j=t.replace(/시$/,'');
+  if(PT_JIJI[j]!==undefined)return {ok:true,sijin:PT_JIJI[j]};
+  const pm=/오후|저녁|밤|[Pp][Mm]/.test(t), am=/오전|새벽|아침|[Aa][Mm]/.test(t);
+  t=t.replace(/오전|오후|새벽|아침|저녁|밤|[APap][Mm]/g,'').trim();
+  let h=null,min=0,mm;
+  if((mm=/^(\d{1,2})\s*[:시]\s*(\d{1,2})\s*분?$/.exec(t))){h=+mm[1];min=+mm[2];}
+  else if((mm=/^(\d{1,2})\s*시$/.exec(t))){h=+mm[1];}
+  else if(/^\d{4}$/.test(t)){h=+t.slice(0,2);min=+t.slice(2,4);}
+  else if((mm=/^(\d{1,2})$/.exec(t))){h=+mm[1];}
+  else return {ok:false,why:'시각을 못 읽었습니다 (3 · 3시 · 0300 · 15:30 · 모름)'};
+  if(pm&&h<12)h+=12;
+  if(am&&h===12)h=0;
+  if(!(h>=0&&h<=23&&min>=0&&min<=59))return {ok:false,why:'시각 범위를 벗어났습니다'};
+  /* [분은 저장하지 않는다 — 2026-08-28 결정] birth에 min 칸을 만들려면 SAVE_VER을 올리고
+     변환을 넣어야 하는데, 분을 실제로 쓸지는 §5.6 문제 2(가/나/다)를 정해야 갈린다.
+     표에서만 받으면 시트로 넣은 사람과 데이터가 갈리므로 **미룬다.**
+     대신 버렸다는 것을 셀에 표시한다 — 조용히 버리면 "15:30을 넣었는데 왜 15시인가"가 된다. */
+  return {ok:true,sijin:ptHourToSijin(h),dropMin:min>0};}
+
+/* 도시 — **목록에 없어도 그대로 저장한다.** 경도만 빈다(지금 경도는 계산에 안 쓰인다).
+   "춘천이 없다"는 지적이 있었고, 목록을 이유로 입력을 막는 것이 더 나쁘다. */
+function ptParseCity(raw){
+  const t=String(raw==null?'':raw).trim();
+  if(!t)return {city:CITY_UNKNOWN,lon:null,known:true};
+  if(CITY_LON[t]!==undefined)return {city:t,lon:CITY_LON[t],known:true};
+  const s=t.replace(/\s+/g,'');
+  if(CITY_LON[s]!==undefined)return {city:s,lon:CITY_LON[s],known:true};
+  /* 접미어만 떼고 한 번 더 — "서울특별시" → "서울". 그 이상의 유사도 매칭은 안 한다:
+     틀리면 경도가 조용히 다른 도시 값이 된다. */
+  const cut=s.replace(/(특별자치시|특별자치도|광역시|특별시|시|군)$/,'');
+  if(cut&&CITY_LON[cut]!==undefined)return {city:cut,lon:CITY_LON[cut],known:true};
+  return {city:t,lon:null,known:false};}
+
+function ptParseSex(raw){
+  const t=String(raw==null?'':raw).trim();
+  if(/^(남|남자|남성|[Mm]|male)$/.test(t))return '남';
+  if(/^(여|여자|여성|[Ff]|female)$/.test(t))return '여';
+  return undefined;}
+
+/* 그룹 — **없는 이름은 오류로 막는다**(사용자 결정). 표에서는 유형(가족·부부·…)을 받을 수
+   없어 새 그룹을 제대로 만들 수 없기 때문이다. 쓸 수 있는 이름은 표 위에 펼쳐 둔다. */
+function ptParseGroups(raw){
+  const t=String(raw==null?'':raw).trim();
+  if(!t)return {ok:true,ids:[]};
+  const names=t.split(/[,/·]/).map(x=>x.trim()).filter(Boolean);
+  const ids=[],miss=[];
+  names.forEach(nm=>{
+    const g=groups.find(x=>x.name===nm);
+    if(g){if(ids.indexOf(g.id)<0)ids.push(g.id);}else miss.push(nm);});
+  if(miss.length)return {ok:false,why:'그런 이름의 그룹이 없습니다 — '+miss.join(', ')
+    +' (위 목록의 이름만 쓸 수 있습니다)'};
+  return {ok:true,ids};}
+
+/* 한 줄을 통째로 검사한다. 화면 표시와 저장이 **같은 결과를 쓴다** — 두 벌로 갈라지면
+   "화면엔 초록인데 저장이 안 되는" 줄이 생긴다. */
+function ptValidate(m){
+  const r={empty:ptIsEmpty(m),ok:false,errs:{},warns:{}};
+  if(r.empty)return r;
+  r.name=m.name.trim();
+  if(!r.name)r.errs.name='이름은 반드시 필요합니다';
+  else if(nodes.some(n=>n.name===r.name))r.warns.name='이미 같은 이름이 있습니다(동명이인이면 그대로 두셔도 됩니다)';
+  const d=ptParseDate(m.date);
+  if(!d.ok)r.errs.date=d.why;
+  else{r.y=d.y;r.m=d.m;r.d=d.d;
+    if(d.guessed)r.warns.date='두 자리 연도를 '+d.y+'년으로 펼쳤습니다 — 맞는지 확인해 주세요';
+    else if(m._dateGuessed)r.warns.date='붙여넣은 두 자리 연도를 '+m._dateGuessed
+      +'년으로 펼쳤습니다 — 맞는지 확인해 주세요';}
+  const t=ptParseTime(m.time);
+  if(!t.ok)r.errs.time=t.why;
+  else{r.sijin=t.sijin; if(t.dropMin)r.warns.time='분은 저장하지 않습니다';}
+  const c=ptParseCity(m.city);
+  r.city=c.city;r.lon=c.lon;
+  if(!c.known)r.warns.city='도시 목록에 없어 경도 없이 저장됩니다';
+  const g=ptParseGroups(m.grp);
+  if(!g.ok)r.errs.grp=g.why; else r.gids=g.ids;
+  r.sex=m.sex;
+  r.ok=!Object.keys(r.errs).length;
+  return r;}
+
+/* ── 화면 ── */
+const PT_BADGE={name:'중복',date:'추정',time:'분버림',city:'목록밖'};
+
+function ptRenderGroups(){
+  const el=document.getElementById('pt-groups');
+  if(!el)return;
+  if(!groups.length){
+    el.innerHTML='<span class="none">아직 그룹이 없습니다 — 그룹 칸은 비워 두세요. '
+      +'그룹은 "그룹 만들기" 탭에서 먼저 만듭니다.</span>';return;}
+  el.innerHTML='<span>쓸 수 있는 그룹 —</span>'
+    +groups.map(g=>`<span class="gchip">${g.name}</span>`).join('')
+    +'<span>· 여럿이면 쉼표로</span>';}
+
+function ptRenderLists(){
+  const cl=document.getElementById('pt-citylist');
+  if(cl&&!cl.children.length)
+    cl.innerHTML=CITY_GROUPS.map(g=>g.list.map(([c])=>`<option value="${c}">`).join('')).join('');
+  const gl=document.getElementById('pt-grouplist');
+  if(gl)gl.innerHTML=groups.map(g=>`<option value="${g.name}">`).join('');}
+
+function ptMakeRow(m){
+  const row=document.createElement('div');
+  row.className='pt-row';
+  row._m=m;row._cells={};
+  const mk=(key,ph,list)=>{
+    const c=document.createElement('div');c.className='pt-cell';
+    const l=document.createElement('span');l.className='pt-lab';l.textContent=PT_LABELS[key];
+    const i=document.createElement('input');
+    i.type='text';i.placeholder=ph;i.value=m[key]||'';
+    if(list)i.setAttribute('list',list);
+    i.oninput=()=>{m[key]=i.value;
+      /* 사용자가 직접 고친 값은 더 이상 우리 추측이 아니다 */
+      if(key==='date')delete m._dateGuessed;
+      ptTouch(row);};
+    i.addEventListener('paste',e=>ptOnPaste(e,row,key));
+    c.appendChild(l);c.appendChild(i);
+    row._cells[key]=c;row._cells[key]._input=i;
+    return c;};
+  row.appendChild(mk('name','이름'));
+  row.appendChild(mk('grp','비워도 됨','pt-grouplist'));
+  row.appendChild(mk('date','1990-01-01'));
+  /* 성별만 버튼 — 사용자 지시. "안 밝힘"은 두지 않는다: 저장할 때 미입력과 같은 null이라
+     표에서 가를 실익이 없다(§5.6 문제 4). 다시 누르면 꺼진다. */
+  const sc=document.createElement('div');sc.className='pt-cell';
+  const sl=document.createElement('span');sl.className='pt-lab';sl.textContent=PT_LABELS.sex;
+  const sw=document.createElement('div');sw.className='pt-sexcell';
+  ['남','여'].forEach(v=>{
+    const b=document.createElement('button');b.type='button';b.textContent=v;
+    b.onclick=()=>{m.sex=(m.sex===v)?undefined:v;ptTouch(row);};
+    sw.appendChild(b);row._cells['sex_'+v]=b;});
+  sc.appendChild(sl);sc.appendChild(sw);row._cells.sex=sc;row.appendChild(sc);
+  row.appendChild(mk('time','모름'));
+  row.appendChild(mk('city','서울','pt-citylist'));
+  const st=document.createElement('div');st.className='pt-cell pt-stemcell';
+  row._cells.stem=st;row.appendChild(st);
+  const dc=document.createElement('div');dc.className='pt-cell pt-delcell';
+  const db=document.createElement('button');db.type='button';db.className='pt-del';
+  db.textContent='✕';db.title='이 줄 지우기';
+  db.onclick=()=>ptRemoveRow(row);
+  dc.appendChild(db);row.appendChild(dc);
+  return row;}
+
+function ptTouch(row){
+  ptPaint(row);
+  ptAutoGrow();
+  ptUpdateSummary();}
+
+function ptPaint(row){
+  const m=row._m,v=ptValidate(m);
+  row._v=v;
+  ['name','grp','date','time','city'].forEach(k=>{
+    const c=row._cells[k];if(!c)return;
+    const err=v.errs[k],warn=v.warns[k];
+    c.classList.toggle('bad',!!err);
+    c.classList.toggle('warn',!err&&!!warn);
+    let b=c.querySelector('.pt-badge');
+    const label=err?'!':(warn?(PT_BADGE[k]||'확인'):'');
+    if(label){
+      if(!b){b=document.createElement('span');b.className='pt-badge';c.appendChild(b);}
+      b.textContent=label;
+      c.title=err||warn;
+    }else{if(b)b.remove();c.removeAttribute('title');}});
+  ['남','여'].forEach(v2=>{
+    const b=row._cells['sex_'+v2];if(b)b.classList.toggle('on',m.sex===v2);});
+  /* 일간 — 날짜가 읽히면 바로 보여준다. 줄 전체가 오류여도 날짜만 맞으면 보인다 */
+  row._cells.stem.textContent=(v.y&&!v.errs.date)?STEMS[dayStem(v.y,v.m,v.d)]:'';}
+
+/* 마지막 줄에 뭔가 들어가면 다음 줄이 저절로 생긴다 — **빈 줄을 미리 깔지 않는다.**
+   한 명만 넣는 사람은 한 줄만 보고, 여러 명은 "+ 줄 추가"를 찾을 필요가 없다. */
+function ptAutoGrow(){
+  const body=document.getElementById('pt-body');
+  if(!body)return;
+  const rows=[...body.children];
+  if(!rows.length)return;
+  const last=rows[rows.length-1];
+  if(!ptIsEmpty(last._m)&&ptModel.length<PT_MAX_ROWS){
+    const m=ptBlank();ptModel.push(m);
+    const r=ptMakeRow(m);body.appendChild(r);ptPaint(r);}}
+
+function ptRemoveRow(row){
+  const body=document.getElementById('pt-body');
+  const i=ptModel.indexOf(row._m);
+  if(i>=0)ptModel.splice(i,1);
+  row.remove();
+  if(!ptModel.length){const m=ptBlank();ptModel.push(m);const r=ptMakeRow(m);body.appendChild(r);ptPaint(r);}
+  ptUpdateSummary();}
+
+function ptRenderAll(){
+  const body=document.getElementById('pt-body');
+  if(!body)return;
+  body.innerHTML='';
+  ptModel.forEach(m=>{const r=ptMakeRow(m);body.appendChild(r);ptPaint(r);});
+  ptAutoGrow();ptUpdateSummary();}
+
+function ptUpdateSummary(){
+  const el=document.getElementById('pt-summary');
+  const body=document.getElementById('pt-body');
+  if(!el||!body)return;
+  const rows=[...body.children].map(r=>r._v||ptValidate(r._m));
+  const used=rows.filter(v=>!v.empty);
+  const ok=used.filter(v=>v.ok).length, bad=used.length-ok;
+  const warns=used.reduce((a,v)=>a+Object.keys(v.warns).length,0);
+  if(!used.length){el.innerHTML='<span style="color:var(--mut)">이름과 생년월일만 있으면 등록됩니다. 나머지는 비워 두셔도 됩니다.</span>';return;}
+  let h=`<b>${ok}명</b>이 등록됩니다`;
+  if(bad)h+=` · <span class="bad">${bad}줄은 빨간 칸을 고쳐 주세요</span>`;
+  if(warns)h+=` · <span class="warn">확인 ${warns}곳</span>`;
+  /* 오류 사유를 요약에 **글로** 편다 — 셀의 "!" 배지만으로는 무엇이 틀렸는지 모른다 */
+  const msgs=[];
+  used.forEach((v,i)=>{
+    Object.keys(v.errs).forEach(k=>{if(msgs.length<4)msgs.push(`${i+1}번째 줄 ${PT_LABELS[k]} — ${v.errs[k]}`);});});
+  if(msgs.length)h+='<br><span style="color:var(--mut);font-size:var(--fs-xs)">'+msgs.join('<br>')+'</span>';
+  el.innerHTML=h;}
+
+/* ── 붙여넣기 ── 엑셀에서 복사한 여러 줄이 **줄로 나뉘어야** 한다.
+   탭이 하나라도 있으면 탭을 열 구분으로 본다(엑셀·구글시트). 없으면 쉼표로 떨어뜨린다.
+   한 칸짜리 붙여넣기는 건드리지 않는다 — 기본 동작이 맞다. */
+function ptOnPaste(e,row,key){
+  const cb=e.clipboardData||window.clipboardData;
+  const txt=cb?cb.getData('text'):'';
+  if(!txt||!/[\t\n\r]/.test(txt))return;
+  e.preventDefault();
+  const lines=txt.replace(/\r\n?/g,'\n').split('\n').filter(l=>l.trim()!=='');
+  if(!lines.length)return;
+  const sep=/\t/.test(txt)?'\t':',';
+  const startRow=ptModel.indexOf(row._m);
+  const startCol=PT_COLS.indexOf(key);
+  lines.forEach((line,li)=>{
+    const ri=startRow+li;
+    while(ptModel.length<=ri&&ptModel.length<PT_MAX_ROWS)ptModel.push(ptBlank());
+    const m=ptModel[ri];
+    if(!m)return;
+    line.split(sep).forEach((cell,ci)=>{
+      const col=PT_COLS[startCol+ci];
+      if(!col)return;
+      const val=cell.trim();
+      if(col==='sex')m.sex=ptParseSex(val);
+      else m[col]=val;});});
+  /* 붙여넣은 값 중 **해석된 것은 셀에 펼쳐 써 넣는다** — 두 자리 연도가 그렇다.
+     화면과 저장이 다른 값을 쓰면 안 된다. */
+  ptModel.forEach(m=>{
+    const d=ptParseDate(m.date);
+    if(d.ok&&d.guessed){
+      m.date=d.y+'-'+String(d.m).padStart(2,'0')+'-'+String(d.d).padStart(2,'0');
+      /* [★ 실측으로 잡음] 펼치고 나면 네 자리라 재검사에서 guessed가 꺼져 **"추정" 표시가
+         사라졌다.** 추측을 조용히 확정해 버리는 셈이라, 흔적을 남겨 배지를 유지한다.
+         사용자가 그 칸을 직접 고치면 흔적도 지운다(아래 oninput). */
+      m._dateGuessed=d.y;}});
+  ptRenderAll();
+  const note=document.getElementById('pt-note');
+  if(note)note.textContent=`붙여넣기: ${lines.length}줄을 받았습니다`
+    +(sep==='\t'?' (탭으로 칸을 나눴습니다)':' (쉼표로 칸을 나눴습니다)');}
+
+function openPersonTable(){
+  ptModel=[ptBlank()];
+  ptShowMode('table');
+  ptRenderGroups();ptRenderLists();ptRenderAll();
+  const note=document.getElementById('pt-note');
+  if(note)note.innerHTML='생년월일 — <b>1990-01-01</b> · <b>19900101</b> · <b>90.1.1</b>'
+    +' (두 자리 연도는 00~'+String(new Date().getFullYear()%100).padStart(2,'0')
+    +'을 2000년대로, 그 위를 1900년대로 봅니다) &nbsp;·&nbsp; '
+    +'시각 — <b>3</b> · <b>3시</b> · <b>0300</b> · <b>15:30</b> · <b>모름</b> (분은 저장하지 않습니다)'
+    +' &nbsp;·&nbsp; 엑셀에서 <b>여러 줄을 복사해 붙여넣을 수 있습니다</b>';
+  setCreateTab('person',false);
+  createsheet.classList.add('open');dim.classList.add('on');
+  setTimeout(()=>{
+    const f=document.querySelector('#pt-body .pt-cell input');if(f)f.focus();},60);}
+
+/* 저장 — **재배치는 마지막에 한 번만.** 한 명씩 layoutGalaxy를 부르면 100명이면 100번 돈다. */
+function ptSave(){
+  const body=document.getElementById('pt-body');
+  const rows=[...body.children];
+  const usable=[],bad=[];
+  rows.forEach(r=>{const v=ptValidate(r._m);
+    if(v.empty)return;
+    if(v.ok)usable.push({r,v});else bad.push(r);});
+  if(!usable.length){
+    ptUpdateSummary();
+    showNote(bad.length
+      ?'등록할 수 있는 줄이 없습니다 — <b>빨간 칸</b>을 고쳐 주세요.'
+      :'이름과 생년월일을 넣어 주세요.');
+    return;}
+  const t0=nowISO();
+  const made=[];
+  usable.forEach(({v})=>{
+    const n=addNode({name:v.name,stemIdx:dayStem(v.y,v.m,v.d),isMe:false,
+      createdAt:t0,updatedAt:t0,
+      birth:{y:v.y,m:v.m,d:v.d,sijin:v.sijin,city:v.city,lon:v.lon,
+        sex:v.sex===undefined?null:v.sex}});
+    /* 기존 인물 전원과 관계선. 루프 안에서 만들어지므로 방금 넣은 사람들끼리도 이어진다 */
+    nodes.forEach(o=>{if(o!==n)addEdge(n,o);});
+    (v.gids||[]).forEach(gid=>{
+      const g=groups.find(x=>x.id===gid);
+      if(g&&!g.members.includes(n))g.members.push(n);});
+    made.push(n);});
+  layoutGalaxy();rebuildRings();renderNav();   /* ★ 여기 한 번뿐이다 */
+  /* 오류 줄은 **남긴다** — 한 글자 때문에 열 줄을 다시 붙여넣게 하지 않는다 */
+  if(bad.length){
+    ptModel=bad.map(r=>r._m);
+    ptRenderAll();
+    showNote(`<b>${made.length}명</b>을 등록했습니다. `
+      +`<b>${bad.length}줄</b>은 고칠 것이 있어 표에 남겨 두었습니다.`);
+  }else{
+    closeSheets();
+    showNote(`<b>${made.length}명</b>을 등록했습니다.`);
+    if(activeGroup){showGroup(activeGroup);fitGroup(activeGroup);}
+    else{selectGroup(null);showNode(made[made.length-1]);}}
+  renderNextStep();}
 /* [UI재검토 6, 2026-08-25] 생성 통합 FAB.
    IIFE로 감싼 이유 — 새 최상위 const는 이 코드베이스에서 TDZ 사고를 세 번 냈다
    (CLAUDE.md "전역 선언 순서" 규칙: curOff, panelEl, MAX_GROUP_DEPTH). 여기서 필요한
@@ -6037,7 +6530,7 @@ function renderNextStep(){
     +'<p>가족이나 친구를 추가해 보세요. 그 사람이 당신 주위를 도는 행성이 되고, '
     +'둘 사이의 관계가 자동으로 계산됩니다.</p>'
     +'<button type="button">사람 추가</button>';
-  d.querySelector('button').onclick=()=>openAddSheet(null);
+  d.querySelector('button').onclick=()=>openPersonTable();
   body.appendChild(d);
   /* [2026-08-28] 모바일은 패널이 하단 시트라 기본 높이에서는 이 카드가 **접힌 아래로
      밀려 안 보인다**(390x844 실측). 혼자일 때만 시트를 높이기로 열어 안내를 보이게 한다 —
@@ -6055,7 +6548,7 @@ function renderNextStep(){
     document.body.classList.toggle('fabopen',v);}
   fab.onclick=e=>{e.stopPropagation();setOpen(!open);};
   menu.onclick=e=>e.stopPropagation();
-  document.getElementById('fm-person').onclick=()=>{setOpen(false);openAddSheet(null);};
+  document.getElementById('fm-person').onclick=()=>{setOpen(false);openPersonTable();};
   document.getElementById('fm-group').onclick=()=>{setOpen(false);openGrpSheet();};
   document.addEventListener('click',()=>{if(open)setOpen(false);});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&open)setOpen(false);});
@@ -6114,19 +6607,12 @@ document.getElementById('f-newgrp-add').onclick=commitNewGroupRow;
 document.getElementById('f-newgrp-name').addEventListener('keydown',e=>{
   if(e.key==='Enter'){e.preventDefault();commitNewGroupRow();}});
 
-/* ═══ 사람 저장 [연속 입력, 2026-08-28] ═══
-   `keepOpen`이 참이면 시트를 닫지 않고 **다음 사람을 받을 상태**로 되돌린다.
-   무엇을 비우고 무엇을 남기는지가 이 기능의 전부다:
-   · **이름은 비운다** — 유일하게 반드시 다른 값
-   · **생년월일은 남긴다** — 바꿀 확률보다 비슷할 확률이 높고(가족은 연대가 몰린다)
-     셀렉트라 값이 화면에 그대로 보인다. 틀린 채로 지나갈 위험이 낮다
-   · **그룹 체크는 남긴다** — "이 그룹에 다섯 명 넣기"가 정확히 이 흐름이고, 여기가 가장 큰 이득이다
-   · **성별은 비운다** — 사람마다 다르고, "기본값을 두지 않는다"(§5.6 문제 4)가 여기서도 유효하다.
-     앞사람 값이 남으면 안 보고 넘긴 사람의 값이 그리로 굳는다
-   · **시각·도시 접힘은 건드리지 않는다** — 열어 뒀으면 열린 채 둔다. 시트를 새로 열 때
-     접는 규칙(openAddSheet)은 "다음에 열 때"의 규칙이지 연속 입력 중의 규칙이 아니다
-   카메라도 움직이지 않는다 — 매번 날아가면 시트에 가려 보이지도 않으면서 어지럽기만 하다. */
-function savePerson(keepOpen){
+/* ═══ 사람 저장 — 이제 **수정 전용 경로**다 [2026-08-28] ═══
+   ~~연속 입력("저장하고 계속")~~ 은 **표(#pt-mode)가 대신한다.** 추가는 전부 표로 가므로
+   이 함수는 editTarget이 있는 경우(사람을 클릭해 고치는 경우)만 실제로 탄다.
+   새 인물을 만드는 아래 분기는 **안전망으로 남긴다** — openAddSheet(null)이 표로 돌려보내지만,
+   옛 호출부가 남아 이 경로로 들어와도 "나"가 아닌 인물이 정상으로 만들어져야 한다. */
+function savePerson(){
   const name=document.getElementById('f-name').value.trim();
   if(!name){alert('이름을 입력해주세요');return;}
   /* [2026-08-27] 경도를 함께 저장한다. 지금은 아무 계산에도 안 쓰이지만, L2(만세력 엔진)의
@@ -6171,27 +6657,13 @@ function savePerson(keepOpen){
   for(let i=groups.length-1;i>=0;i--){
     if(effectiveMembers(groups[i]).length<2)removeGroupAt(i);}
   layoutGalaxy();rebuildRings();renderNav();
-  if(keepOpen&&!editTarget){
-    /* 다음 사람을 받는 상태로. **시트는 그대로 열려 있다.** */
-    const added=n.name;
-    document.getElementById('f-name').value='';
-    fSex=undefined;renderFSex();   /* renderFSex가 접힘 요약(updMoreSummary)까지 갱신한다 */
-    renderFGroups();               /* 새로 만든 그룹이 있으면 칩 목록에 반영된다 */
-    /* **방금 저장됐다는 신호가 없으면 같은 사람을 두 번 넣는다** — 시트가 안 닫혀 화면이
-       아무것도 안 변하기 때문이다. 누적 인원까지 함께 보여 진행 상황을 알린다. */
-    const box=document.getElementById('as-added');
-    if(box){box.innerHTML='<b>'+bkEsc(added)+'</b> 추가됐습니다 · 지금까지 '+nodes.length+'명';
-      box.style.display='block';}
-    const nm=document.getElementById('f-name');if(nm)nm.focus();
-    renderNextStep();
-    return;}
   closeSheets();
   if(activeGroup){showGroup(activeGroup);fitGroup(activeGroup);}
   else{selectGroup(null);showNode(n);focusNode(n);}
   editTarget=null;
   renderNextStep();}   /* 둘째가 들어오면 안내 카드와 ＋ 강조가 여기서 꺼진다 */
-document.getElementById('addbtn').onclick=()=>savePerson(false);
-document.getElementById('addcontbtn').onclick=()=>savePerson(true);
+document.getElementById('addbtn').onclick=()=>savePerson();
+document.getElementById('pt-save').onclick=ptSave;
 
 document.getElementById('delbtn').onclick=()=>{
   if(!editTarget)return;
@@ -6241,6 +6713,7 @@ let pickedType='가족';const pickedMembers=new Set();
    인자를 안 넘기므로 전부 무변경으로 생성 모드 그대로 동작한다. */
 let editGroup=null;
 function openGrpSheet(presetIds,editTarget){
+  ptShowMode('single'); /* 그룹 탭으로 넘어가면 표 폭을 되돌린다 */
   editGroup=editTarget||null;
   pickedMembers.clear();
   if(editGroup)editGroup.members.forEach(n=>pickedMembers.add(n.id));
