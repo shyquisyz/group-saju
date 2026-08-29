@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>그룹사주 — STELLAR 0.7</title>
+<title>사주은하 — STELLAR 0.7</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pretendard/1.3.9/static/pretendard.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -658,6 +658,17 @@
     word-break:keep-all;overflow-wrap:break-word;margin-bottom:6px}
   /* 별명 설명도 읽는 문장이다 — .reading p와 같은 이유로 --fs-base */
   .nickdesc{font-size:var(--fs-base);line-height:1.65;color:var(--ink);word-break:keep-all}
+  /* ═══ 해석 층 [2026-08-30] ═══ 해설과 **구분되되 갈라지지 않게.**
+     경계는 라벨이 짓고, 시각 신호는 왼쪽 금색 선 하나와 아주 옅은 톤 차이(.05)뿐이다 —
+     카드를 따로 떼면 "다른 이야기"로 읽혀 한 사람에 대한 문단이 둘로 쪼개진다.
+     크기·색은 이번에 확정된 4토큰 체계 안에서만 고른다(최소 15px, --mut/--mut-2 두 단계). */
+  .nicktake{margin-top:9px;padding:7px 0 6px 10px;
+    border-left:2px solid rgba(232,198,106,.32);background:rgba(232,198,106,.05);
+    border-radius:0 8px 8px 0}
+  .nicktake-h{display:block;font-size:var(--fs-sm);font-weight:700;letter-spacing:.04em;
+    color:var(--gold);margin-bottom:2px}
+  .nicktake-t{display:block;font-size:var(--fs-base);line-height:1.6;color:var(--ink);
+    word-break:keep-all;padding-right:10px}
   /* 안내는 **11px로 내리지 않는다** — 읽는 글이라 기준선(13px)을 지키고,
      위계는 크기가 아니라 **색과 굵기**로 준다(사용자 지시). */
   /* [2026-08-30] ~~opacity:.72~~ → --mut-2. 안내 문구는 읽어야 하는 글이라 흐리면 안 된다 */
@@ -1077,8 +1088,11 @@
 <body>
 <canvas id="scene"></canvas>
 <header>
-  <div class="eyebrow">GROUP SAJU · STELLAR 0.7</div>
-  <h1>그룹사주</h1>
+  <!-- [2026-08-30] 서비스명 ~~그룹사주(가칭)~~ → **사주은하**. 표기만 바꾼다 —
+       저장소 이름(group-saju) · 배포 주소 · localStorage 키 · BACKUP_APP는 그대로다.
+       건드리면 기존 사용자의 저장 데이터와 백업 파일이 깨진다. -->
+  <div class="eyebrow">SAJU GALAXY · STELLAR 0.7</div>
+  <h1>사주은하</h1>
 </header>
 <!-- [UI재검토 6] +/− 두 칸 → ⌖ 하나. 연속 줌은 휠·핀치가 이미 담당한다(canvas wheel / touchmove) -->
 <div id="zoomctl">
@@ -1147,7 +1161,7 @@
 <div id="onboard"><div class="obcard">
   <!-- [2026-08-28] 상단 줄 — 브랜드와 **접기 버튼**을 나란히. 접기는 예시일 때만 뜬다 -->
   <div class="obtop">
-    <div class="brand">GROUP SAJU</div>
+    <div class="brand">SAJU GALAXY</div>
     <button type="button" id="ob-fold" aria-label="등록 화면 접고 예시 은하 둘러보기">⌄ 접고 둘러보기</button>
   </div>
   <h2>먼저 당신을 등록해 주세요</h2>
@@ -1936,7 +1950,8 @@ function ro(w){
    십신 기반 관계 [2026-08-30]
 
    [왜] 개인 해석은 여덟 글자를 다 쓰는데 관계는 일간 오행 하나로만 봤다
-   ("토극수 — 나를 누르는 쪽입니다"). 서비스 이름이 그룹사주인데 관계가 가장 단순했다.
+   ("토극수 — 나를 누르는 쪽입니다"). 관계를 보는 서비스인데 관계가 가장 단순했다.
+   (당시 서비스명은 "그룹사주"였다 — 2026-08-30에 **사주은하**로 바뀌었다.)
 
    [★ 두 체계가 섞이지 않는 이유] 십신은 오행의 **대체가 아니라 해상도를 올린 것**이다 —
    오행 관계(생·극·비화 5종)에 음양을 더하면 그대로 십신 10종이 된다. 그리고 **축이 다르다**:
@@ -1990,21 +2005,30 @@ const REL_ROLE=[
    "손이 가는"은 꾸준한 관리(정재의 핵심)와 반대고, "지적러"는 상대가 나를 누르는
    관성 쪽 어휘다. 겁재는 탈재(奪財 — 재물을 위협한다)가 빠져 있어 "몫을 나눠 갖지만"으로
    되살렸고, 식신은 풍요·먹을 복이 핵심이라 "넉넉한"으로 잡았다.
+   (**이 문단이 다듬은 별명들은 2026-08-30에 한 마디 캐릭터로 다시 교체됐다.** 방향을 보는
+   기준은 그대로 유효해 남긴다 — 새 별명도 같은 기준으로 읽으면 된다.)
 
-   [★ 1인칭] 편관 「나를 키우는 어른」에만 '나'가 남아 있다. 역방향 출력에서 그 '나'가
-   상대를 가리켜야 하므로, **문장에서 시점을 먼저 세워** 푼다("어머니 입장에서는 —").
-   별명 자체는 사용자가 확정한 대로 두었다. */
+   [★ 1인칭] ~~편관 「나를 키우는 어른」에만 '나'가 남아 있다.~~
+   **[2026-08-30 별명 교체로 해소]** 편관이 「매섭게 담금질하는 어른」이 되면서
+   **열 개 전부 1인칭이 없다.** 역방향 리드 "○○ 입장에서는"은 그대로 두는데,
+   이제는 오류를 막으려는 게 아니라 **방향이 바뀌는 지점을 알리는 신호**로 남긴다 —
+   십신은 비대칭이라 그 표시가 여전히 필요하다. */
+/* [★ 2026-08-30 구조 변경] 별명이 **두 마디에서 한 마디 캐릭터로** 바뀌었다.
+   구: "아쉬운 면 + 좋은 면 + 관계 이름"("챙겨주지만 잔소리 많은 엄마")
+   신: **한 마디 캐릭터**("잔소리로 키우는 엄마")
+   양면 서술은 별명이 아니라 **REL_DESC(좋게 작용할 때 / 아쉬울 때)가 계속 담당한다.**
+   별명에 양면을 다 넣으면 회자되는 말이 길어지고, 정작 상황별 구분은 흐려진다. */
 const REL_NICK=[
-  '편하지만 밀어주진 않는 친구',              /* 비견 */
-  '몫을 나눠 갖지만 힘이 되는 형제',          /* 겁재 */
-  '퍼주게 되지만 같이 있으면 넉넉한 아이',     /* 식신 */
-  '말이 앞서도 재주는 넘치는 재간둥이',        /* 상관 */
-  '씀씀이는 크지만 판을 키우는 돈줄',          /* 편재 */
-  '재미는 없어도 믿고 맡기는 살림꾼',          /* 정재 */
-  '부담스럽지만 나를 키우는 어른',            /* 편관 */
-  '까다롭지만 든든한 상사',                  /* 정관 */
-  '엉뚱하지만 시야를 넓혀주는 스승',          /* 편인 */
-  '챙겨주지만 잔소리 많은 엄마'];             /* 정인 */
+  '함께 걷는 관망자',                    /* 비견 */
+  '콩 한쪽도 나눠 먹게 되는 형제',        /* 겁재 */
+  '여유를 전염시키는 낙천주의자',         /* 식신 */
+  '지구력이 떨어지는 재간둥이',           /* 상관 */
+  '판돈을 키우는 큰손',                  /* 편재 */
+  '뿌리깊은 살림꾼',                     /* 정재 */
+  '매섭게 담금질하는 어른',              /* 편관 */
+  '깐깐하게 지켜주는 상사',              /* 정관 */
+  '엉뚱하게 시야를 틔우는 스승',          /* 편인 */
+  '잔소리로 키우는 엄마'];               /* 정인 */
 /* 양면 — **어떤 상황에서 좋게 작용하고 어떤 상황에서 아쉬운지**를 상황으로 가른다.
    좋고 나쁨으로 가르지 않는다 — 정과 편의 차이는 '안정적이냐 치우쳤냐'지
    '좋으냐 나쁘냐'가 아니다(사용자 판단). 끝 괄호가 십신 용어의 뜻을 함께 적는 자리다. */
@@ -2029,6 +2053,25 @@ const REL_STRENGTH={'극왕':' 상대 쪽 힘이 넉넉한 편이라 그 역할�
 /* 별명이 계산이 아니라 해석이라는 것을 화면에서 밝힌다(사용자 지시).
    "어머니 자리"가 실제 가족 관계로 오해되면 안 되기 때문이기도 하다. */
 const NICK_NOTE='이해를 돕기 위한 비유입니다 — 실제 가족 관계를 뜻하지 않습니다.';
+/* ═══ 해석 층 [2026-08-30] ═══
+   [왜] 위의 REL_DESC까지는 **해설**이다 — 십신이 어떤 자리인지, 언제 좋고 언제 아쉬운지.
+   그 아래는 성격이 다르다: "그래서 이 사람에게 무엇을 맡기고 무엇을 맡기지 않을 것인가"는
+   자료가 답을 주지 않는 **서비스의 판단**이다. 그 경계를 화면에 라벨로 밝힌다
+   (NICK_TAKE_H). 읽는 사람이 객관 해설과 서비스 해석을 구별할 수 있어야 한다.
+   [고정 매핑] 십신 열 가지에 문장 하나씩. **방향별로 적용**한다(나→상대, 상대→나 각각).
+   무작위도 시각 의존도 없다 — 같은 사람이면 항상 같은 문장이다. */
+const NICK_TAKE_H='사주은하의 해석';
+const REL_TAKE=[
+  /* 비견 */ '판단을 나란히 맞춰 보기 좋은 사람입니다. 다만 끌어 주기를 기대하지는 않는 편이 낫습니다.',
+  /* 겁재 */ '함께 밀어붙일 때 힘을 빌리기 좋은 사람입니다. 다만 돈과 몫의 관리는 맡기지 않는 편이 낫습니다.',
+  /* 식신 */ '쉬어 가고 싶을 때 곁에 있으면 좋은 사람입니다. 다만 급한 일을 재촉하는 자리에는 세우지 않는 편이 낫습니다.',
+  /* 상관 */ '굳은 판을 흔들 때 기대기 좋은 사람입니다. 다만 마무리는 맡기지 않는 편이 낫습니다.',
+  /* 편재 */ '일을 벌일 때 힘을 빌리기 좋은 사람입니다. 다만 아껴 쓰는 살림은 맡기지 않는 편이 낫습니다.',
+  /* 정재 */ '오래 지켜야 할 것을 맡기기 좋은 사람입니다. 다만 판을 바꾸는 일은 기대하지 않는 편이 낫습니다.',
+  /* 편관 */ '성장이 필요한 시기에 곁에 두면 좋은 사람입니다. 이미 지쳐 있을 때는 잠시 거리를 두는 편이 낫습니다.',
+  /* 정관 */ '일을 반듯하게 세울 때 기대기 좋은 사람입니다. 다만 틀을 깨야 하는 일은 맡기지 않는 편이 낫습니다.',
+  /* 편인 */ '정답이 안 보일 때 다른 각도를 얻기 좋은 사람입니다. 다만 꾸준한 뒷받침은 기대하지 않는 편이 낫습니다.',
+  /* 정인 */ '막막할 때 조언을 구하기 좋은 사람입니다. 다만 결정 자체는 맡기지 않는 편이 낫습니다.'];
 
 /** 그 사람의 강약 판정(문자열). 생년월일이 없거나 계산이 안 되면 빈 문자열 */
 function personGangyak(x){
@@ -5803,6 +5846,9 @@ const JUSTLOADED_KEY='groupsaju:justloaded';   /* 새로고침 너머로 넘기�
      남의 JSON이 통과한다. 백업 파일은 **밖에서 오므로** 저장본보다 검증이 엄격해야 한다.
    · **개수를 봉투에 안 적는다.** 적으면 진실이 두 벌이 되고, 미리보기가 봉투를 믿으면
      거짓말하는 파일에 속는다. 화면에 띄우는 수는 **파싱 결과의 배열 길이**로 센다. */
+/* [★ 2026-08-30] 서비스명이 "사주은하"로 바뀌어도 **이 값은 절대 안 바꾼다.**
+   내보낸 백업 파일의 app 필드와 대조하는 식별자라, 바꾸면 사용자가 전에 받아 둔
+   백업 파일이 전부 "다른 앱의 파일"로 거부된다. 파일명 접두어(group-saju-backup-)도 같은 이유. */
 const BACKUP_APP='group-saju';
 const BACKUP_MAX_CHARS=2*1024*1024; /* 실측 저장 한계 5,177,344바이트 대비 여유(30인=7,931바이트) */
 const BACKUP_MAX_PEOPLE=1000;       /* 폭주 방지. 30인 7.9KB이므로 1000인도 260KB 안팎이다 */
@@ -6057,14 +6103,14 @@ function parseBackup(text){
   if(typeof text!=='string')return bkBad('파일을 글자로 읽지 못했습니다.');
   const t=text.trim();
   if(!t)return bkBad('내용이 비어 있습니다.');
-  if(t.length>BACKUP_MAX_CHARS)return bkBad('파일이 너무 큽니다 — 그룹사주 백업 파일이 아닌 것 같습니다.');
+  if(t.length>BACKUP_MAX_CHARS)return bkBad('파일이 너무 큽니다 — 사주은하 백업 파일이 아닌 것 같습니다.');
   let d;
   try{d=JSON.parse(t);}
-  catch(e){return bkBad('그룹사주 백업 파일이 아닙니다 — 내용이 JSON 형식이 아닙니다.');}
+  catch(e){return bkBad('사주은하 백업 파일이 아닙니다 — 내용이 JSON 형식이 아닙니다.');}
   if(!d||typeof d!=='object'||Array.isArray(d))
-    return bkBad('그룹사주 백업 파일이 아닙니다.');
+    return bkBad('사주은하 백업 파일이 아닙니다.');
   if(d.app!==BACKUP_APP)
-    return bkBad('그룹사주 백업 파일이 아닙니다'+(typeof d.app==='string'&&d.app
+    return bkBad('사주은하 백업 파일이 아닙니다'+(typeof d.app==='string'&&d.app
       ?' — 다른 앱의 파일입니다('+d.app.slice(0,30)+').':' — 표시(app)가 없습니다.'));
   /* **저장본과 같은 변환 체인을 탄다** — 반년 전 백업이 오늘 앱에서 열려야 한다. */
   const m=migrate(d);
@@ -6427,7 +6473,7 @@ function wireBackup(){
     ev.target.value=''; /* 같은 파일을 다시 골라도 change가 뜨게 비운다 */
     if(!f)return;
     if(f.size>BACKUP_MAX_CHARS){
-      bkShowErr('파일이 너무 큽니다 — 그룹사주 백업 파일이 아닌 것 같습니다.');return;}
+      bkShowErr('파일이 너무 큽니다 — 사주은하 백업 파일이 아닌 것 같습니다.');return;}
     const rd=new FileReader();
     rd.onload=()=>bkTryLoad(String(rd.result));
     rd.onerror=()=>bkShowErr('파일을 읽지 못했습니다.');
@@ -7441,7 +7487,10 @@ function pairReading(a,b,giver,receiver,rel){
     const st=personGangyak(other), add=(st&&REL_STRENGTH[st])||'';
     return `<div class="nickblk"><div class="nicklead">${lead}</div>`
       +`<div class="nickname">${REL_NICK[g]}</div>`
-      +`<div class="nickdesc">${REL_DESC[g]}${add}</div></div>`;};
+      +`<div class="nickdesc">${REL_DESC[g]}${add}</div>`
+      /* 해설(REL_DESC) 아래, 비유 안내 위. 방향별로 하나씩 붙는다 */
+      +`<div class="nicktake"><span class="nicktake-h">${NICK_TAKE_H}</span>`
+      +`<span class="nicktake-t">${REL_TAKE[g]}</span></div></div>`;};
   let t1=blk(`${a.name}에게 <b>${b.name}</b>${particle(b.name,'은는')}`,gAB,b)
         +blk(`<b>${b.name}</b> 입장에서는`,gBA,a)
         +`<div class="nicknote">${NICK_NOTE}`
