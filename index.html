@@ -1042,8 +1042,10 @@
   .citybtn.on{background:var(--ink);color:#101018;font-weight:700}
   .cityreg:active,.citybtn:active{opacity:.75}
   /* [★ 임시, 2026-08-31] 핀치 감도 선택. 확정되면 이 규칙도 함께 지운다 */
+  /* [320px 실측] min-width 64px이면 4개(64*4+6*3=274)가 240px 안에 못 들어가
+     "3배"만 다음 줄로 밀려 혼자 240px로 늘어났다. 52px이면 226px이라 한 줄에 들어간다 */
   .pinchrow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-  .pinchrow button{flex:1 1 0;min-width:64px;min-height:44px;padding:8px 6px;
+  .pinchrow button{flex:1 1 0;min-width:52px;min-height:44px;padding:8px 4px;
     border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.05);
     color:var(--mut);font-family:inherit;font-size:var(--fs-sm);cursor:pointer}
   .pinchrow button.on{background:var(--ink);color:#101018;border-color:var(--ink);font-weight:700}
