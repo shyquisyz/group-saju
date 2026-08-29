@@ -169,6 +169,34 @@
   .rel-listh{font-size:var(--fs-sm);color:var(--mut-2);line-height:1.6;
     margin:12px 0 5px;word-break:keep-all}
   .rel-listh b{color:var(--mut);font-weight:600}
+  /* ═══ 합·충 딱지 [L4, 2026-08-31] ═══
+     [크기] 별명은 18px, 딱지는 15px(최소 토큰). 위계가 겹치지 않게 **보조 크기**로 둔다.
+     색도 --mut이라 금색 별명 옆에서 튀지 않는다.
+     [줄바꿈] nowrap이라 좁은 폭에서는 딱지가 **통째로 아랫줄**로 내려간다.
+     별명 중간이 끊기는 것보다 낫다(320px 실측 근거).
+     [터치] 보이는 알약은 작지만 누르는 판은 ::before로 44px을 채운다 — 어르신 기준.
+     알약 자체를 44px로 키우면 별명 줄이 두 배로 두꺼워진다.
+     [★ sjHelp를 그대로 안 쓴 이유] 아래 세 가지를 일부러 다르게 했다(사용자 허용) —
+       (1) 손잡이가 **딱지 자신**이다. sjHelp의 전폭 글자 버튼을 별명 옆에 둘 수 없다.
+       (2) **기본 접힘**. sjHelp가 펼침인 근거는 "접혀 있으면 없는 것과 같다"인데,
+           딱지는 그 자체가 이미 결론을 말한다 — 근거는 궁금한 사람만 연다.
+       (3) **기억하지 않는다.** 관계 패널에는 방향마다 하나씩 최대 둘이 붙는데,
+           둘 다 펼쳐진 채로 시작하면 별명 → 해설 → 해석의 흐름이 끊긴다.
+     공통으로 가져온 것 — 왼쪽 보조색 세로선, 본문 크기·색, 여닫는 동작. */
+  .hcchip{position:relative;display:inline-block;margin-left:7px;padding:2px 9px;
+    border:1px solid rgba(160,162,178,.35);border-radius:999px;background:transparent;
+    color:var(--mut);font-family:inherit;font-size:var(--fs-sm);font-weight:600;
+    line-height:1.5;cursor:pointer;vertical-align:middle;white-space:nowrap;
+    transition:color .15s,border-color .15s,background .15s}
+  .hcchip::before{content:'';position:absolute;left:0;right:0;top:50%;
+    transform:translateY(-50%);height:44px}
+  .hcchip:hover{color:var(--ink);border-color:rgba(255,255,255,.3)}
+  .hcchip.on{color:var(--ink);border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.06)}
+  .hcwhy{display:none;margin:6px 0 0;padding-left:10px;
+    border-left:2px solid rgba(160,162,178,.4);
+    font-size:var(--fs-sm);color:var(--mut);line-height:1.6;word-break:keep-all;
+    font-weight:400}
+  .hcwhy.open{display:block}
   /* rich 제목은 h2 자리를 뺏지 않고 부제로 내려온다 */
   .pairsub{font-size:var(--fs-base);font-weight:700;color:var(--gold);
     line-height:1.4;margin:2px 0 8px;word-break:keep-all}
@@ -1629,7 +1657,9 @@ function dayStem(y,m,d){const days=Math.floor(Date.UTC(y,m-1,d)/86400000);return
 
 /* ═════════════════════════════════════════════════════════════════════════
    만세력 엔진 (L2) — 4주 8자 [2026-08-29]
-   범위는 여덟 글자까지다. 십신·신강신약(L3), 합충형파해(L4), 대운(L5)은 여기 없다.
+   범위는 여덟 글자까지다. 십신·신강신약(L3), 대운(L5)은 여기 없다.
+   [2026-08-31] ~~합충형파해(L4)~~ → **L4 첫 절반(일지 합·충 + 천간합)은 구현됐다.**
+   아래 "합·충" 구역 참고. 형·파·해는 보류다(이유도 그 구역에 적었다).
 
    [세 시각을 구분한다 — 이게 이 엔진의 전부다]
      (1) 벽시계     — 사람이 기억하는 시각("아홉 시쯤")
@@ -1655,6 +1685,88 @@ function dayStem(y,m,d){const days=Math.floor(Date.UTC(y,m-1,d)/86400000);return
    - 전이표 vs IANA tzdata: 1930~2026을 6시간 간격 141,716개 시점 검사, 불일치 0
    ═════════════════════════════════════════════════════════════════════════ */
 const BRANCHES=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+/* ═══════════════════════════════════════════════════════════════════════
+   합·충 [L4 첫 절반, 2026-08-31]
+
+   [범위] **두 사람의 태어난 날 두 글자만** 본다.
+     · 일지(날 아랫글자)끼리 육합 / 충
+     · 일간(날 윗글자)끼리 천간합
+   [★ 형·파·해는 구현하지 않는다] 둘 다 이유가 있다 —
+     (1) **부정 딱지 과잉**: 형·파·해까지 넣으면 "부딪힌다"류 딱지가 급격히 늘어
+         화면이 경고판이 된다. 이 앱은 관계를 겁주려고 만든 게 아니다.
+     (2) **자료 이견**: 형(刑)은 자료마다 짝이 다르다(삼형·자형의 구성에 이견).
+         십신·신강약과 달리 "여러 자료가 일치하는 성질"이라는 우리 기준을 못 넘는다.
+   [넓히기 쉬운 구조] 아래 표는 전부 **쌍 목록 그대로** 적었다.
+   `|i-j|==6`(충)이나 `|i-j|==5`(천간합) 같은 규칙식으로 줄이면 짧아지지만,
+   **규칙이 안 서는 것(형·파·해)을 같은 틀에 못 붙인다.** 표를 늘리고
+   HC_ORDER에 이름을 더하면 그대로 확장된다.
+   [대칭] 방향이 없다 — hapChung(a,b)와 hapChung(b,a)는 **문장까지 같다**
+   (글자를 인덱스 순으로 정렬해 만든다). sajuSelfTest의 hcSymmetry가 지킨다. */
+const STEM_KO=['갑','을','병','정','무','기','경','신','임','계'];
+const BRANCH_KO=['자','축','인','묘','진','사','오','미','신','유','술','해'];
+/* 지지 육합 6쌍 — 자축 · 인해 · 묘술 · 진유 · 사신 · 오미 */
+const YUKHAP=[[0,1],[2,11],[3,10],[4,9],[5,8],[6,7]];
+/* 지지 충 6쌍 — 자오 · 축미 · 인신 · 묘유 · 진술 · 사해 */
+const CHUNG=[[0,6],[1,7],[2,8],[3,9],[4,10],[5,11]];
+/* 천간합 5쌍 — 갑기 · 을경 · 병신 · 정임 · 무계 */
+const GANHAP=[[0,5],[1,6],[2,7],[3,8],[4,9]];
+/* [★ 우선순위] 충 > 천간합 > 육합. 한 쌍에 딱지는 하나만 붙는다(사용자 결정).
+   충이 먼저인 이유 — 겹칠 때 "부딪힌다"를 숨기고 "잘 맞는다"만 보여주면
+   사용자가 알아야 할 쪽을 가리게 된다. */
+const HC_ORDER=['chung','ganhap','yukhap'];
+/* [★ 문안 확정본] 사용자가 준 문구 그대로다. 임의 수정 금지.
+   why는 예시("… 午(오)와 子(자)는 정면으로 부딪히는 짝입니다.")의 짜임을 따른다 —
+   `어느 자리 + 한자(한글 음) + 한자(한글 음) + 무슨 짝인가`. */
+const HC_DEF={
+  chung: {tag:'· 자꾸 부딪히는 사이', 자리:'아랫글자', 끝:'정면으로 부딪히는 짝입니다.'},
+  ganhap:{tag:'· 서로 끌리는 사이',   자리:'윗글자',   끝:'서로 짝을 이루는 글자입니다.'},
+  yukhap:{tag:'· 죽이 잘 맞는 사이',  자리:'아랫글자', 끝:'서로 붙는 짝입니다.'}};
+
+function hcPairIn(table,x,y){return table.some(a=>(a[0]===x&&a[1]===y)||(a[0]===y&&a[1]===x));}
+/** 그 사람의 네 기둥. 없거나 계산이 안 되면 null */
+function hcPillars(x){
+  const b=x&&x.birth; if(!b)return null;
+  try{return sajuOf({y:b.y,m:b.m,d:b.d,
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon});}catch(e){return null;}}
+/** 문장 한 줄. 조사는 **한자가 아니라 한글 음**에서 고른다 — particle이 마지막 글자를 보므로
+    "午(오)"를 그대로 넘기면 ')'를 보고 고른다. */
+function hcWhy(kind,tbl,ko,x,y){
+  const d=HC_DEF[kind];
+  const lo=Math.min(x,y), hi=Math.max(x,y);   /* 정렬 → 양방향 문장이 같다 */
+  return `두 사람의 태어난 날 ${d.자리} ${tbl[lo]}(${ko[lo]})`+particle(ko[lo],'과와')
+    +` ${tbl[hi]}(${ko[hi]})`+particle(ko[hi],'은는')+` ${d.끝}`;}
+/** [★ 계산 코어 — 순수 함수] 일간 둘·일지 둘의 **인덱스만** 받는다.
+    생년월일이나 노드를 안 받으므로 합성 입력으로 시험할 수 있다(회귀 테스트가 이걸 쓴다).
+    해당 없으면 **null** — 빈자리를 채우는 기본 문구는 만들지 않는다(사용자 지시). */
+function hapChungOf(sa,sb,ba,bb){
+  for(let i=0;i<HC_ORDER.length;i++){
+    const k=HC_ORDER[i];
+    if(k==='chung' &&hcPairIn(CHUNG, ba,bb))return {kind:k,tag:HC_DEF[k].tag,why:hcWhy(k,BRANCHES,BRANCH_KO,ba,bb)};
+    if(k==='ganhap'&&hcPairIn(GANHAP,sa,sb))return {kind:k,tag:HC_DEF[k].tag,why:hcWhy(k,STEMS,   STEM_KO,  sa,sb)};
+    if(k==='yukhap'&&hcPairIn(YUKHAP,ba,bb))return {kind:k,tag:HC_DEF[k].tag,why:hcWhy(k,BRANCHES,BRANCH_KO,ba,bb)};}
+  return null;}
+/** 두 사람의 합·충. 네 기둥을 뽑아 코어에 넘긴다 */
+function hapChung(a,b){
+  const ra=hcPillars(a), rb=hcPillars(b);
+  if(!ra||!rb||!ra.day||!rb.day)return null;
+  return hapChungOf(ra.day[0],rb.day[0],ra.day[1],rb.day[1]);}
+/** 딱지 + 접힌 근거. 없으면 빈 문자열 — 아무것도 붙이지 않는다 */
+let hcSeq=0;
+function hcChipHtml(a,b){
+  const hc=hapChung(a,b); if(!hc)return '';
+  const id='hc'+(++hcSeq);
+  return `<button type="button" class="hcchip" data-hc="${id}" aria-expanded="false">${hc.tag}</button>`
+    +`<span class="hcwhy" id="${id}">${hc.why}</span>`;}
+/* [★ span인 이유] 인물 패널의 .egonick이 <span>이다. 그 안에 <div>를 넣으면 브라우저가
+   문단을 쪼개 레이아웃이 깨진다. display:block을 준 span이면 두 자리 모두에서 안전하다. */
+function wireHapChung(root){
+  (root||document).querySelectorAll('.hcchip').forEach(btn=>btn.onclick=()=>{
+    const body=(root||document).querySelector('#'+btn.dataset.hc); if(!body)return;
+    const on=!body.classList.contains('open');
+    body.classList.toggle('open',on);
+    btn.classList.toggle('on',on);
+    btn.setAttribute('aria-expanded',on?'true':'false');});}
+/* ═════════════════════════════════════════════════════════════════════ */
 const BRANCH_EL=['su','to','mok','mok','to','hwa','hwa','to','geum','geum','to','su'];
 
 /* ── 한국 표준시 전이표 ──
@@ -7400,6 +7512,34 @@ function sajuSelfTest(){
   /* 4. 관계 패널 제목은 항상 "A ↔ B" */
   const h2c=(pbody.querySelector('h2')||{}).textContent||'';
   T('pairTitle: 관계 패널 제목에 ↔', h2c.indexOf('↔')>0, h2c);
+
+  /* ═══ 합·충 [L4, 2026-08-31] ═══ */
+  /* 5. 짝 목록 정합 — 개수와 내용을 **사양에 적힌 짝 이름**과 대조한다.
+        인덱스가 아니라 사람이 읽는 이름으로 비교해야 표를 잘못 옮겨 적은 것을 잡는다. */
+  const nm=(t,ko)=>t.map(x=>ko[x[0]]+ko[x[1]]).sort().join(' ');
+  const yuk=nm(YUKHAP,BRANCH_KO), chg=nm(CHUNG,BRANCH_KO), gan=nm(GANHAP,STEM_KO);
+  T('hcTable육합: 6쌍 자축 인해 묘술 진유 사신 오미',
+    YUKHAP.length===6&&yuk===['자축','인해','묘술','진유','사신','오미'].sort().join(' '), yuk);
+  T('hcTable충: 6쌍 자오 축미 인신 묘유 진술 사해',
+    CHUNG.length===6&&chg===['자오','축미','인신','묘유','진술','사해'].sort().join(' '), chg);
+  T('hcTable천간합: 5쌍 갑기 을경 병신 정임 무계',
+    GANHAP.length===5&&gan===['갑기','을경','병신','정임','무계'].sort().join(' '), gan);
+  /* 6. 대칭 — 코어를 전 조합(10×10×12×12=14,400)으로 돌려 **문장까지** 같은지 본다 */
+  let asym=0, sample=null;
+  for(let sa=0;sa<10;sa++)for(let sb=0;sb<10;sb++)for(let ba=0;ba<12;ba++)for(let bb=0;bb<12;bb++){
+    const x=hapChungOf(sa,sb,ba,bb), y=hapChungOf(sb,sa,bb,ba);
+    if(JSON.stringify(x)!==JSON.stringify(y)){asym++; if(!sample)sample=[sa,sb,ba,bb];}}
+  T('hcSymmetry: A↔B와 B↔A가 같다 (14,400조합)', asym===0, asym?('불일치 '+asym+'건, 예 '+sample):'0건');
+  /* 7. 우선순위 — 충과 천간합이 동시에 걸리는 합성 입력(갑·기 + 자·오) */
+  const both=hapChungOf(0,5,0,6);
+  T('hcPriority: 충 > 천간합', both&&both.kind==='chung', both?both.kind+' / '+both.tag:'null');
+  const both2=hapChungOf(0,0,0,6);   /* 충 + 육합은 같은 지지쌍에서 동시에 안 나므로 충만 */
+  T('hcPriority2: 충이 육합보다 먼저', both2&&both2.kind==='chung', both2?both2.kind:'null');
+  /* 8. 해당 없음 — 아무 짝도 아니면 null이라 딱지가 안 붙는다 */
+  const none=hapChungOf(0,0,0,0);    /* 甲甲(합 아님) · 子子(충·육합 아님) */
+  T('hcNone: 해당 없으면 null', none===null, String(none));
+  /* 9. 한 쌍에 딱지는 하나 */
+  T('hcSingle: 결과는 하나뿐', !both||typeof both.tag==='string', both?both.tag:'null');
   return out;}
 function deselect(){if(selected){if(!selected.isMe&&selectedMesh)selectedMesh.scale.setScalar(V2_TUNABLES.PLANET_SCALE);selected=null;selectedMesh=null;}}
 /* [§7.4] groupContext/targetMesh 둘 다 선택 인자 — 안 넘기면 지금까지와 100% 동일하게 동작한다
@@ -7417,7 +7557,8 @@ function egoRelLine(node){
   /* [2026-08-30 별명] 여기가 가장 자주 읽히는 관계 문장이라 별명을 먼저 낸다.
      역할 이름(REL_ROLE)은 별명 밑 근거로 내려 십신·오행과 함께 둔다 —
      전문용어를 쓰되 뜻을 반드시 함께 적는다는 규칙을 그대로 따른다. */
-  const txt=`<span class="egonick">${REL_NICK[g]}</span>`
+  /* [L4, 2026-08-31] 같은 규칙의 딱지를 여기에도. 나와 이 사람의 두 글자를 본다 */
+  const txt=`<span class="egonick">${REL_NICK[g]}${hcChipHtml(me,node)}</span>`
     +`<span class="k">${REL_ROLE[g]} · ${TEN_GODS[g]} · ${r.kind==='bi'?EL_KO[me.el]+'·'+EL_KO[node.el]:r.label}</span>`;
   const tc=topSystemCount(node);
   const ring=!sp?'고리 없음'
@@ -7732,6 +7873,7 @@ function showNode(n,groupContext,targetMesh){
      강조를 한꺼번에 맞춰 주므로 showGroup을 직접 부르지 않는다(트리 강조가 어긋난다). */
   navWireBack(()=>{selectGroup(backTo);});
   wireHelp(pbody); /* [2026-08-31] 도움말 세 곳의 접기 손잡이 */
+  wireHapChung(pbody); /* [L4] 합·충 딱지 → 근거 */
   panel.classList.add('open');
   pbody.querySelectorAll('.rel-item').forEach(el=>el.onclick=()=>{
     const A=nodes.find(x=>x.id===el.dataset.a),B=nodes.find(x=>x.id===el.dataset.b);
@@ -7773,6 +7915,7 @@ function showEdge(e){
   /* [2026-08-31] 관계 패널에는 뒤로가 **아예 없었다** — 여기 들어오면 트리나 태그바를
      쓰지 않고는 나갈 수 없었다(실측). 이력이 비면 두 사람 중 앞사람으로 보낸다. */
   navPrependBack(e.a.name,()=>showNode(e.a));
+  wireHapChung(pbody); /* [L4] 합·충 딱지 → 근거 */
   panel.classList.add('open');}
 
 /** 두 사람 관계의 세 문단. 소제목 형식은 개인 해석과 같다 */
@@ -7787,16 +7930,20 @@ function pairReading(a,b,giver,receiver,rel){
      [시점을 먼저 세운다] 역방향 리드를 "○○ 입장에서는"으로 두면, 별명 안의
      '나'(편관 「나를 키우는 어른」)가 읽는 사람이 아니라 그 사람을 가리키게 된다.
      별명을 고치지 않고 화면에서 푸는 방법이다(사용자가 편관 별명을 그대로 두기로 함). */
-  const blk=(lead,g,other)=>{
+  /* [L4, 2026-08-31] 합·충 딱지. **대칭이라 양방향 블록에 같은 것이 붙는다** —
+     한 번 계산해 두 블록이 나눠 쓴다(두 번 계산하면 같은 값을 두 번 구하는 셈이다).
+     해당 없으면 빈 문자열이라 아무것도 안 붙는다. */
+  const hcA=hcChipHtml(a,b), hcB=hcChipHtml(a,b);
+  const blk=(lead,g,other,hc)=>{
     const st=personGangyak(other), add=(st&&REL_STRENGTH[st])||'';
     return `<div class="nickblk"><div class="nicklead">${lead}</div>`
-      +`<div class="nickname">${REL_NICK[g]}</div>`
+      +`<div class="nickname">${REL_NICK[g]}${hc||''}</div>`
       +`<div class="nickdesc">${REL_DESC[g]}${add}</div>`
       /* 해설(REL_DESC) 아래, 비유 안내 위. 방향별로 하나씩 붙는다 */
       +`<div class="nicktake"><span class="nicktake-h">${NICK_TAKE_H}</span>`
       +`<span class="nicktake-t">${REL_TAKE[g]}</span></div></div>`;};
-  let t1=blk(`${a.name}에게 <b>${b.name}</b>${particle(b.name,'은는')}`,gAB,b)
-        +blk(`<b>${b.name}</b> 입장에서는`,gBA,a)
+  let t1=blk(`${a.name}에게 <b>${b.name}</b>${particle(b.name,'은는')}`,gAB,b,hcA)
+        +blk(`<b>${b.name}</b> 입장에서는`,gBA,a,hcB)
         +`<div class="nicknote">${NICK_NOTE}`
         +(gAB!==gBA?' 한 사이인데 서로 다르게 보이는 것은 각자의 태어난 날을 기준으로 보기 때문입니다.'
                    :' 서로를 같은 자리로 봅니다.')
