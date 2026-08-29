@@ -165,6 +165,13 @@
   .rel-item .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;box-shadow:0 0 8px currentColor}
     /* 관계 목록의 십신 이름 — 이름 옆 부가가 아니라 **관계 그 자체**라 읽어야 한다 */
   .rel-item .k{font-family:inherit;font-size:var(--fs-sm);color:var(--mut);margin-left:auto}
+  /* [2026-08-31] 목록이 A의 패널 안에 있어 A 기준으로 읽히기 쉽다 — 나 기준임을 밝힌다 */
+  .rel-listh{font-size:var(--fs-sm);color:var(--mut-2);line-height:1.6;
+    margin:12px 0 5px;word-break:keep-all}
+  .rel-listh b{color:var(--mut);font-weight:600}
+  /* rich 제목은 h2 자리를 뺏지 않고 부제로 내려온다 */
+  .pairsub{font-size:var(--fs-base);font-weight:700;color:var(--gold);
+    line-height:1.4;margin:2px 0 8px;word-break:keep-all}
   .gbar{display:flex;height:9px;border-radius:99px;overflow:hidden;margin:10px 0 4px}
   .gbar i{display:block;height:100%}
   .glegend{font-size:var(--fs-sm);color:var(--mut);margin-bottom:8px}
@@ -1478,7 +1485,8 @@
 <!-- v2 §5.4: 관계 보기 대상 선택 시트 -->
 <div class="sheet" id="relsheet">
   <button type="button" class="sheetclose" aria-label="닫기" title="닫기">✕</button>
-  <h3>관계 보기 — 상대 선택</h3>
+  <!-- [2026-08-31] 제목은 openRelSheet가 앵커 이름을 넣어 다시 쓴다(A와 볼 사람을 골라 주세요) -->
+  <h3 id="relsheet-h">관계 보기 — 상대 선택</h3>
   <div class="field"><label>누구와의 관계를 볼까요 (1명 이상)</label><div class="memgrid" id="rel-members"></div></div>
   <button class="primary" id="relbtn">관계 보기</button>
 </div>
@@ -6979,6 +6987,10 @@ function showRelationView(members){
 let relAnchor=null;const relPicked=new Set();
 function openRelSheet(n){
   relAnchor=n;relPicked.clear();
+  /* [2026-08-31] 시트 일원화 — A와 다른 사람의 관계는 **여기 한 곳**에서만 연다.
+     제목에 A를 박아, 무엇을 고르는 중인지 시트만 봐도 알게 한다. */
+  {const h=document.getElementById('relsheet-h');
+   if(h)h.textContent=n.name+'와 볼 사람을 골라 주세요';}
   const mg=document.getElementById('rel-members');
   mg.innerHTML=nodes.filter(x=>x!==n).map(x=>`<div class="memrow" data-id="${x.id}">
     <span class="dot" style="background:${EL_INFO[x.el].css};color:${EL_INFO[x.el].css}"></span>${x.name}
@@ -7345,6 +7357,12 @@ canvas.addEventListener('click',e=>{
   if(hit&&hit.object.userData.virtualSlotHit){showVirtualSlot();}
   else if(hit&&hit.object.userData.group){selectGroup(hit.object.userData.group);}
   else if(hit){
+    /* ═══ [★ 불변 2026-08-31] 행성(인물) 클릭은 **언제나 인물 패널**이다 ═══
+       관계 패널로 새지 않는다. A와 다른 사람의 관계는 인물 패널의
+       「A와 다른 사람의 관계 보기」 → 시트를 통해서만 연다(경로 일원화).
+       3D에 "상대를 고르는 중" 같은 안내 상태는 만들지 않는다 — 다중 선택과
+       3인 이상 보기가 이미 시트에 있어 경로가 둘이 되기 때문이다(사용자 결정).
+       이 불변은 sajuSelfTest()의 planetClick 항목이 지킨다. */
     const n=hit.object.userData.node;
     const ctx=hit.object.userData.instanceGroup; /* [§7.4] 추가 인스턴스만 태깅돼 있음 — 주 인스턴스는
       undefined라 showNode가 activeGroup으로 자연히 폴백(하위호환) */
@@ -7352,6 +7370,37 @@ canvas.addEventListener('click',e=>{
   else if(activeGroup){showGroup(activeGroup);deselect();fitGroup(activeGroup);}
   else if(innerWidth>=768){activeVirtual=false;pbody.innerHTML='';deselect();fitGalaxy();} /* 데스크톱: 트리 유지 */
   else{activeVirtual=false;panel.classList.remove('open','tall');deselect();fitGalaxy();}});
+/* ═══ 회귀 테스트 [2026-08-31] ═══ 콘솔에서 `sajuSelfTest()`로 부른다.
+   테스트 러너가 없는 프로젝트라, **깨지면 바로 드러나는 불변**만 골라 담았다.
+   화면 상태를 바꾸므로 확인용이다 — 부른 뒤에는 보던 화면이 달라져 있다. */
+function sajuSelfTest(){
+  const me=nodes.find(x=>x.isMe), out=[];
+  const other=nodes.find(x=>!x.isMe);
+  const T=(name,pass,detail)=>out.push({test:name,pass:!!pass,detail});
+  if(!me||!other){T('데이터',false,'나 또는 상대가 없다');return out;}
+  /* 1. 행성 클릭 → 인물 패널. 클릭 핸들러와 같은 진입점을 그대로 부른다 */
+  showNode(other);
+  const h2a=(pbody.querySelector('h2')||{}).textContent||'';
+  T('planetClick: 행성 클릭은 인물 패널', h2a.indexOf('↔')===-1&&h2a.indexOf(other.name)===0, h2a);
+  /* 2. 관계 목록은 나 기준 — 모든 줄의 data-a가 나여야 한다 */
+  const rows=[...pbody.querySelectorAll('.rel-item')];
+  T('relListBase: 관계 목록 나 기준', rows.length>0&&rows.every(el=>el.dataset.a===me.id),
+    rows.length+'줄 중 '+rows.filter(el=>el.dataset.a===me.id).length+'줄이 나 기준');
+  /* 3. 줄에 보이는 관계 = 눌렀을 때 열리는 관계 */
+  const row=rows[0];
+  if(row){
+    const shown=(row.querySelector('.k')||{}).textContent||'';
+    const o=nodes.find(x=>x.id===row.dataset.b);
+    const expect=REL_ROLE_SHORT[relGod(me,o)]+' · '+TEN_GODS[relGod(me,o)];
+    T('relListLabel: 줄 표기가 나 기준', shown.trim()===expect, shown.trim()+' vs '+expect);
+    row.click();
+    const h2b=(pbody.querySelector('h2')||{}).textContent||'';
+    T('relListOpen: 누르면 나↔상대', h2b===me.name+' ↔ '+o.name||h2b===o.name+' ↔ '+me.name, h2b);
+  }
+  /* 4. 관계 패널 제목은 항상 "A ↔ B" */
+  const h2c=(pbody.querySelector('h2')||{}).textContent||'';
+  T('pairTitle: 관계 패널 제목에 ↔', h2c.indexOf('↔')>0, h2c);
+  return out;}
 function deselect(){if(selected){if(!selected.isMe&&selectedMesh)selectedMesh.scale.setScalar(V2_TUNABLES.PLANET_SCALE);selected=null;selectedMesh=null;}}
 /* [§7.4] groupContext/targetMesh 둘 다 선택 인자 — 안 넘기면 지금까지와 100% 동일하게 동작한다
    (ctx는 activeGroup으로, selectedMesh는 n.mesh로 폴백). 형제 그룹 다중소속자의 추가 인스턴스를
@@ -7619,18 +7668,33 @@ function showNode(n,groupContext,targetMesh){
   const birthLine=n.birth?`<p style="font-size:var(--fs-sm);color:var(--mut)">${n.birth.y}.${n.birth.m}.${n.birth.d} · ${sjText} · ${n.birth.city}</p>`:'';
   /* [2026-08-28] 성계마다 선이 생기므로 같은 상대가 여러 번 나올 수 있다 — 한 번만 보인다 */
   const relSeen=new Set();
-  const rels=edges.filter(e=>{
+  /* ═══ [★ 2026-08-31] 관계 목록을 **나 기준**으로 바꿨다 ═══
+     [무엇이 문제였나 — 수정 전 배포본에서 실제로 재현] A(아내) 패널의 관계 목록에서
+     「정명」 줄을 누르면 **아내 ↔ 정명**이 열렸다. 줄에 붙은 십신도 아내 기준이었다.
+     사용자는 "내 관계를 보는 앱"에서 남의 관계를 열고도 그걸 모른다 — 제목이 작아
+     "아내 ↔ 정명"을 안 읽으면 자기 관계로 착각한다.
+     [고친 방향] 줄의 표기도, 눌렀을 때 열리는 것도 **전부 나 기준**으로 맞춘다.
+     보이는 것과 눌러서 나오는 것이 같아야 한다.
+     [나 자신 줄은 뺀다] o가 나이면 "나 ↔ 나"가 되어 뜻이 없다. 그 관계는 바로 위
+     egoRelLine("나와의 관계")이 이미 말하고 있다.
+     [A와 다른 사람의 관계를 보고 싶으면] 아래 「A와 다른 사람의 관계 보기」 버튼 →
+     시트에서 고른다. 경로를 하나로 모았다(3D 안내 상태는 만들지 않는다 — 사용자 결정). */
+  const meNode=nodes.find(x=>x.isMe);
+  const rels=!meNode?'':edges.filter(e=>{
     if(e.a!==n&&e.b!==n)return false;
     const o=e.a===n?e.b:e.a;
+    if(o===meNode)return false;            /* "나 ↔ 나"는 만들지 않는다 */
     if(relSeen.has(o.id))return false;
     relSeen.add(o.id);return true;}).map(e=>{
     const o=e.a===n?e.b:e.a;
-    /* [2026-08-30] ~~"화극금 · 극"~~ → **보고 있는 사람 기준 십신 짧은 이름.**
-       11px 한 줄에 오행과 십신 둘은 안 들어간다. 오행은 관계 패널과 3D 관계선에 남는다. */
-    const g=relGod(n,o);
-    return`<div class="rel-item" data-a="${n.id}" data-b="${o.id}">
+    /* [2026-08-30] ~~"화극금 · 극"~~ → 십신 짧은 이름. 한 줄에 오행과 십신 둘은 안 들어간다.
+       [2026-08-31] 기준이 ~~보고 있는 사람(n)~~ → **나(meNode)**로 바뀌었다. */
+    const g=relGod(meNode,o);
+    return`<div class="rel-item" data-a="${meNode.id}" data-b="${o.id}">
       <span class="dot" style="background:${EL_INFO[o.el].css};color:${EL_INFO[o.el].css}"></span>${o.name}
       <span class="k">${REL_ROLE_SHORT[g]} · ${TEN_GODS[g]}</span></div>`;}).join('');
+  /* 나 기준임을 화면에 밝힌다 — 목록이 A의 패널 안에 있어서 A 기준으로 읽히기 쉽다 */
+  const relHead=rels?`<div class="rel-listh">아래는 모두 <b>나</b> 기준입니다 — 누르면 <b>나와 그 사람</b>의 관계가 열립니다.</div>`:'';
   const r=n.rich;
   /* [2026-08-29] ~~"일간 기준 약식 — 만세력 엔진 연결 후 전체 분석 제공"~~ 삭제.
      만세력이 붙어 네 기둥이 실제로 나오므로 그 문구는 이제 사실이 아니다.
@@ -7661,8 +7725,8 @@ function showNode(n,groupContext,targetMesh){
 
   pbody.innerHTML=`${backHtml}${roleTag}<span class="tag">${EL_INFO[n.el].name}</span>
     <h2>${r?r.title:`${n.name} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
-    ${birthLine}${sajuTableHtml(n)}${egoRelLine(n)}${main}<div class="rel-list">${rels}</div>
-    <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">관계 보기</button></div>
+    ${birthLine}${sajuTableHtml(n)}${egoRelLine(n)}${main}${relHead}<div class="rel-list">${rels}</div>
+    <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">${bkEsc(n.name)}와 다른 사람의 관계 보기</button></div>
     <div class="panelbtns"><button class="pbtn" id="vstoggle">${virtualMembers.some(c=>c.ref===n)?'가상 성계에서 빼기':'가상 성계에 담기'}</button></div>`;
   /* 뒤로 가기 — 그룹이면 그 그룹으로, 아니면 은하 전체로. selectGroup이 카메라·패널·트리
      강조를 한꺼번에 맞춰 주므로 showGroup을 직접 부르지 않는다(트리 강조가 어긋난다). */
@@ -7696,10 +7760,15 @@ function showEdge(e){
   /* [2026-08-30] 십신 세 문단을 얹는다. 오행 문구(pairPhrase)는 ②에 그대로 남는다 —
      기존 카피 15개는 "성질까지 간다"는 원칙으로 쓴 자산이라 버리지 않는다. */
   const relHtml=pairReading(e.a,e.b,giver,receiver,rel);
-  pbody.innerHTML=(r
-    ?`<span class="tag ${rel.kind==='geuk'?'warn':''}">${rel.label}</span><h2>${r.title}</h2>
-      ${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`
-    :`<span class="tag ${rel.kind==='geuk'?'warn':''}">${rel.label}</span><h2>${e.a.name} ↔ ${e.b.name}</h2>`)
+  /* [★ 2026-08-31] rich 제목이 있어도 **"A ↔ B"를 h2로 먼저** 놓는다.
+     구 코드는 rich가 있으면 h2를 r.title("서로를 비추는 두 사람" 같은 별칭)으로 덮어써서
+     **누구와 누구의 관계인지가 화면 어디에도 크게 안 나왔다.** 관계를 잘못 열었을 때
+     알아챌 유일한 단서가 제목인데 그 단서가 사라졌던 것이다.
+     r.title은 부제로 내린다 — 버리지 않는다. 사람이 직접 쓴 글이라 계산보다 정확하다. */
+  const pairTitle=`<h2>${bkEsc(e.a.name)} ↔ ${bkEsc(e.b.name)}</h2>`;
+  pbody.innerHTML=`<span class="tag ${rel.kind==='geuk'?'warn':''}">${rel.label}</span>${pairTitle}`
+    +(r?`<div class="pairsub">${r.title}</div>${r.body.map(p=>`<p>${p}</p>`).join('')}`
+        +`<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')
     +relHtml;
   /* [2026-08-31] 관계 패널에는 뒤로가 **아예 없었다** — 여기 들어오면 트리나 태그바를
      쓰지 않고는 나갈 수 없었다(실측). 이력이 비면 두 사람 중 앞사람으로 보낸다. */
