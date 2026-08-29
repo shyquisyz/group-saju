@@ -8,7 +8,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#eceef2; --bg:#07070e; --card:rgba(18,19,30,.94); --line:#2a2c3d; --mut:#8a8c9c;
+    /* [★ 2026-08-30 대비 개편] --mut을 #8a8c9c → #a0a2b2로 올리고, 구 값을 조용한 단계로 남긴다.
+       [왜] 실측하니 구 --mut은 **불투명도 1에서도 5.25:1(패널) / 4.98:1(하이라이트 행)**이었다.
+       여유가 0.5도 안 되니 .5~.85로 흐리게 하는 순간 예외 없이 4.5 아래로 떨어진다 —
+       4.5를 넘기려면 불투명도가 0.90/0.93 이상이어야 해서 흐림 장치로 쓸 수가 없다(실측).
+       그래서 **텍스트 흐림을 불투명도가 아니라 색 단계로 바꾼다.** 위계는 크기가 아니라
+       색·굵기로 준다는 이번 개편의 원칙과도 같은 방향이다.
+       구 --mut 값은 그대로 4.98:1을 넘기므로 --mut-2(한 단계 조용한 보조)로 재활용한다. */
+    --ink:#eceef2; --bg:#07070e; --card:rgba(18,19,30,.94); --line:#2a2c3d;
+    --mut:#a0a2b2;   /* 보조 텍스트 기본 — 6.90:1(패널) / 6.55:1(하이라이트 행) */
+    --mut-2:#8a8c9c; /* 한 단계 조용한 보조 — 5.25:1 / 4.98:1. 구 --mut 값 그대로 */
     /* [F-5-2, 2026-08-27] 수 #4d7fc4 → #308dcf, 금 #aab4c4 → #b3b8bc. 사유는 EL_INFO 옆 주석 */
     --su:#308dcf; --geum:#b3b8bc; --hwa:#ff6242; --mok:#5cb87a; --to:#d9a84e; --gold:#e8c66a;
     /* [2026-08-24] 텍스트 위계 재설계 — 기준 18px.
@@ -612,7 +621,8 @@
   .sjg b{color:var(--ink);font-weight:700}
   .sjg.sjun{color:var(--gold);opacity:.85}
   /* 지장간은 참고 자료라 작게 두되, 음수 자간까지 주면 한자가 뭉개진다(실측) */
-  .sjhd{font-size:var(--fs-sm);color:var(--mut);opacity:.75;
+  /* [2026-08-30] ~~opacity:.75~~ → --mut-2. 15px에서 3.52:1이라 기준 미달이었다 */
+  .sjhd{font-size:var(--fs-sm);color:var(--mut-2);
     margin-top:4px;padding-top:5px;border-top:1px dotted var(--line)}
   .sjels{display:flex;flex-direction:column;gap:3px;
     margin-top:10px;padding-top:9px;border-top:1px solid var(--line);
@@ -645,11 +655,13 @@
   .nickdesc{font-size:var(--fs-base);line-height:1.65;color:var(--ink);word-break:keep-all}
   /* 안내는 **11px로 내리지 않는다** — 읽는 글이라 기준선(13px)을 지키고,
      위계는 크기가 아니라 **색과 굵기**로 준다(사용자 지시). */
-  .nicknote{font-size:var(--fs-sm);font-weight:400;color:var(--mut);opacity:.72;
+  /* [2026-08-30] ~~opacity:.72~~ → --mut-2. 안내 문구는 읽어야 하는 글이라 흐리면 안 된다 */
+  .nicknote{font-size:var(--fs-sm);font-weight:400;color:var(--mut-2);
     line-height:1.6;margin:2px 0 0;word-break:keep-all}
   .egonick{display:block;font-size:var(--fs-sm);font-weight:700;color:var(--gold);
     line-height:1.4;margin:2px 0 3px;word-break:keep-all}
-  .egonote{display:block;margin-top:5px;font-size:var(--fs-sm);color:var(--mut);opacity:.66;
+  /* [2026-08-30] ~~opacity:.66~~ → --mut-2. 3.02:1로 여섯 항목 중 가장 낮았다 */
+  .egonote{display:block;margin-top:5px;font-size:var(--fs-sm);color:var(--mut-2);
     line-height:1.5;word-break:keep-all}
   /* [L3] 신강·신약. 판정이 주(主), 숫자는 근거로 작게(사용자 판단) */
   .sjgy{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
@@ -659,9 +671,12 @@
   .sjgyref{font-size:var(--fs-sm);color:var(--gold);border:1px solid rgba(212,175,90,.45);
     border-radius:9px;padding:1px 7px}
   .sjgyox{margin-top:5px;font-size:var(--fs-sm);color:var(--mut)}
-  .sjgyox .ox{color:var(--mut);opacity:.5}
+  /* [2026-08-30] ~~opacity:.5~~(2.28:1) → --mut-2. "해당 없음"을 죽여 보이게 하는 것은
+     불투명도가 아니라 색으로 한다 — ○(--gold)와의 대비는 색상 차이로 충분하다 */
+  .sjgyox .ox{color:var(--mut-2)}
   .sjgyox .ox.on{color:var(--gold);opacity:1}
-  .sjgynum{display:block;font-size:var(--fs-sm);opacity:.75;margin-top:2px}
+  /* [2026-08-30] ~~opacity:.75~~(3.52:1) → --mut-2 */
+  .sjgynum{display:block;font-size:var(--fs-sm);color:var(--mut-2);margin-top:2px}
   .sjwhy{margin-top:7px}
   /* 누르는 것은 ~~11px~~로 두지 않는다 — 읽고 눌러야 하는 대상이다
      [2026-08-30] 최소가 15px이 되면서 이 구분 자체가 필요 없어졌다. 주석은 근거로 남긴다. */
@@ -827,8 +842,11 @@
   .egorel{font-size:var(--fs-sm);color:var(--mut);line-height:1.55;margin:10px 0;
     padding:9px 11px;border-left:2px solid var(--line);background:rgba(255,255,255,.03);border-radius:0 6px 6px 0}
   .egorel b{color:var(--ink);font-weight:600;margin-right:5px}
+  /* [2026-08-30] ~~opacity:.85~~(4.14:1) → --mut-2. 흐림을 걷어도 위계는 유지된다 —
+     이 줄의 구분은 원래 밝기가 아니라 **Space Mono + 자간 .04em**이 만들고 있었다.
+     (항목 2 "위계는 크기가 아니라 서체·자간·색·굵기로"의 실제 적용례다) */
   .egorel .k{display:block;margin-top:5px;font-family:'Space Mono',monospace;
-    font-size:var(--fs-sm);letter-spacing:.04em;opacity:.85}
+    color:var(--mut-2);font-size:var(--fs-sm);letter-spacing:.04em}
   .guardnote{font-size:var(--fs-sm);color:var(--mut);line-height:1.55;margin-top:9px;
     padding:9px 11px;border:1px dashed var(--line);border-radius:6px}
   .guardnote b{color:var(--ink);font-weight:600}
