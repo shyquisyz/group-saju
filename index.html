@@ -1816,27 +1816,34 @@ function ro(w){
    [어휘] 개인 해석의 다섯 계열 이름(GROUP_POWER)과 짝이 맞게 지었다.
    열 가지가 전부 "~쪽"으로 끝나 문장 어디에 놓아도 같은 리듬이 된다.
    ═════════════════════════════════════════════════════════════════════════ */
-/* 나에게 그 사람은 — 성질로만. 육친 이름 없음 */
+/* "A에게 B는 ○○입니다" 꼴에 그대로 들어가는 역할 이름. 성질로만 부르고 육친 이름은 없다.
+   [★ 실측으로 잡음] 처음엔 "나를 긴장시키고 밀어붙이는 쪽"처럼 **1인칭을 넣어 썼다.**
+   그랬더니 역방향에서 "어머니에게 나는 **나를** 긴장시키고 밀어붙이는 쪽입니다"가 나왔다 —
+   문장 속 '나'가 읽는 사람이 아니라 어머니를 가리켜야 하는데 글자는 그대로여서 뒤엉킨다.
+   **주어를 비워 두면 어느 방향에 놓아도 맞는다.** */
 const REL_ROLE=[
-  '나와 나란히 서는 쪽',              /* 비견 */
-  '나와 같은 자리를 나눠 쓰는 쪽',      /* 겁재 */
-  '내가 편하게 내주게 되는 쪽',        /* 식신 */
-  '내가 거리낌 없이 드러내게 되는 쪽',  /* 상관 */
-  '내가 크게 벌여 보게 되는 쪽',       /* 편재 */
-  '내가 챙기고 건사하게 되는 쪽',      /* 정재 */
-  '나를 긴장시키고 밀어붙이는 쪽',      /* 편관 */
-  '나에게 기준을 세워 주는 쪽',        /* 정관 */
-  '나를 다른 방식으로 일깨우는 쪽',     /* 편인 */
-  '나를 받쳐 주고 채워 주는 쪽'];      /* 정인 */
+  '나란히 서는 쪽',                  /* 비견 */
+  '같은 자리를 나눠 쓰는 쪽',          /* 겁재 */
+  '편하게 내주게 되는 쪽',            /* 식신 */
+  '거리낌 없이 드러내게 되는 쪽',      /* 상관 */
+  '크게 벌여 보게 되는 쪽',           /* 편재 */
+  '챙기고 건사하게 되는 쪽',          /* 정재 */
+  '긴장시키고 밀어붙이는 쪽',         /* 편관 */
+  '기준을 세워 주는 쪽',             /* 정관 */
+  '다른 방식으로 일깨우는 쪽',        /* 편인 */
+  '받쳐 주고 채워 주는 쪽'];         /* 정인 */
 /* 관계 목록(11px 한 줄)용 짧은 이름 */
 const REL_ROLE_SHORT=['나란히 서는 쪽','나눠 쓰는 쪽','내주게 되는 쪽','드러내게 되는 쪽',
   '벌여 보게 되는 쪽','챙기게 되는 쪽','밀어붙이는 쪽','기준을 세우는 쪽',
   '일깨우는 쪽','받쳐 주는 쪽'];
 /* 계열이 많을 때 그 사람이 나에게 어떤 상대인지 — ③·그룹 문단에서 쓴다 */
+/* [★ REL_ROLE과 같은 이유로 1인칭을 뺐다] 보는 쪽이 '나'가 아닐 수 있다 —
+   "어머니 기준으로 세면 … 내가 챙기게 되는 결"에서 '내가'는 어머니를 가리켜야 하는데
+   글자는 읽는 사람으로 읽힌다. 주어를 비우면 어느 기준에 놓아도 맞는다. */
 const GROUP_TOWARD={
-  비겁:'나와 나란히 서는 결',식상:'내가 말을 꺼내게 되는 결',
-  재성:'내가 챙기게 되는 결',관성:'나에게 기준과 부담을 주는 결',
-  인성:'나를 받쳐 주는 결'};
+  비겁:'나란히 서는 결',식상:'말을 꺼내게 되는 결',
+  재성:'챙기게 되는 결',관성:'기준과 부담을 주는 결',
+  인성:'받쳐 주는 결'};
 
 /** a가 b를 어떻게 보는가 — 일간 대 일간. 시주와 무관해 삼주여도 확정적이다. */
 function relGod(a,b){return tenGod(a.stemIdx,b.stemIdx);}
@@ -5197,9 +5204,14 @@ const EL_PAIR={
 'geum' :'{A/과} {B/은} 같은 날을 세웁니다. 기준이 같아 말이 잘 통하다가, 한 번 어긋나면 서로 물러설 각도가 없습니다.',
 'su'   :'{A/과} {B/은} 같은 결로 흐릅니다. 설명 없이 통하는 대신 둘 다 고이는 걸 못 견뎌서, 한쪽이 멈추면 다른 쪽도 같이 답답해집니다.'};
 const JOSA_MAP={'이':'이가','은':'은는','을':'을를','과':'과와'};
+/* [★ 2026-08-30] 이름이 "나"일 때 주격 조사가 "나가"로 나왔다("나가 어머니를 달굽니다").
+   한국어에서 1인칭 '나'의 주격은 **'내가'**다 — 받침 규칙으로는 안 나오는 예외라 따로 잡는다.
+   '나는'·'나를'·'나에게'는 그대로 맞아 손대지 않는다. */
+function subjKo(nm){return nm==='나'?'내가':josa(nm,'이가');}
 function fillPair(tpl,aName,bName){
   return tpl.replace(/\{([AB])(?:\/([이은을과]))?\}/g,(m,who,par)=>{
     const nm=who==='A'?aName:bName;
+    if(par==='이')return subjKo(nm);
     return par?josa(nm,JOSA_MAP[par]):nm;});}
 function pairPhrase(giver,receiver,kind,form){
   const gEl=EL_KO[giver.el],rEl=EL_KO[receiver.el];
@@ -5207,15 +5219,15 @@ function pairPhrase(giver,receiver,kind,form){
     /* short는 쌍 조각을 콤마로 잇는 자리(최대 4쌍)라 카피를 넣으면 문장이 화면을 넘긴다.
        1단계 원칙(주어=사람, 오행=근거)은 여기서도 그대로다 — 카피만 long 전용이다. */
     return kind==='bi'
-      ?`${josa(giver.name,'과와')} ${josa(receiver.name,'이가')} 같은 결(${gEl}·${rEl})`
-      :`${josa(giver.name,'이가')} ${josa(receiver.name,'을를')}(${gEl}→${rEl})`;
+      ?`${josa(giver.name,'과와')} ${subjKo(receiver.name)} 같은 결(${gEl}·${rEl})`
+      :`${subjKo(giver.name)} ${josa(receiver.name,'을를')}(${gEl}→${rEl})`;
   const key=kind==='bi'?giver.el:giver.el+'>'+receiver.el;
   const tail=kind==='bi'?`(${gEl}·${rEl})`:`(${gEl} → ${rEl})`;
   const copy=EL_PAIR[key];
   return copy
     ?`${fillPair(copy,giver.name,receiver.name)} ${tail}`
     /* 15개를 다 채웠으므로 여기 오면 안 된다 — 오행이 늘어나는 일은 없지만 방어로 남긴다 */
-    :`${josa(giver.name,'이가')} ${josa(receiver.name,'을를')} ${kind==='geuk'?'누릅':'살립'}니다 ${tail}`;}
+    :`${subjKo(giver.name)} ${josa(receiver.name,'을를')} ${kind==='geuk'?'누릅':'살립'}니다 ${tail}`;}
 
 /* 발신자별로 묶어 최대 3명까지 쓰고, 초과분은 펼칠 수 있는 "외 N쌍"으로 남긴다.
    정렬은 발신량 내림차순, 동점은 ms 순서(멤버 등록 순) — §3.3이 orderIndex로 위상 결정성을
@@ -6907,11 +6919,9 @@ function egoRelLine(node){
   const me=nodes.find(x=>x.isMe);
   if(!me||node===me)return'';
   const r=relation(node.el,me.el),sp=egoRingSpec(node);
-  let txt;
-  if(r.kind==='bi')txt=`나와 같은 <b>${EL_KO[me.el]}</b> — 비화입니다`;
-  else if(r.from===node.el)
-    txt=`<b>${r.label}</b> — ${r.kind==='saeng'?'나에게 기운을 주는':'나를 누르는'} 쪽입니다`;
-  else txt=`<b>${r.label}</b> — ${r.kind==='saeng'?'내가 기운을 주는':'내가 누르는'} 쪽입니다`;
+  /* [2026-08-30] 십신을 주로, 오행을 근거로(사용자 결정). 나 기준으로 상대를 본다. */
+  const g=relGod(me,node);
+  const txt=`<b>${REL_ROLE[g]}</b>입니다(${TEN_GODS[g]} · ${r.kind==='bi'?EL_KO[me.el]+'·'+EL_KO[node.el]:r.label})`;
   const tc=topSystemCount(node);
   const ring=!sp?'고리 없음'
     :sp.why==='many'?`고리 3개 · 소속 항성계 ${tc}곳 — 관계 표식보다 우선 표시됩니다`
@@ -7046,9 +7056,12 @@ function showNode(n,groupContext,targetMesh){
     if(relSeen.has(o.id))return false;
     relSeen.add(o.id);return true;}).map(e=>{
     const o=e.a===n?e.b:e.a;
+    /* [2026-08-30] ~~"화극금 · 극"~~ → **보고 있는 사람 기준 십신 짧은 이름.**
+       11px 한 줄에 오행과 십신 둘은 안 들어간다. 오행은 관계 패널과 3D 관계선에 남는다. */
+    const g=relGod(n,o);
     return`<div class="rel-item" data-a="${n.id}" data-b="${o.id}">
       <span class="dot" style="background:${EL_INFO[o.el].css};color:${EL_INFO[o.el].css}"></span>${o.name}
-      <span class="k">${e.label} · ${e.kind==='geuk'?'극':e.kind==='bi'?'비화':'생'}</span></div>`;}).join('');
+      <span class="k">${REL_ROLE_SHORT[g]} · ${TEN_GODS[g]}</span></div>`;}).join('');
   const r=n.rich;
   /* [2026-08-29] ~~"일간 기준 약식 — 만세력 엔진 연결 후 전체 분석 제공"~~ 삭제.
      만세력이 붙어 네 기둥이 실제로 나오므로 그 문구는 이제 사실이 아니다.
@@ -7109,13 +7122,43 @@ function showEdge(e){
      제목("A ↔ B")과 뒤집힌다. 비화일 때는 a,b 순서를 그대로 쓴다. */
   const giver=rel.kind==='bi'?e.a:(e.a.el===rel.from?e.a:e.b);
   const receiver=giver===e.a?e.b:e.a;
-  pbody.innerHTML=r
+  /* [2026-08-30] 십신 세 문단을 얹는다. 오행 문구(pairPhrase)는 ②에 그대로 남는다 —
+     기존 카피 15개는 "성질까지 간다"는 원칙으로 쓴 자산이라 버리지 않는다. */
+  const relHtml=pairReading(e.a,e.b,giver,receiver,rel);
+  pbody.innerHTML=(r
     ?`<span class="tag ${rel.kind==='geuk'?'warn':''}">${rel.label}</span><h2>${r.title}</h2>
       ${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`
-    :`<span class="tag ${rel.kind==='geuk'?'warn':''}">${rel.label}</span><h2>${e.a.name} ↔ ${e.b.name}</h2>
-      <p>${pairPhrase(giver,receiver,rel.kind,'long')}</p>
-      <div class="tip"><b>NOTE</b>일간 기준 약식 — 십신·합충 분석은 다음 단계</div>`;
+    :`<span class="tag ${rel.kind==='geuk'?'warn':''}">${rel.label}</span><h2>${e.a.name} ↔ ${e.b.name}</h2>`)
+    +relHtml;
   panel.classList.add('open');}
+
+/** 두 사람 관계의 세 문단. 소제목 형식은 개인 해석과 같다 */
+function pairReading(a,b,giver,receiver,rel){
+  const gAB=relGod(a,b), gBA=relGod(b,a);
+  const out=[];
+  /* ① 서로에게 무엇인가 — 양방향. 비대칭이 이 화면의 핵심이다 */
+  /* [★ 함정] '에게'와 '의'는 **받침과 무관한 불변 조사**다. josa()/particle()은 두 글자를
+     한 글자씩 짝지어 고르므로 '에게'를 넘기면 '에' 또는 '게'가 나온다("나게", "어머니에").
+     '의'는 pair[1]이 없어 undefined가 붙는다. 불변 조사는 그냥 이어 붙인다. */
+  let t1=`${a.name}에게 <b>${b.name}</b>${particle(b.name,'은는')} ${REL_ROLE[gAB]}입니다(${TEN_GODS[gAB]}).`
+       +` ${b.name}에게 <b>${a.name}</b>${particle(a.name,'은는')} ${REL_ROLE[gBA]}입니다(${TEN_GODS[gBA]}).`;
+  if(gAB!==gBA)t1+=' 한 사이인데 서로 다르게 봅니다 — 각자의 태어난 날을 기준으로 보기 때문입니다.';
+  else t1+=' 서로를 같은 자리로 봅니다.';
+  out.push({h:'서로에게 무엇인가',t:t1});
+  /* ② 기운의 방향 — 기존 오행 카피를 그대로 */
+  out.push({h:'기운의 방향',t:pairPhrase(giver,receiver,rel.kind,'long')});
+  /* ③ 여덟 글자로 보면 — 관계를 일간 하나로만 보던 것을 푸는 자리 */
+  const sp=relSpread(a,b);
+  if(sp&&sp.max>=2){
+    const nm=sp.tops.map(k=>GROUP_POWER[k]+'('+k+')').join(sp.tops.length===2?'과 ':', ');
+    const toward=sp.tops.map(k=>GROUP_TOWARD[k]).join(sp.tops.length===2?', ':', ');
+    const num=NUM_KO[Math.min(sp.max,8)]+(sp.tops.length>1?'씩':'');
+    let t3=`${b.name}의 ${NUM_KO[sp.letters]} 글자를 ${a.name} 기준으로 세면 ${nm}${particle(GROUP_POWER[sp.tops[sp.tops.length-1]],'이가')} ${num}${ro(num)} 가장 많습니다 — ${toward}입니다.`;
+    if(!sp.hasTime)t3+=` ${b.name}의 시각을 몰라 ${NUM_KO[sp.letters]} 글자만 본 결과라, 시각을 넣으면 달라질 수 있습니다.`;
+    out.push({h:'여덟 글자로 보면',t:t3});
+  }
+  return `<div class="reading">${out.map(x=>
+    `<div class="rdblk"><div class="rdh">${x.h}</div><p>${x.t}</p></div>`).join('')}</div>`;}
 /* [4번 1단계] 두 사람의 관계 패널을 여는 단일 진입점. edges[]에 저장된 쌍이면 그 객체를 그대로
    써서 수기 해설(RICH_E)이 나오게 하고, 없으면 즉석 계산 객체를 넘긴다(§5.4와 같은 패턴). */
 function openPairPanel(a,b){
