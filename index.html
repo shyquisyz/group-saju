@@ -612,6 +612,9 @@
   .bk-note{font-size:var(--fs-sm);color:var(--mut);line-height:1.6;margin-top:10px}
   .bk-note b{color:var(--ink);font-weight:600}
   .bk-or{font-size:var(--fs-sm);color:var(--mut);margin:11px 0 6px}
+  /* [2026-08-31] 파일 선택은 글자를 치는 칸이 아니라 iOS 강제 확대 대상이 아니지만,
+     "16px 미만 0건"을 규칙으로 두면 예외를 남기지 않는 편이 뒤에 헷갈리지 않는다. */
+  #bk-input{font-size:var(--fs-base)}
   #bk-paste{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;
     background:rgba(255,255,255,.04);color:var(--ink);font-size:var(--fs-base);
     font-family:'Space Mono',monospace;resize:vertical;margin-bottom:8px}   /* [2026-08-31] iOS */
