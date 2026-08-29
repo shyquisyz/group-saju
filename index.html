@@ -602,6 +602,25 @@
     margin-bottom:4px;opacity:.9}
   .reading p{margin:0;font-size:var(--fs-md);line-height:1.7;color:var(--ink)}
   .reading p b{font-weight:700}
+  /* ═══ 별명 블록 [2026-08-30] ═══ 별명이 회자되는 부분이라 한 단계 크게 둔다.
+     [줄바꿈] 가장 긴 별명이 20자(식신)다. 패널이 좁으면 두 줄이 되는데,
+     keep-all로 **낱말 중간에서 끊기지 않게** 하고 높이를 열어 둬 잘리지 않게 한다
+     (overflow도 고정 높이도 주지 않는다 — 줄이 늘면 블록이 늘어난다). */
+  .nickblk{margin:0 0 12px;padding:11px 12px;border-radius:10px;
+    border:1px solid var(--line);background:rgba(255,255,255,.03)}
+  .nicklead{font-size:var(--fs-sm);color:var(--mut);margin-bottom:3px}
+  .nicklead b{color:var(--ink);font-weight:600}
+  .nickname{font-size:var(--fs-base);font-weight:800;color:var(--gold);line-height:1.35;
+    word-break:keep-all;overflow-wrap:break-word;margin-bottom:6px}
+  .nickdesc{font-size:var(--fs-md);line-height:1.65;color:var(--ink);word-break:keep-all}
+  /* 안내는 **11px로 내리지 않는다** — 읽는 글이라 기준선(13px)을 지키고,
+     위계는 크기가 아니라 **색과 굵기**로 준다(사용자 지시). */
+  .nicknote{font-size:var(--fs-sm);font-weight:400;color:var(--mut);opacity:.72;
+    line-height:1.6;margin:2px 0 0;word-break:keep-all}
+  .egonick{display:block;font-size:var(--fs-md);font-weight:700;color:var(--gold);
+    line-height:1.4;margin:2px 0 3px;word-break:keep-all}
+  .egonote{display:block;margin-top:5px;font-size:var(--fs-sm);color:var(--mut);opacity:.66;
+    line-height:1.5;word-break:keep-all}
   /* [L3] 신강·신약. 판정이 주(主), 숫자는 근거로 작게(사용자 판단) */
   .sjgy{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
   .sjgyhead{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
@@ -1893,6 +1912,72 @@ const REL_ROLE=[
   '기준을 세워 주는 쪽',             /* 정관 */
   '다른 방식으로 일깨우는 쪽',        /* 편인 */
   '받쳐 주고 채워 주는 쪽'];         /* 정인 */
+/* ═══ 별명 [2026-08-30] ═══
+   [왜] 역할 이름만 말하면 "그래서?"가 남는다. 십신은 원래 관계를 **사람 관계로 이름 붙이는**
+   체계라, 육친 은유를 쓰는 것이 지어내는 게 아니라 원래 방식이다(사용자 판단).
+   목표는 **한 번에 알아듣고 남에게 옮길 수 있는 말** — "얘가 나한테 ○○래"가 성립해야 한다.
+
+   [★ 별명은 계산이 아니라 해석이다] 십신 계산은 답이 하나지만 "정재를 뭐라고 부를까"는
+   답이 없다. 그래서 **완벽한 별명을 찾지 않는다.** 지킨 선은 하나 —
+   **여러 자료가 일치하는 성질과 정면으로 어긋나지 않을 것.** 근거가 애매한 것은 무리하게
+   꾸미지 않고 담백하게 뒀다. 화면에도 "이해를 돕기 위한 비유"라고 밝힌다(NICK_NOTE).
+
+   [★ 방향] 십신은 비대칭이라 별명도 방향을 탄다. 기준은 **"상대가 나에게 무엇인가"**다.
+   재성(정재·편재)과 식상(식신·상관)은 **내가 주는·관리하는 쪽**이라,
+   상대가 나에게 뭘 주는 것처럼 읽히면 방향이 뒤집힌 것이다.
+   초안에서 정재를 "손이 가는 막내"로, 상관을 "지적러"로 썼다가 방향이 뒤집혀 고쳤다 —
+   "손이 가는"은 꾸준한 관리(정재의 핵심)와 반대고, "지적러"는 상대가 나를 누르는
+   관성 쪽 어휘다. 겁재는 탈재(奪財 — 재물을 위협한다)가 빠져 있어 "몫을 나눠 갖지만"으로
+   되살렸고, 식신은 풍요·먹을 복이 핵심이라 "넉넉한"으로 잡았다.
+
+   [★ 1인칭] 편관 「나를 키우는 어른」에만 '나'가 남아 있다. 역방향 출력에서 그 '나'가
+   상대를 가리켜야 하므로, **문장에서 시점을 먼저 세워** 푼다("어머니 입장에서는 —").
+   별명 자체는 사용자가 확정한 대로 두었다. */
+const REL_NICK=[
+  '편하지만 밀어주진 않는 친구',              /* 비견 */
+  '몫을 나눠 갖지만 힘이 되는 형제',          /* 겁재 */
+  '퍼주게 되지만 같이 있으면 넉넉한 아이',     /* 식신 */
+  '말이 앞서도 재주는 넘치는 재간둥이',        /* 상관 */
+  '씀씀이는 크지만 판을 키우는 돈줄',          /* 편재 */
+  '재미는 없어도 믿고 맡기는 살림꾼',          /* 정재 */
+  '부담스럽지만 나를 키우는 어른',            /* 편관 */
+  '까다롭지만 든든한 상사',                  /* 정관 */
+  '엉뚱하지만 시야를 넓혀주는 스승',          /* 편인 */
+  '챙겨주지만 잔소리 많은 엄마'];             /* 정인 */
+/* 양면 — **어떤 상황에서 좋게 작용하고 어떤 상황에서 아쉬운지**를 상황으로 가른다.
+   좋고 나쁨으로 가르지 않는다 — 정과 편의 차이는 '안정적이냐 치우쳤냐'지
+   '좋으냐 나쁘냐'가 아니다(사용자 판단). 끝 괄호가 십신 용어의 뜻을 함께 적는 자리다. */
+const REL_DESC=[
+  '판단을 맞춰 볼 때 가장 빠릅니다. 같은 자리를 두고 겨루어야 할 때는 둘 다 물러서지 않습니다. (비견 — 나와 같은 힘이 나란히 선 자리)',
+  '함께 밀어붙일 때 힘이 배가 됩니다. 나눌 몫을 미리 정해 두지 않으면 서운함이 남습니다. (겁재 — 같은 힘이되 몫을 나눠 가지는 자리. 한자 뜻이 "재물을 위협한다"입니다)',
+  '급할 것 없을 때 곁에 두면 여유가 돌아옵니다. 이쪽이 이미 지쳐 있을 때는 주기만 하는 자리가 됩니다. (식신 — 내가 편하게 내주는 자리)',
+  '굳어 있는 판을 흔들 때 재주가 빛납니다. 마무리가 필요한 국면에서는 말이 앞서 실천이 뒤따르지 않습니다. (상관 — 내가 거리낌 없이 드러내는 자리)',
+  '새로 벌이는 일에서 판이 커집니다. 아껴야 할 때는 씀씀이도 같이 커집니다. (편재 — 내가 크게 굴리는 자리)',
+  '오래 이어 가는 일에서 쌓이는 것이 보입니다. 새로운 것을 시도할 때는 답답하게 느껴집니다. (정재 — 내가 꾸준히 관리하는 자리)',
+  '미뤄 둔 일이 이 사람 앞에서는 진척됩니다. 여유가 없을 때는 요구가 겹쳐 이쪽 몫이 뒤로 밀립니다. (편관 — 나를 세게 누르는 자리)',
+  '방향이 흔들릴 때 기준이 되어 줍니다. 사정이 있어 못 맞출 때는 그 기준이 잣대가 됩니다. (정관 — 나를 반듯하게 세우는 자리)',
+  '정답이 안 보이는 문제에서 실마리가 나옵니다. 답이 정해진 일에서는 이야기가 겉돕니다. (편인 — 나를 남다른 방식으로 채우는 자리)',
+  '막막할 때 먼저 떠오르고 실제로 답이 나옵니다. 이미 마음을 정한 일에서는 참견이 얹힙니다. (정인 — 나를 꾸준히 채워 주는 자리)'];
+/* 변주 — 상대의 강약으로 갈린다. **무작위가 아니라 계산이다**: 같은 사람이면 항상 같다.
+   Math.random·Date.now를 쓰지 않는다 — 사주는 계산 결과라 열 때마다 달라지면 안 된다.
+   "변주"는 매번 다르게 나온다는 뜻이 아니라 사람마다 다르게 나온다는 뜻이다(사용자 지시). */
+const REL_STRENGTH={'극왕':' 상대 쪽 힘이 넉넉한 편이라 그 역할이 세게 나옵니다.',
+  '신강':' 그 역할이 뚜렷하게 드러나는 편입니다.',
+  '신약':' 그 역할을 하고 싶어도 힘이 달릴 때가 있습니다.',
+  '극약':' 마음이 앞서는 쪽이라 하려는 것과 되는 것이 어긋나기도 합니다.'};
+/* 별명이 계산이 아니라 해석이라는 것을 화면에서 밝힌다(사용자 지시).
+   "어머니 자리"가 실제 가족 관계로 오해되면 안 되기 때문이기도 하다. */
+const NICK_NOTE='이해를 돕기 위한 비유입니다 — 실제 가족 관계를 뜻하지 않습니다.';
+
+/** 그 사람의 강약 판정(문자열). 생년월일이 없거나 계산이 안 되면 빈 문자열 */
+function personGangyak(x){
+  const b=x&&x.birth; if(!b)return '';
+  let r=null;
+  try{r=sajuOf({y:b.y,m:b.m,d:b.d,
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon});}catch(e){return '';}
+  if(!r)return '';
+  const g=gangyak(r); return g?g.verdict:'';}
+
 /* 관계 목록(11px 한 줄)용 짧은 이름 */
 const REL_ROLE_SHORT=['나란히 서는 쪽','나눠 쓰는 쪽','내주게 되는 쪽','드러내게 되는 쪽',
   '벌여 보게 되는 쪽','챙기게 되는 쪽','밀어붙이는 쪽','기준을 세우는 쪽',
@@ -7055,12 +7140,17 @@ function egoRelLine(node){
   const r=relation(node.el,me.el),sp=egoRingSpec(node);
   /* [2026-08-30] 십신을 주로, 오행을 근거로(사용자 결정). 나 기준으로 상대를 본다. */
   const g=relGod(me,node);
-  const txt=`<b>${REL_ROLE[g]}</b>입니다(${TEN_GODS[g]} · ${r.kind==='bi'?EL_KO[me.el]+'·'+EL_KO[node.el]:r.label})`;
+  /* [2026-08-30 별명] 여기가 가장 자주 읽히는 관계 문장이라 별명을 먼저 낸다.
+     역할 이름(REL_ROLE)은 별명 밑 근거로 내려 십신·오행과 함께 둔다 —
+     전문용어를 쓰되 뜻을 반드시 함께 적는다는 규칙을 그대로 따른다. */
+  const txt=`<span class="egonick">${REL_NICK[g]}</span>`
+    +`<span class="k">${REL_ROLE[g]} · ${TEN_GODS[g]} · ${r.kind==='bi'?EL_KO[me.el]+'·'+EL_KO[node.el]:r.label}</span>`;
   const tc=topSystemCount(node);
   const ring=!sp?'고리 없음'
     :sp.why==='many'?`고리 3개 · 소속 항성계 ${tc}곳 — 관계 표식보다 우선 표시됩니다`
     :`고리 ${sp.count}개 · ${sp.why==='saeng'?'나를 생':'나를 극'}`;
-  return`<div class="egorel">나와의 관계 ${txt}<span class="k">${ring}</span></div>`;}
+  return`<div class="egorel">나와의 관계 ${txt}<span class="k">${ring}</span>`
+    +`<span class="egonote">${NICK_NOTE}</span></div>`;}
 /* ═══ 사주 표 [2026-08-29, L2 4단계] ═══
    여덟 글자를 계산해 놓고 일간 하나만 보여주고 있었다(사용자 지적). 네 기둥을 전부 낸다.
 
@@ -7274,11 +7364,22 @@ function pairReading(a,b,giver,receiver,rel){
   /* [★ 함정] '에게'와 '의'는 **받침과 무관한 불변 조사**다. josa()/particle()은 두 글자를
      한 글자씩 짝지어 고르므로 '에게'를 넘기면 '에' 또는 '게'가 나온다("나게", "어머니에").
      '의'는 pair[1]이 없어 undefined가 붙는다. 불변 조사는 그냥 이어 붙인다. */
-  let t1=`${a.name}에게 <b>${b.name}</b>${particle(b.name,'은는')} ${REL_ROLE[gAB]}입니다(${TEN_GODS[gAB]}).`
-       +` ${b.name}에게 <b>${a.name}</b>${particle(a.name,'은는')} ${REL_ROLE[gBA]}입니다(${TEN_GODS[gBA]}).`;
-  if(gAB!==gBA)t1+=' 한 사이인데 서로 다르게 봅니다 — 각자의 태어난 날을 기준으로 보기 때문입니다.';
-  else t1+=' 서로를 같은 자리로 봅니다.';
-  out.push({h:'서로에게 무엇인가',t:t1});
+  /* [2026-08-30 별명] ~~역할 이름 두 문장~~ → **별명 블록 둘 + 비유 안내.**
+     [시점을 먼저 세운다] 역방향 리드를 "○○ 입장에서는"으로 두면, 별명 안의
+     '나'(편관 「나를 키우는 어른」)가 읽는 사람이 아니라 그 사람을 가리키게 된다.
+     별명을 고치지 않고 화면에서 푸는 방법이다(사용자가 편관 별명을 그대로 두기로 함). */
+  const blk=(lead,g,other)=>{
+    const st=personGangyak(other), add=(st&&REL_STRENGTH[st])||'';
+    return `<div class="nickblk"><div class="nicklead">${lead}</div>`
+      +`<div class="nickname">${REL_NICK[g]}</div>`
+      +`<div class="nickdesc">${REL_DESC[g]}${add}</div></div>`;};
+  let t1=blk(`${a.name}에게 <b>${b.name}</b>${particle(b.name,'은는')}`,gAB,b)
+        +blk(`<b>${b.name}</b> 입장에서는`,gBA,a)
+        +`<div class="nicknote">${NICK_NOTE}`
+        +(gAB!==gBA?' 한 사이인데 서로 다르게 보이는 것은 각자의 태어난 날을 기준으로 보기 때문입니다.'
+                   :' 서로를 같은 자리로 봅니다.')
+        +`</div>`;
+  out.push({h:'서로에게 무엇인가',t:t1,raw:true});
   /* ② 기운의 방향 — 기존 오행 카피를 그대로 */
   out.push({h:'기운의 방향',t:pairPhrase(giver,receiver,rel.kind,'long')});
   /* ③ 여덟 글자로 보면 — 관계를 일간 하나로만 보던 것을 푸는 자리 */
@@ -7292,7 +7393,7 @@ function pairReading(a,b,giver,receiver,rel){
     out.push({h:'여덟 글자로 보면',t:t3});
   }
   return `<div class="reading">${out.map(x=>
-    `<div class="rdblk"><div class="rdh">${x.h}</div><p>${x.t}</p></div>`).join('')}</div>`;}
+    `<div class="rdblk"><div class="rdh">${x.h}</div>${x.raw?x.t:'<p>'+x.t+'</p>'}</div>`).join('')}</div>`;}
 /* [4번 1단계] 두 사람의 관계 패널을 여는 단일 진입점. edges[]에 저장된 쌍이면 그 객체를 그대로
    써서 수기 해설(RICH_E)이 나오게 하고, 없으면 즉석 계산 객체를 넘긴다(§5.4와 같은 패턴). */
 function openPairPanel(a,b){
