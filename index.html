@@ -727,8 +727,7 @@
   .sjgydef{margin-top:4px;font-size:var(--fs-sm);color:var(--mut-2);line-height:1.6;
     word-break:keep-all}
   .sjgydef b{color:var(--mut);font-weight:600}
-  .sjgydef2{margin-top:5px;padding-top:5px;border-top:1px dotted var(--line)}
-  .sjlegend{margin-top:8px}
+  /* [2026-08-31] ~~.sjgydef2 / .sjlegend~~ 제거 — sjHelp로 통일되며 붙는 요소가 사라졌다 */
   .sjgyox{margin-top:5px;font-size:var(--fs-sm);color:var(--mut)}
   /* [2026-08-30] ~~opacity:.5~~(2.28:1) → --mut-2. "해당 없음"을 죽여 보이게 하는 것은
      불투명도가 아니라 색으로 한다 — ○(--gold)와의 대비는 색상 차이로 충분하다 */
@@ -736,18 +735,33 @@
   .sjgyox .ox.on{color:var(--gold);opacity:1}
   /* [2026-08-30] ~~opacity:.75~~(3.52:1) → --mut-2 */
   .sjgynum{display:block;font-size:var(--fs-sm);color:var(--mut-2);margin-top:2px}
-  .sjwhy{margin-top:7px}
+  /* [2026-08-31] .sjwhy 계열은 sjHelp로 대체됐다. .sjwhynote만 살아 있다 —
+     도움말 본문 마지막 문단의 점선 구분선으로 여전히 쓰인다. */
+  /* ═══ 도움말 한 패턴 [2026-08-31] ═══ 세 곳이 같은 모양을 쓴다.
+     [세로선 색] --mut 계열. 금색은 관계 패널의 "사주은하의 해석"이 쓰고 있어
+     같은 색을 쓰면 **도움말과 해석이 한 종류로 보인다** — 층을 나눈 의미가 없어진다.
+     [터치] 글자 버튼이지만 누르는 판은 44px을 채운다(어르신 기준). */
+  .sjhelp{margin-top:8px}
+  .sjhelp-b{display:flex;align-items:center;gap:6px;width:100%;min-height:44px;
+    padding:0 2px;border:0;background:transparent;color:var(--mut);
+    font-family:inherit;font-size:var(--fs-sm);text-align:left;cursor:pointer;
+    text-decoration:underline;text-underline-offset:3px;transition:color .15s}
+  .sjhelp-b:hover{color:var(--ink)}
+  .sjhelp-car{display:inline-block;width:1em;text-decoration:none;flex-shrink:0}
+  .sjhelp-body{display:none;margin:2px 0 4px;padding-left:10px;
+    border-left:2px solid rgba(160,162,178,.4)}
+  .sjhelp.open>.sjhelp-body{display:block}
+  .sjhelp-t{font-size:var(--fs-sm);font-weight:700;color:var(--mut);
+    letter-spacing:.02em;margin-bottom:4px}
+  .sjhelp-body p{font-size:var(--fs-base);color:var(--mut);line-height:1.65;margin:6px 0 0}
+  .sjhelp-body p:first-of-type{margin-top:0}
+  .sjhelp-body b{color:var(--ink)}
   /* 누르는 것은 ~~11px~~로 두지 않는다 — 읽고 눌러야 하는 대상이다
      [2026-08-30] 최소가 15px이 되면서 이 구분 자체가 필요 없어졌다. 주석은 근거로 남긴다. */
-  .sjwhy summary{font-size:var(--fs-sm);color:var(--mut);cursor:pointer;
-    text-decoration:underline;text-underline-offset:3px;list-style:none}
-  .sjwhy summary::-webkit-details-marker{display:none}
   /* [2026-08-30 폰트 재조사] ~~11px가 패널 안 44곳으로 가장 많아 읽는 글만 13px로 올렸다.
      라벨·태그·아이콘은 11px로 둔다(그건 읽는 게 아니라 구분하는 것이다).~~
      → **접근성 개편으로 폐기.** "라벨은 구분만 하면 된다"는 정상 시력 기준의 판단이었다.
      어르신 눈에는 구분도 안 된다. 라벨·태그도 전부 15px로 올렸다. */
-  .sjwhy p{font-size:var(--fs-sm);color:var(--mut);line-height:1.65;margin:6px 0 0}
-  .sjwhy b{color:var(--ink)}
   .sjwhynote{border-top:1px dotted var(--line);padding-top:6px;margin-top:7px !important}
   .sjel.zero{color:var(--mut);opacity:.45;font-weight:400}
   .sjnote{margin-top:9px;padding:8px 10px;border-radius:7px;
@@ -5726,6 +5740,17 @@ const collapsedG=new Set();
    저장 스키마에 넣으면 SAVE_VER을 올리고 MIGRATIONS를 더해야 한다(CLAUDE.md 저장 규칙) —
    접힘 하나에 치를 값이 아니다. 읽기 실패는 조용히 펼침으로 떨어진다. */
 const UI_KEY='groupsaju:ui';
+/* ═══ 도움말 접힘 기억 [2026-08-31] ═══
+   개인 패널의 도움말 세 곳이 각각 다른 모양이었다 — 득령·득지·득세 풀이는 **접히지도 않는
+   맨 문단**, 판정 근거와 표 읽는 법은 `<details>`. 같은 성격의 것이 세 가지 모양이면
+   사용자는 그것들이 같은 종류라는 걸 알 수 없다. **sjHelp 한 패턴으로 통일한다.**
+   [최초는 펼침] 처음 보는 사람에게 도움말이 접혀 있으면 없는 것과 같다.
+   접은 뒤에는 기억한다 — 아는 사람이 매번 접는 수고를 하지 않게.
+   [키가 없으면 true] 그래서 `!==false`로 읽는다. */
+let helpOpen=(()=>{
+  try{const v=JSON.parse(localStorage.getItem(UI_KEY)||'{}').helpOpen;
+    return (v&&typeof v==='object')?v:{};}catch{return {};}})();
+function helpIsOpen(k){return helpOpen[k]!==false;}
 let treeCollapsed=(()=>{
   try{return JSON.parse(localStorage.getItem(UI_KEY)||'{}').treeCollapsed===true;}
   catch{return false;}})();
@@ -5751,6 +5776,7 @@ function saveUiPref(){
     const o=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     o.treeCollapsed=treeCollapsed;
     o.panelW=panelW;
+    o.helpOpen=helpOpen;
     localStorage.setItem(UI_KEY,JSON.stringify(o));
   }catch{/* 저장이 막혀 있어도 이번 세션 동안은 접힌 채로 동작한다 */}}
 function renderTree(){
@@ -7360,6 +7386,31 @@ function egoRelLine(node){
    생긴다(L3). 오행 개수는 해석이 아니라 계산 결과 표시라 범위 안이다(사용자 결정).
    [경계] ±10분. ±15분은 하루에 두 시간 넘게 경고 구간이 돼 넓다는 판단(사용자 결정).
    문구는 **확정하지 않고 알리는 정도**로만 둔다. 두 결과를 다 보여줄지는 나중에 판단한다. */
+/* ═══ 도움말 한 패턴 [2026-08-31] ═══
+   개인 패널의 도움말 세 곳이 전부 이 함수를 지난다.
+   [버튼 글자는 각자 이름] 「풀이 보기」/「판정 근거」/「표 읽는 법」 —
+   셋 다 같은 글자면 한 화면에 같은 버튼이 셋이라 무엇이 무엇인지 구분이 안 된다(사용자 판단).
+   **패턴만 통일하고 이름은 각자 쓴다.**
+   [모양] 글자 버튼 + 왼쪽 보조색 세로선. 세로선은 --mut 계열이다 — 금색은 이미
+   "사주은하의 해석"(관계 패널)이 쓰고 있어서, 같은 색을 쓰면 도움말과 해석이 섞여 보인다.
+   [문안] 안쪽 글은 한 글자도 바꾸지 않았다. 감싸는 껍데기만 바뀐 것이다. */
+function sjHelp(key,btnLabel,bodyHtml,title){
+  const open=helpIsOpen(key);
+  return `<div class="sjhelp${open?' open':''}" data-help="${key}">`
+    +`<button type="button" class="sjhelp-b" aria-expanded="${open?'true':'false'}">`
+    +`<span class="sjhelp-car">${open?'▾':'▸'}</span>${btnLabel}</button>`
+    +`<div class="sjhelp-body">${title?`<div class="sjhelp-t">${title}</div>`:''}${bodyHtml}</div>`
+    +`</div>`;}
+/** 패널을 다시 그릴 때마다 배선한다 — 패널 안 다른 손잡이들과 같은 방식 */
+function wireHelp(root){
+  (root||document).querySelectorAll('.sjhelp-b').forEach(b=>b.onclick=()=>{
+    const box=b.closest('.sjhelp'), k=box.dataset.help;
+    const now=!box.classList.contains('open');
+    box.classList.toggle('open',now);
+    b.setAttribute('aria-expanded',now?'true':'false');
+    const car=b.querySelector('.sjhelp-car'); if(car)car.textContent=now?'▾':'▸';
+    helpOpen[k]=now; saveUiPref();});}
+
 function sajuTableHtml(n){
   const b=n.birth; if(!b)return '';
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
@@ -7388,8 +7439,9 @@ function sajuTableHtml(n){
   /* [2026-08-31] 표에 **줄 이름이 없었다** — 편관 / 丙 / 寅 / 편재 / 절 / 戊丙甲 여섯 줄이
      아무 설명 없이 쌓여 있다. 왼쪽에 이름 칸을 하나 더 두면 4열이 5열이 되어 320px에서 깨지므로
      (폰트 개편 때 잰 최소 폭이 그 근거다), 표 아래 **접힌 풀이 한 개**로 푼다.
-     판정 근거(.sjwhy)가 이미 쓰는 방식이라 화면 어휘도 일관된다. */
-  const legend=`<details class="sjwhy sjlegend"><summary>표 읽는 법</summary>
+     판정 근거가 이미 쓰던 방식이라 화면 어휘도 일관된다.
+     [2026-08-31] 셋 다 sjHelp 한 패턴으로 합쳐졌다. */
+  const legend=sjHelp('legend','표 읽는 법',`
     <p><b>천간 · 지지</b> — 각 기둥의 위 글자와 아래 글자입니다. 넷씩 여덟 글자가 사주입니다.</p>
     <p><b>십신</b> — 글자 위아래에 붙은 말. 그 글자가 <b>나(일간)</b>와 맺는 관계입니다
        (비견·겁재·식신·상관·편재·정재·편관·정관·편인·정인 열 가지).</p>
@@ -7398,8 +7450,7 @@ function sajuTableHtml(n){
     <p><b>지장간</b> — 맨 아랫줄. <b>지지 안에 숨어 있는 천간</b>입니다. 겉으로는 안 보이지만
        기운은 들어 있어서, 아래 "지장간 포함" 줄에서 함께 셉니다.</p>
     <p class="sjwhynote"><b>일간</b>은 태어난 날의 위 글자이고 <b>이 사람 자신</b>을 가리킵니다 —
-       나머지 일곱 글자는 전부 이 글자를 기준으로 읽습니다.</p>
-  </details>`;
+       나머지 일곱 글자는 전부 이 글자를 기준으로 읽습니다.</p>`);
 
   /* ── 안내 ── */
   const notes=[];
@@ -7438,8 +7489,8 @@ function sajuTableHtml(n){
         힘이 <b>${GANGYAK_DEF[GANGYAK.indexOf(gy.verdict)]}</b> 편이라는 뜻입니다.</div>
       <div class="sjgyox">득령 ${OX(gy.deukRyeong)} · 득지 ${OX(gy.deukJi)} · 득세 ${OX(gy.deukSe)}
         <span class="sjgynum">일간을 돕는 글자 ${gy.ally}/${gy.total}</span></div>
-      <div class="sjgydef sjgydef2">${GY_TERM_DEF}</div>
-      <details class="sjwhy"><summary>판정 근거</summary>
+      ${sjHelp('gyterm','풀이 보기',`<p>${GY_TERM_DEF}</p>`,'득령 · 득지 · 득세 풀이')}
+      ${sjHelp('gywhy','판정 근거',`
         <p>득령 — 월지(태어난 달의 아랫글자) <b>${BRANCHES[gy.mBranch]}</b>의 정기(그 글자를
            대표하는 기운)가 일간에게 <b>${TEN_GODS[gy.mGod]}</b>.
            비겁(나와 같은 편)·인성(나를 채워 주는 편)이면 성립합니다.</p>
@@ -7454,8 +7505,7 @@ function sajuTableHtml(n){
         <p class="sjwhynote">성립 개수로 극약(0) · 신약(1) · 신강(2) · 극왕(3)을 가릅니다.
            <b>이 판정은 유파마다 기준이 다릅니다</b> — 다른 만세력에 같은 표시가 없어
            대조하지 못했습니다. 그래서 근거를 함께 냅니다.
-           ${gy.hasTime?'':'<br>시주가 없어 글자 수가 적습니다. <b>시각을 넣으면 판정이 바뀔 수 있습니다.</b>'}</p>
-      </details>
+           ${gy.hasTime?'':'<br>시주가 없어 글자 수가 적습니다. <b>시각을 넣으면 판정이 바뀔 수 있습니다.</b>'}</p>`)}
     </div>`:'';
 
   return `<div class="sajubox"><div class="sjgrid">${cols}</div>
@@ -7617,6 +7667,7 @@ function showNode(n,groupContext,targetMesh){
   /* 뒤로 가기 — 그룹이면 그 그룹으로, 아니면 은하 전체로. selectGroup이 카메라·패널·트리
      강조를 한꺼번에 맞춰 주므로 showGroup을 직접 부르지 않는다(트리 강조가 어긋난다). */
   navWireBack(()=>{selectGroup(backTo);});
+  wireHelp(pbody); /* [2026-08-31] 도움말 세 곳의 접기 손잡이 */
   panel.classList.add('open');
   pbody.querySelectorAll('.rel-item').forEach(el=>el.onclick=()=>{
     const A=nodes.find(x=>x.id===el.dataset.a),B=nodes.find(x=>x.id===el.dataset.b);
