@@ -1749,6 +1749,24 @@ const CITY_LON={};CITY_GROUPS.forEach(g=>g.list.forEach(([c,l])=>{CITY_LON[c]=l;
    경도를 두 곳에 적으면 언젠가 어긋난다. */
 const CITY_FAVS=['서울','부산','인천','대구','대전','광주','울산','수원','용인','고양',
   '창원','성남','청주','화성','부천','전주','천안','제주'];
+/* [★ 2026-08-31] 목록 조립을 **한 곳으로 모은다.**
+   같은 마크업이 인물 시트(selCity)와 온보딩(obCity) 두 곳에 복사돼 있었고,
+   "자주 찾는 도시"를 넣을 때 **한쪽만 고쳐 조용히 어긋났다**(실측으로 발견).
+   원래 주석이 "두 벌로 갈라지면 한쪽만 고쳤을 때 조용히 어긋난다"고 경고하던 그 일이
+   그대로 일어난 것이다 — 경고만으로는 안 되고 함수 하나로 묶어야 막힌다. */
+function cityOptionsHtml(){
+  return `<optgroup label="자주 찾는 도시">`
+    +CITY_FAVS.filter(c=>CITY_LON[c]!==undefined).map(c=>`<option value="${c}">${c}</option>`).join('')
+    +`</optgroup>`
+    +CITY_GROUPS.map(g=>`<optgroup label="${g.region}">`
+      +g.list.map(([c])=>`<option value="${c}">${c}</option>`).join('')+`</optgroup>`).join('')
+    +`<optgroup label="그 밖"><option value="${CITY_CUSTOM}">${CITY_CUSTOM}</option>`
+    +`<option value="${CITY_UNKNOWN}">${CITY_UNKNOWN}</option></optgroup>`;}
+/* 표의 자동완성 목록(datalist)은 그룹을 못 쓰므로 **순서**로 같은 뜻을 낸다 */
+function cityDatalistHtml(){
+  const rest=[];CITY_GROUPS.forEach(g=>g.list.forEach(([c])=>{if(CITY_FAVS.indexOf(c)<0)rest.push(c);}));
+  return CITY_FAVS.filter(c=>CITY_LON[c]!==undefined).concat(rest)
+    .map(c=>`<option value="${c}">`).join('');}
 const CITY_CUSTOM='직접 입력';   // 해외 출생자 등 — 이름을 직접 받고 경도는 비운다
 const CITY_UNKNOWN='모름';
 function dayStem(y,m,d){const days=Math.floor(Date.UTC(y,m-1,d)/86400000);return((days+7)%10+10)%10;}
@@ -8574,14 +8592,7 @@ const selY=document.getElementById('f-y'),selM=document.getElementById('f-m'),se
   refreshDays();
   selY.onchange=refreshDays;selM.onchange=refreshDays;
   /* [2026-08-27] 권역별 optgroup. 60개가 한 줄로 늘어서면 못 찾는다 */
-  selCity.innerHTML=`<optgroup label="자주 찾는 도시">`
-      +CITY_FAVS.filter(c=>CITY_LON[c]!==undefined).map(c=>`<option value="${c}">${c}</option>`).join('')
-      +`</optgroup>`
-    +CITY_GROUPS.map(g=>
-      `<optgroup label="${g.region}">`+
-      g.list.map(([c])=>`<option value="${c}">${c}</option>`).join('')+`</optgroup>`).join('')
-    +`<optgroup label="그 밖"><option value="${CITY_CUSTOM}">${CITY_CUSTOM}</option>`
-    +`<option value="${CITY_UNKNOWN}">${CITY_UNKNOWN}</option></optgroup>`;
+  selCity.innerHTML=cityOptionsHtml();
   selCity.value='서울';
   selCity.onchange=()=>{syncCityCustom();};
   const cc=document.getElementById('f-city-custom');
@@ -9010,7 +9021,7 @@ function ptRenderGroups(){
 function ptRenderLists(){
   const cl=document.getElementById('pt-citylist');
   if(cl&&!cl.children.length)
-    cl.innerHTML=CITY_GROUPS.map(g=>g.list.map(([c])=>`<option value="${c}">`).join('')).join('');
+    cl.innerHTML=cityDatalistHtml();
 }
 
 /* ── 후보 드롭다운 ──
@@ -9498,11 +9509,7 @@ function obRenderSijin(){renderTime('ob');}   /* 한 명 화면과 같은 컨트
   obY.onchange=obRefreshDays;obM.onchange=obRefreshDays;
   /* 도시 목록은 인물 시트와 같은 출처(CITY_GROUPS)를 쓴다 — 두 벌로 갈라지면 한쪽만
      고쳤을 때 조용히 어긋난다 */
-  obCity.innerHTML=CITY_GROUPS.map(g=>
-      `<optgroup label="${g.region}">`+
-      g.list.map(([c])=>`<option value="${c}">${c}</option>`).join('')+`</optgroup>`).join('')
-    +`<optgroup label="그 밖"><option value="${CITY_CUSTOM}">${CITY_CUSTOM}</option>`
-    +`<option value="${CITY_UNKNOWN}">${CITY_UNKNOWN}</option></optgroup>`;
+  obCity.innerHTML=cityOptionsHtml();
   obCity.value='서울';
   const occ=document.getElementById('ob-city-custom');
   obCity.onchange=()=>{if(occ)occ.style.display=(obCity.value===CITY_CUSTOM)?'block':'none';};
