@@ -171,6 +171,9 @@
   .rel-listh b{color:var(--mut);font-weight:600}
   /* ═══ 그룹 상성란 [2026-08-31] ═══ 항목마다 소제목을 달아 **어디까지가 한 이야기인지**
      보이게 한다. 위 서술 문단들과 섞이면 세 기둥이라는 구조가 화면에서 사라진다. */
+  /* 코너 해설 — 계산 사실. 해석 층과 크기를 맞추되 위계는 여백으로 준다 */
+  .cnrfact{font-size:var(--fs-base);line-height:1.65;color:var(--ink);
+    word-break:keep-all;margin:0 0 2px}
   .gsecs{margin:14px 0 4px;border-top:1px solid var(--line);padding-top:12px}
   .gsec{margin-bottom:14px}
   .gsec:last-child{margin-bottom:4px}
@@ -2380,6 +2383,95 @@ function relSpread(a,b){
   return {cnt:cnt,tops:ks.filter(k=>cnt[k]===mx),max:mx,letters:letters,hasTime:r.hasTime};}
 
 /** 인물 한 명의 해석 문단들. [{h:소제목, t:본문}] */
+/* ═══════════════════════════════════════════════════════════════════════
+   개인 해석 코너 넷 [2026-08-31] — 어울리는 일 · 돈 스타일 · 관계 스타일 · 힘이 되는 기운
+
+   [이층식] 코너마다 **해설(계산 사실) + "사주은하의 해석" 라벨 층**이다.
+   관계 패널과 같은 금색 세로선을 써서, 어디까지가 사실이고 어디부터가
+   서비스의 판단인지 화면에서 갈라 보인다.
+   [★ 해설은 수치로] 위 ④ "넘치는 것과 비어 있는 것"이 이미 "무엇이 가장 많은가"를
+   말하므로, 같은 말을 되풀이하지 않게 **해설은 갈래별 개수를 그대로 적는다.**
+   개수 나열은 위 문단에 없는 정보라 겹치지 않는다.
+   [집계] 위 cnt(계열)와 **같은 루프에서 같은 규칙**으로 센다 — cnt를 cnt10에서 파생시켜
+   둘이 어긋날 수 없게 했다. 일간 자신은 빼는데, 자기를 세면 언제나 비견이라 뜻이 없다.
+   [문안] 사용자가 준 것 그대로다. 임의 수정 금지. */
+const JOB_LINE={
+  식상:'생각을 밖으로 꺼내는 일 — 만들고, 쓰고, 가르치고, 보여주는 일이 어울립니다. 다만 정해진 틀을 반복하는 자리에서는 답답해지기 쉽습니다.',
+  재성:'벌이고 굴리는 일 — 사고팔고, 사람을 만나고, 판을 넓히는 일이 어울립니다. 다만 결과가 눈에 보이지 않는 일에서는 흥이 나지 않기 쉽습니다.',
+  관성:'맡아서 지키는 일 — 책임지고, 관리하고, 질서를 세우는 일이 어울립니다. 다만 규칙 없이 굴러가는 판에서는 스트레스가 쌓이기 쉽습니다.',
+  인성:'받아들이고 깊어지는 일 — 배우고, 파고들고, 다듬는 일이 어울립니다. 다만 빠른 결정을 재촉받는 자리에서는 힘이 빠지기 쉽습니다.',
+  비겁:'제 힘으로 서는 일 — 스스로 결정하고 밀고 나가는 일이 어울립니다. 다만 시키는 대로만 해야 하는 자리에서는 오래 버티기 어렵습니다.'};
+const JOB_TIE='여러 기운이 고루 있어 어느 한 길로 좁혀지지 않습니다 — 어느 쪽으로도 열려 있는 판입니다.';
+const MONEY_LINE={
+  jeong:'차곡차곡 모아 지키는 쪽입니다. 다만 큰 기회 앞에서 몸을 사리기 쉽습니다.',
+  pyeon:'굴리고 벌려서 키우는 쪽입니다. 다만 씀씀이 단속이 헐거워지기 쉽습니다.',
+  even:'지킬 때와 벌일 때를 오가는 쪽입니다. 다만 두 마음이 부딪혀 결정이 늦어지기 쉽습니다.',
+  none:'돈 자체보다 하고 싶은 일이 먼저인 쪽입니다. 다만 돈 관리는 손이 덜 가는 장치에 맡겨 두는 편이 낫습니다.'};
+const TIE_LINE={
+  mok:'먼저 다가가 이끄는 쪽입니다. 다만 상대의 속도를 기다리는 게 어려울 수 있습니다.',
+  hwa:'마음을 드러내고 주변을 데우는 쪽입니다. 다만 식을 때도 빨라 오해를 사기 쉽습니다.',
+  to:'받아주고 품어서 곁을 지키는 쪽입니다. 다만 속마음을 꺼내는 게 늦어지기 쉽습니다.',
+  geum:'선을 지키며 깊게 사귀는 쪽입니다. 다만 차갑다는 첫인상을 주기 쉽습니다.',
+  su:'스며들어 상대를 헤아리는 쪽입니다. 다만 마음을 정하기까지 재는 시간이 길기 쉽습니다.'};
+const HELP_CLOSER='그런 기운을 가진 사람이 곁에 있으면 숨통이 트입니다. 주변에 떠오르는 사람이 있다면 은하에 등록해 보세요.';
+/** 나를 낳는 오행(인성 쪽) — GEN의 역방향 */
+function elBorn(me){for(const k in GEN)if(GEN[k]===me)return k;return null;}
+/** 나를 다스리는 오행(관성 쪽) — OVR의 역방향 */
+function elRuled(me){for(const k in OVR)if(OVR[k]===me)return k;return null;}
+/** 해석 층 한 덩이 — 관계 패널과 같은 모양 */
+function takeBlk(t){return `<div class="nicktake"><span class="nicktake-h">${NICK_TAKE_H}</span>`
+  +`<span class="nicktake-t">${t}</span></div>`;}
+/** 코너 하나 = 해설 + 해석 층 */
+function cornerBlk(fact,take){
+  return `<p class="cnrfact">${fact}</p>`+(take?takeBlk(take):'');}
+/* ── 코너 넷을 **순수 함수**로 뺀다 [2026-08-31] ──
+   생년월일이 아니라 이미 센 값만 받는다. 모서리 경우(직업 동률·재성 0·오행 고루·
+   극왕극약)는 실제 인물에 없을 수 있어, 합성 입력으로 시험할 길이 있어야 한다.
+   sajuSelfTest가 이 넷을 직접 부른다. */
+const CNR_GRP5=['식상','재성','관성','인성','비겁'];
+function cornerJob(cnt){
+  const mx=Math.max.apply(null,CNR_GRP5.map(k=>cnt[k]));
+  const top=CNR_GRP5.filter(k=>cnt[k]===mx);
+  const counts=CNR_GRP5.map(k=>`${k} ${cnt[k]}`).join(' · ');
+  /* [★ 실측으로 잡음] 하드코딩한 '로'가 "재성로"를 만들었다 — 받침이 있으면 '으로'다.
+     조사는 <b> 밖에서 **마지막 낱말**을 보고 고른다(관계 해석에서 세 번 밟은 그 함정). */
+  const fact=top.length>1
+    ?`${counts} — 가장 많은 갈래가 <b>${top.join('·')}</b>${ro(top[top.length-1])} 갈립니다.`
+    :`${counts} — 가장 많은 갈래는 <b>${top[0]}</b>입니다.`;
+  return {h:'어울리는 일',t:cornerBlk(fact,top.length>1?JOB_TIE:JOB_LINE[top[0]]),raw:true};}
+function cornerMoney(cnt10){
+  const jj=cnt10[5], pp=cnt10[4];   /* TEN_GODS: 4=편재 5=정재 */
+  const key=(jj===0&&pp===0)?'none':(jj>pp?'jeong':(pp>jj?'pyeon':'even'));
+  return {h:'돈 스타일',t:cornerBlk(`정재 ${jj} · 편재 ${pp}.`,MONEY_LINE[key]),raw:true};}
+function cornerTie(dayStem){
+  const el=STEM_EL[dayStem];
+  return {h:'관계 스타일',
+    t:cornerBlk(`태어난 날 윗글자는 <b>${STEMS[dayStem]}</b>, 오행은 <b>${EL_KO[el]}</b>입니다.`,
+      TIE_LINE[el]),raw:true};}
+function cornerPower(sur,dayStem,verdict){
+  const miss=EL_ORDER.filter(k=>!sur[k]);
+  const nmEl=a=>a.map(k=>EL_KO[k]).join('·');
+  const myEl=STEM_EL[dayStem];
+  let fact = miss.length
+    ? `당신의 여덟 글자에는 <b>${nmEl(miss)}</b> 기운이 없습니다. `
+      +miss.map(k=>`${EL_KO[k]} — ${EL_TRAIT[k]}`).join(' · ')+'.'
+    : `다섯 기운을 고루 갖춘 판입니다.`;
+  let take=null;
+  if(verdict==='신약'||verdict==='신강'){
+    /* [★ 억부는 공통 골격까지만] 신약이면 나를 낳는·나와 같은 /
+       신강이면 내가 낳는·내가 다루는·나를 다스리는.
+       후보를 한 글자로 좁히는 세부 판별·조후 보정·종격 처리는 유파 간 이견 지대라
+       쓰지 않는다(HANDOFF §6.5). 화면에 "용신"이라는 말도 쓰지 않는다. */
+    const list=(verdict==='신약')?[elBorn(myEl),myEl]:[GEN[myEl],OVR[myEl],elRuled(myEl)];
+    take=`기운을 누르고 북돋아 균형을 찾는 셈법(억부)으로 보면, 당신은 기운이 `
+      +`${verdict==='신약'?'약한':'센'} 편이라 <b>${nmEl(list.filter(Boolean))}</b> 기운이 힘이 됩니다. `
+      +HELP_CLOSER;
+  }else{
+    /* 극왕·극약은 억부 문장을 쓰지 않는다(사용자 결정) */
+    if(miss.length)take=HELP_CLOSER;
+    else fact+=' 어느 쪽 사람과도 잘 어울립니다.';}
+  return {h:'힘이 되는 기운',t:cornerBlk(fact,take),raw:true};}
+
 function personReading(n){
   const b=n.birth; if(!b)return null;
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
@@ -2388,11 +2480,15 @@ function personReading(n){
   const det=sajuDetail(r), gy=gangyak(r), d=r.day[0];
   const letters=r.hasTime?8:6;
 
-  /* 십신 계열 개수 — 일간은 뺀다(자기 자신은 셈에서 제외) */
-  const cnt={비겁:0,식상:0,재성:0,관성:0,인성:0};
+  /* 십신 낱개 개수 — 일간은 뺀다(자기 자신은 셈에서 제외).
+     [2026-08-31] 계열 개수(cnt)를 여기서 **파생**시킨다. 따로 세면 언젠가 어긋난다 —
+     "돈 스타일"이 쓰는 정재·편재 낱개와 위 문단이 쓰는 계열이 같은 셈에서 나와야 한다. */
+  const cnt10=[0,0,0,0,0,0,0,0,0,0];
   det.forEach((p,i)=>{ if(!p)return;
-    if(i!==2)cnt[TEN_GOD_GROUP[tenGod(d,p.stem)]]++;
-    cnt[TEN_GOD_GROUP[p.branchGod]]++; });
+    if(i!==2)cnt10[tenGod(d,p.stem)]++;
+    cnt10[p.branchGod]++; });
+  const cnt={비겁:0,식상:0,재성:0,관성:0,인성:0};
+  cnt10.forEach((v,g)=>{cnt[TEN_GOD_GROUP[g]]+=v;});
 
   const out=[];
 
@@ -2462,6 +2558,12 @@ function personReading(n){
     sents.push(`겉으로 드러난 ${NUM_KO[letters]} 글자에는 ${nm} 기운이 없지만, 글자 안에 숨은 기운(지장간)까지 세면 ${NUM_KO[Math.min(cn,8)]}${particle(NUM_KO[Math.min(cn,8)],'이가')} 들어 있습니다.`);
   }
   if(sents.length)out.push({h:'넘치는 것과 비어 있는 것',t:sents.join(' ')});
+
+  /* ══ 코너 넷 [2026-08-31] ══ 전부 이층식(해설 + 해석 층). 계산은 순수 함수가 한다 */
+  out.push(cornerJob(cnt));
+  out.push(cornerMoney(cnt10));
+  out.push(cornerTie(d));
+  out.push(cornerPower(sajuElements(r),d,gy.verdict));
   return out;}
 
 /** 사주 한 벌의 십신·운성·지장간을 한 번에. 시주가 없으면 그 자리는 null */
@@ -7710,6 +7812,56 @@ function sajuSelfTest(){
   const dual=gSecFlow({ms:[mk('가','su'),mk('나','su'),mk('목','mok'),mk('다','hwa'),mk('라','hwa')]});
   T('gFlowBoth: 한 사람이 양쪽이면 한 문장으로',
     /대는 사람도, 기운이 가장 많이 모이는 사람도\s*목\s*입니다/.test(txtOf(dual)), txtOf(dual).slice(0,64));
+  /* ═══ 개인 해석 코너 넷 [2026-08-31] ═══ */
+  {const txt=x=>x.t.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
+   const mk=(o)=>Object.assign({식상:0,재성:0,관성:0,인성:0,비겁:0},o);
+   /* 18. 매핑 정합 — 다섯 갈래가 각각 제 문장을 부른다 */
+   let mapOk=true, mapDet=[];
+   CNR_GRP5.forEach(k=>{const c=mk({}); c[k]=3;
+     const got=txt(cornerJob(c));
+     if(got.indexOf(JOB_LINE[k])<0){mapOk=false;mapDet.push(k);}});
+   T('cnrJobMap: 다섯 갈래 매핑 정합', mapOk, mapOk?'5/5':'어긋남 '+mapDet.join(','));
+   /* 19. 모서리 ① 직업 동률 */
+   const tie=cornerJob(mk({식상:2,재성:2}));
+   T('cnrJobTie: 최다 동률이면 동률 문장', txt(tie).indexOf(JOB_TIE)>=0, txt(tie).slice(0,58));
+   /* 조사 회귀 — 받침 있는 갈래 뒤에 '로'가 붙던 버그("재성로") */
+   let josaBad=[];
+   [['식상','재성'],['관성','인성'],['비겁','식상'],['인성','재성']].forEach(pair=>{
+     const c=mk({}); pair.forEach(k=>{c[k]=2;});
+     const t2=txt(cornerJob(c));
+     CNR_GRP5.forEach(k=>{ if(t2.indexOf(k+'로 갈립')>=0&&/[가-힣]/.test(k)){
+       const ch=k.charCodeAt(k.length-1); if((ch-0xAC00)%28!==0)josaBad.push(k+'로');}});});
+   T('cnrJobJosa: 동률 문장의 로/으로', josaBad.length===0, josaBad.length?josaBad.join(','):'0건');
+   /* 20. 모서리 ② 재성 0 */
+   const z=new Array(10).fill(0);
+   T('cnrMoneyZero: 재성 0이면 전용 문장',
+     txt(cornerMoney(z)).indexOf(MONEY_LINE.none)>=0, txt(cornerMoney(z)).slice(0,40));
+   const jz=z.slice(); jz[5]=2; jz[4]=1;
+   T('cnrMoneyJeong: 정재 우세', txt(cornerMoney(jz)).indexOf(MONEY_LINE.jeong)>=0, '정재2·편재1');
+   const ez=z.slice(); ez[5]=1; ez[4]=1;
+   T('cnrMoneyEven: 동수', txt(cornerMoney(ez)).indexOf(MONEY_LINE.even)>=0, '정재1·편재1');
+   /* 21. 관계 스타일 — 열 일간이 다섯 오행으로 정확히 갈린다 */
+   let tieOk=true;
+   for(let i=0;i<10;i++) if(txt(cornerTie(i)).indexOf(TIE_LINE[STEM_EL[i]])<0)tieOk=false;
+   T('cnrTieMap: 일간 열 개 → 오행 문장', tieOk, '10/10');
+   /* 22. 모서리 ③ 오행 고루 + 모서리 ④ 극왕·극약은 억부 생략 */
+   const all={mok:1,hwa:1,to:1,geum:1,su:1}, noTo={mok:1,hwa:1,to:0,geum:1,su:1};
+   const evenWeak=cornerPower(all,0,'신약');
+   T('cnrPowerEven: 다섯 고루면 고루 문장',
+     txt(evenWeak).indexOf('다섯 기운을 고루 갖춘 판입니다')>=0, txt(evenWeak).slice(0,40));
+   const ex1=cornerPower(noTo,0,'극왕');
+   T('cnrPowerExtreme: 극왕은 억부 문장 없음',
+     txt(ex1).indexOf('억부')<0&&txt(ex1).indexOf(HELP_CLOSER)>=0, txt(ex1).slice(-46));
+   const ex2=cornerPower(all,0,'극약');
+   T('cnrPowerExtremeFull: 극약+고루면 해석 층 생략',
+     txt(ex2).indexOf('억부')<0&&txt(ex2).indexOf('어느 쪽 사람과도 잘 어울립니다')>=0
+       &&txt(ex2).indexOf(NICK_TAKE_H)<0, txt(ex2).slice(0,52));
+   /* 23. 억부 골격 — 신약은 둘, 신강은 셋 */
+   const w=cornerPower(noTo,0,'신약'), st=cornerPower(noTo,0,'신강');
+   T('cnrPowerYeokbu: 신약 2개 · 신강 3개',
+     /수·목 기운이 힘이 됩니다/.test(txt(w))&&/화·토·금 기운이 힘이 됩니다/.test(txt(st)),
+     '신약→'+(txt(w).match(/편이라 ([^ ]+) 기운/)||[])[1]+' / 신강→'+(txt(st).match(/편이라 ([^ ]+) 기운/)||[])[1]);
+  }
   /* 17. 섹션 조립 — 빈 섹션을 만들지 않는다 */
   const secA=gSections({ms:[],cnt:{mok:0,hwa:0,to:0,geum:0,su:0},total:0});
   T('gSecEmpty: 전부 비면 상성란 자체가 없다', secA==='', String(secA).slice(0,30));
@@ -8016,8 +8168,10 @@ function showNode(n,groupContext,targetMesh){
      수기 해설(rich)이 있으면 그것을 먼저 두고 계산 해석을 아래에 붙인다 — 수기는 그 사람을
      직접 아는 사람이 쓴 것이라 계산보다 정확하다. */
   const rd=personReading(n);
+  /* [2026-08-31] raw 문단은 <p>로 감싸지 않는다 — 코너 넷이 해석 층(div)을 품고 있어
+     <p> 안에 넣으면 브라우저가 문단을 쪼개 레이아웃이 깨진다(관계 패널과 같은 처리). */
   const rdHtml=rd?`<div class="reading">${rd.map(x=>
-    `<div class="rdblk"><div class="rdh">${x.h}</div><p>${x.t}</p></div>`).join('')}</div>`:'';
+    `<div class="rdblk"><div class="rdh">${x.h}</div>${x.raw?x.t:'<p>'+x.t+'</p>'}</div>`).join('')}</div>`:'';
   const main=(r?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')+rdHtml;
   /* ═══ 뒤로 가기 [★ 2026-08-28] ═══
      그룹을 보다 그 안의 사람을 누르면 인물 카드로 넘어가는데, 그룹 정보로 돌아가려면
