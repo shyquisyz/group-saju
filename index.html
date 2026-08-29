@@ -1879,7 +1879,10 @@ function groupTowardMe(ms,here){
   let tail='';
   if(tops.length===ks.length&&mx===1&&ks.length>=3)
     tail=' 한쪽으로 쏠리지 않아 역할이 나뉘어 있습니다.';
-  else if(mx>=2&&tops.length===1)
+  /* [★ 배포 데이터에서 발견] 계열이 하나뿐인데 "그중 …이 가장 두껍습니다"가 붙어
+     "그중"이 가리킬 대상이 없었다("관성 둘이 모인 곳입니다. 그중 기준과 부담을 주는 결이…").
+     비교할 것이 둘 이상일 때만 붙인다. */
+  else if(mx>=2&&tops.length===1&&ks.length>=2)
     tail=` 그중 ${GROUP_TOWARD[tops[0]]}${particle(GROUP_TOWARD[tops[0]],'이가')} 가장 두껍습니다.`;
   /* [2026-08-30] 부르는 말을 호출부에서 받는다 — 그룹 패널은 "이 그룹", 관계 보기·가상 성계는
      "이 조합"이다(§5.7 3단계에서 가른 용어). 여기만 "그룹"으로 두면 용어가 어긋난다. */
