@@ -1588,6 +1588,61 @@ function saryeongIndex(branch,daysSinceJie){
   for(let i=0;i<h.length;i++){acc+=h[i][1];if(daysSinceJie<acc)return i;}
   return h.length-1;}
 
+/* ═════════════════════════════════════════════════════════════════════════
+   십신(十神) · 십이운성(十二運星) [L3 2단계, 2026-08-29]
+
+   [십신 규칙 — 문서가 아니라 실측으로 확인했다]
+   일간에서 본 오행 관계 × 음양의 같고 다름. **같은 음양이면 편(偏), 다른 음양이면 정(正).**
+   검증 사례 12(2001-10-09, 일간 乙)의 외부 출력에서 역산해 맞췄다 —
+   辛(음금)이 乙(음목)을 극하는데 음양이 같아 **편관**, 庚(양금)은 달라 **정관**이 나온다.
+
+   [지지의 십신] **정기(본기) 하나로만** 뽑는다. 외부 만세력 두 곳 모두 같다.
+   지장간 전체에 십신을 붙이는 것(부성)은 이번 범위 밖이다 — 표가 빽빽해지고 해석 층이 된다.
+
+   [십이운성 — 양순음역(陽順陰逆)]
+   양간은 순행, **음간은 역행**. 같은 사례(음간 乙)에서 확인했다:
+   乙의 장생은 午이고 역행하면 巳목욕·辰관대·戌묘가 되는데 외부 출력과 정확히 일치한다.
+   음간 역행의 **이론적 근거**에는 학계 논쟁이 있지만(단국대 동양학연구원 논문),
+   **계산 관행은 하나**라 갈릴 자리가 아니다.
+   ═════════════════════════════════════════════════════════════════════════ */
+const TEN_GODS=['비견','겁재','식신','상관','편재','정재','편관','정관','편인','정인'];
+const TEN_GODS_HANJA=['比肩','劫財','食神','傷官','偏財','正財','偏官','正官','偏印','正印'];
+/* 십신을 다섯 갈래로 묶은 이름 — 화면에서 색을 나눌 때 쓴다(비겁/식상/재성/관성/인성) */
+const TEN_GOD_GROUP=['비겁','비겁','식상','식상','재성','재성','관성','관성','인성','인성'];
+
+/** 일간(천간index) 기준 대상 천간의 십신 index. 천간 index의 짝수=양, 홀수=음 */
+function tenGod(dayStem,target){
+  const de=STEM_EL[dayStem], te=STEM_EL[target];
+  const same=(dayStem%2)===(target%2);
+  if(te===de)      return same?0:1;   // 비견 / 겁재
+  if(GEN[de]===te) return same?2:3;   // 식신 / 상관  (일간이 생함)
+  if(OVR[de]===te) return same?4:5;   // 편재 / 정재  (일간이 극함)
+  if(OVR[te]===de) return same?6:7;   // 편관 / 정관  (일간을 극함)
+  return same?8:9;                    // 편인 / 정인  (일간을 생함)
+}
+/** 지지의 십신 — 정기 기준 */
+function branchTenGod(dayStem,branch){return tenGod(dayStem,mainStem(branch));}
+
+const UNSEONG=['장생','목욕','관대','건록','제왕','쇠','병','사','묘','절','태','양'];
+/* 각 천간의 장생 자리(지지 index). 甲亥 乙午 丙寅 丁酉 戊寅 己酉 庚巳 辛子 壬申 癸卯 */
+const JANGSAENG=[11,6,2,9,2,9,5,0,8,3];
+/** 일간 기준 그 지지의 십이운성 index. 양간 순행 · 음간 역행 */
+function unseong(dayStem,branch){
+  const dir=(dayStem%2===0)?1:-1;
+  return (((branch-JANGSAENG[dayStem])*dir)%12+12)%12;}
+
+/** 사주 한 벌의 십신·운성·지장간을 한 번에. 시주가 없으면 그 자리는 null */
+function sajuDetail(r){
+  if(!r)return null;
+  const d=r.day[0], P=[r.year,r.month,r.day,r.hour];
+  return P.map((p,i)=>{
+    if(!p)return null;
+    return {
+      stem:p[0], branch:p[1],
+      stemGod:(i===2)?null:tenGod(d,p[0]),        // 일간 자리는 십신이 없다 → "일원"
+      branchGod:branchTenGod(d,p[1]),
+      unseong:unseong(d,p[1]),
+      hidden:hiddenStems(p[1])};});}
 /** 여덟 글자의 오행 개수. 해석이 아니라 계산 결과 표시다(사용자 결정). */
 function sajuElements(r){
   const c={mok:0,hwa:0,to:0,geum:0,su:0};
