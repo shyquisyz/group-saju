@@ -581,9 +581,35 @@
   .sjhead{font-size:var(--fs-xs);color:var(--mut);letter-spacing:.06em;margin-bottom:5px}
   .sjch{font-size:var(--fs-xl);font-weight:700;line-height:1.15}
   .sjunk{font-size:var(--fs-md);color:var(--mut);opacity:.6;padding:8px 0 14px}
-  .sjels{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;
+  /* [L3] 십신·운성·지장간 줄. 표가 세로로 길어지므로 글자를 작게 쥔다 */
+  .sjg{font-size:var(--fs-xs);color:var(--mut);line-height:1.5;letter-spacing:-.02em}
+  .sjg b{color:var(--ink);font-weight:700}
+  .sjg.sjun{color:var(--gold);opacity:.85}
+  .sjhd{font-size:var(--fs-xs);color:var(--mut);opacity:.6;letter-spacing:-.04em;
+    margin-top:3px;padding-top:4px;border-top:1px dotted var(--line)}
+  .sjels{display:flex;flex-direction:column;gap:3px;
     margin-top:10px;padding-top:9px;border-top:1px solid var(--line);
     font-size:var(--fs-sm);font-weight:600}
+  .sjelrow{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+  .sjelk{font-size:var(--fs-xs);font-weight:400;color:var(--mut);min-width:74px}
+  /* [L3] 신강·신약. 판정이 주(主), 숫자는 근거로 작게(사용자 판단) */
+  .sjgy{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+  .sjgyhead{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+  .sjgyhead b{font-size:var(--fs-lg);font-weight:800;color:var(--ink)}
+  .sjgycnt{font-size:var(--fs-xs);color:var(--mut)}
+  .sjgyref{font-size:var(--fs-xs);color:var(--gold);border:1px solid rgba(212,175,90,.45);
+    border-radius:9px;padding:1px 7px}
+  .sjgyox{margin-top:5px;font-size:var(--fs-sm);color:var(--mut)}
+  .sjgyox .ox{color:var(--mut);opacity:.5}
+  .sjgyox .ox.on{color:var(--gold);opacity:1}
+  .sjgynum{display:block;font-size:var(--fs-xs);opacity:.75;margin-top:2px}
+  .sjwhy{margin-top:7px}
+  .sjwhy summary{font-size:var(--fs-xs);color:var(--mut);cursor:pointer;
+    text-decoration:underline;text-underline-offset:3px;list-style:none}
+  .sjwhy summary::-webkit-details-marker{display:none}
+  .sjwhy p{font-size:var(--fs-xs);color:var(--mut);line-height:1.6;margin:6px 0 0}
+  .sjwhy b{color:var(--ink)}
+  .sjwhynote{border-top:1px dotted var(--line);padding-top:6px;margin-top:7px !important}
   .sjel.zero{color:var(--mut);opacity:.45;font-weight:400}
   .sjnote{margin-top:9px;padding:8px 10px;border-radius:7px;
     border:1px dashed rgba(212,175,90,.4);background:rgba(212,175,90,.07);
@@ -1630,6 +1656,70 @@ const JANGSAENG=[11,6,2,9,2,9,5,0,8,3];
 function unseong(dayStem,branch){
   const dir=(dayStem%2===0)?1:-1;
   return (((branch-JANGSAENG[dayStem])*dir)%12+12)%12;}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   신강·신약 [L3 4단계, 2026-08-29]
+
+   [★ 이 항목만 외부 검증이 안 된다] L2·L3에서 대조한 만세력 두 곳 어디에도 신강/신약·
+   득령·득지·득세 표시가 **없다**. "기존 서비스와 대조하라"를 여기엔 적용할 수 없다.
+   그래서 판정만 내놓지 않고 **세 요소가 왜 성립했는지를 화면에 함께 낸다** —
+   규칙이 드러나야 틀렸을 때 드러나고, 학파가 다른 사람도 어디가 다른지 짚을 수 있다.
+
+   [기준] 가장 널리 쓰이는 득령·득지·득세 3요소.
+     득령 — 월지의 **정기**가 비겁 또는 인성
+     득지 — 일지에서 일간의 십이운성이 **장생·관대·건록·제왕**
+     득세 — 일간 제외 천간 중 비겁·인성이 **3분의 2 이상**
+   판정: 3개 극왕 · 2개 신강 · 1개 신약 · 0개 극약
+
+   [삼주] 시각을 모르면 천간이 둘뿐이라 득세 기준이 빡빡해진다. **비율(3분의 2)을 그대로
+   쓰고 개수를 함께 보여준다** — 삼주용으로 기준을 따로 만들면 그게 또 근거 없는 선택이 된다.
+   대신 화면이 "시주 미상이라 참고용"이라고 밝히고, 시각을 넣으면 판정이 바뀔 수 있다고 알린다.
+
+   [★ 점수는 크게 내세우지 않는다] "신강 62점"처럼 보이면 그 숫자가 절대적인 것처럼 읽힌다
+   (사용자 판단). 판정이 주이고, 숫자는 **가중치 없는 개수**로만 낸다 —
+   일간을 제외한 글자 중 일간을 돕는(비겁·인성) 것이 몇 개인지. 월지 가중 같은 건 넣지 않는다.
+   그건 유파마다 달라 §2.9가 금지한 "그럴듯한 숫자"가 된다.
+   ═════════════════════════════════════════════════════════════════════════ */
+const GANGYAK=['극약','신약','신강','극왕'];   // 성립 개수 0·1·2·3
+/** 십신 index가 일간을 돕는 쪽(비겁·인성)인가 */
+function isAlly(g){return g===0||g===1||g===8||g===9;}
+
+function gangyak(r){
+  if(!r)return null;
+  const det=sajuDetail(r), d=r.day[0];
+  /* 득령 — 월지 정기 */
+  const mBranch=r.month[1], mGod=branchTenGod(d,mBranch);
+  const deukRyeong=isAlly(mGod);
+  /* 득지 — 일지 십이운성 */
+  const dUn=unseong(d,r.day[1]);
+  const deukJi=(dUn===0||dUn===2||dUn===3||dUn===4);
+  /* 득세 — 일간 제외 천간 */
+  const others=[r.year,r.month,r.hour].filter(Boolean).map(p=>p[0]);
+  const allyStems=others.filter(st=>isAlly(tenGod(d,st))).length;
+  const deukSe=others.length>0&&(allyStems/others.length)>=2/3;
+  const cnt=(deukRyeong?1:0)+(deukJi?1:0)+(deukSe?1:0);
+  /* 참고 개수 — 일간 제외한 글자(천간 + 지지 정기) 중 돕는 쪽 */
+  let ally=0,total=0;
+  det.forEach((p,i)=>{
+    if(!p)return;
+    if(i!==2){total++;if(isAlly(tenGod(d,p.stem)))ally++;}
+    total++;if(isAlly(p.branchGod))ally++;});
+  return {deukRyeong:deukRyeong,deukJi:deukJi,deukSe:deukSe,count:cnt,
+    verdict:GANGYAK[cnt], hasTime:r.hasTime,
+    mGod:mGod, mBranch:mBranch, dUn:dUn,
+    allyStems:allyStems, stemCount:others.length,
+    ally:ally, total:total};}
+
+/** 지장간까지 포함한 오행 개수. 가중치는 주지 않는다 — 여기·중기·정기에 몇 점씩 줄지가
+    곧 유파 선택이라, 그냥 **글자 수**를 센다. */
+function sajuElementsDeep(r){
+  const c={mok:0,hwa:0,to:0,geum:0,su:0};
+  if(!r)return c;
+  [r.year,r.month,r.day,r.hour].forEach(p=>{
+    if(!p)return;
+    c[STEM_EL[p[0]]]++;
+    hiddenStems(p[1]).forEach(st=>{c[STEM_EL[st]]++;});});
+  return c;}
 
 /** 사주 한 벌의 십신·운성·지장간을 한 번에. 시주가 없으면 그 자리는 null */
 function sajuDetail(r){
@@ -6620,17 +6710,26 @@ function sajuTableHtml(n){
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
     hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon});
   if(!r)return '';
+  /* [L3 4단계] 열 구조는 그대로 두고 **세로로 늘린다** — 외부 만세력 두 곳과 같은 배열이라
+     사용자가 다른 만세력과 나란히 놓고 볼 수 있다. 순서만 년→시로 우리 방식을 유지한다. */
   const KEYS=['year','month','day','hour'], KO=['년주','월주','일주','시주'];
+  const det=sajuDetail(r);
   const cols=KEYS.map((k,i)=>{
-    const p=r[k];
+    const p=r[k], q=det[i];
     if(!p)return `<div class="sjcol"><div class="sjhead">${KO[i]}</div>
       <div class="sjunk">미상</div></div>`;
     return `<div class="sjcol"><div class="sjhead">${KO[i]}</div>
+      <div class="sjg">${q.stemGod===null?'<b>일원</b>':TEN_GODS[q.stemGod]}</div>
       <div class="sjch" style="color:${EL_INFO[STEM_EL[p[0]]].css}">${STEMS[p[0]]}</div>
-      <div class="sjch" style="color:${EL_INFO[BRANCH_EL[p[1]]].css}">${BRANCHES[p[1]]}</div></div>`;
+      <div class="sjch" style="color:${EL_INFO[BRANCH_EL[p[1]]].css}">${BRANCHES[p[1]]}</div>
+      <div class="sjg">${TEN_GODS[q.branchGod]}</div>
+      <div class="sjg sjun">${UNSEONG[q.unseong]}</div>
+      <div class="sjhd">${q.hidden.map(x=>STEMS[x]).join('')}</div></div>`;
   }).join('');
-  const cnt=sajuElements(r);
-  const els=EL_ORDER.map(k=>`<span class="sjel${cnt[k]?'':' zero'}"${cnt[k]?` style="color:${EL_INFO[k].css}"`:''}>${EL_KO[k]} ${cnt[k]}</span>`).join('');
+  const cnt=sajuElements(r), deep=sajuElementsDeep(r);
+  const elsOf=o=>EL_ORDER.map(k=>`<span class="sjel${o[k]?'':' zero'}"${o[k]?` style="color:${EL_INFO[k].css}"`:''}>${EL_KO[k]} ${o[k]}</span>`).join('');
+  const els=`<div class="sjelrow"><span class="sjelk">겉 여덟 글자</span>${elsOf(cnt)}</div>
+    <div class="sjelrow"><span class="sjelk">지장간 포함</span>${elsOf(deep)}</div>`;
 
   /* ── 안내 ── */
   const notes=[];
@@ -6658,8 +6757,34 @@ function sajuTableHtml(n){
         other+'시일 수도 있습니다.');}
   }
   const noteHtml=notes.map(t=>`<div class="sjnote">${t}</div>`).join('');
+  /* ── 신강·신약 ── */
+  const gy=gangyak(r);
+  const OX=v=>v?'<b class="ox on">○</b>':'<span class="ox">✕</span>';
+  const gyHtml=gy?`
+    <div class="sjgy">
+      <div class="sjgyhead"><b>${gy.verdict}</b> <span class="sjgycnt">${gy.count} / 3</span>
+        ${gy.hasTime?'':'<span class="sjgyref">시주 미상 · 참고용</span>'}</div>
+      <div class="sjgyox">득령 ${OX(gy.deukRyeong)} · 득지 ${OX(gy.deukJi)} · 득세 ${OX(gy.deukSe)}
+        <span class="sjgynum">일간을 돕는 글자 ${gy.ally}/${gy.total}</span></div>
+      <details class="sjwhy"><summary>판정 근거</summary>
+        <p>득령 — 월지 <b>${BRANCHES[gy.mBranch]}</b>의 정기가 일간에게 <b>${TEN_GODS[gy.mGod]}</b>.
+           비겁·인성이면 성립합니다.</p>
+        <p>득지 — 일지에서 일간의 십이운성이 <b>${UNSEONG[gy.dUn]}</b>.
+           장생·관대·건록·제왕이면 성립합니다.</p>
+        <p>득세 — 일간을 뺀 천간 ${gy.stemCount}개 중 비겁·인성이 <b>${gy.allyStems}개</b>.
+           3분의 2 이상이면 성립합니다.</p>
+        <p>월령 사령 — ${BRANCHES[gy.mBranch]}월 절입에서 ${(r.minSinceJie/1440).toFixed(1)}일 지나
+           <b>${hiddenRole(gy.mBranch,saryeongIndex(gy.mBranch,r.minSinceJie/1440))}
+           ${STEMS[HIDDEN_STEMS[gy.mBranch][saryeongIndex(gy.mBranch,r.minSinceJie/1440)][0]]}</b>가 사령입니다.</p>
+        <p class="sjwhynote">성립 개수로 극약(0) · 신약(1) · 신강(2) · 극왕(3)을 가릅니다.
+           <b>이 판정은 유파마다 기준이 다릅니다</b> — 다른 만세력에 같은 표시가 없어
+           대조하지 못했습니다. 그래서 근거를 함께 냅니다.
+           ${gy.hasTime?'':'<br>시주가 없어 글자 수가 적습니다. <b>시각을 넣으면 판정이 바뀔 수 있습니다.</b>'}</p>
+      </details>
+    </div>`:'';
+
   return `<div class="sajubox"><div class="sjgrid">${cols}</div>
-    <div class="sjels">${els}</div>${noteHtml}</div>`;}
+    <div class="sjels">${els}</div>${gyHtml}${noteHtml}</div>`;}
 
 /* 절입 시각을 사람이 읽는 형태로. 표는 UTC ms이므로 KST로 옮겨 찍는다 */
 function sajuKstStr(ms){
