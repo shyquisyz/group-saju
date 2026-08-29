@@ -6291,12 +6291,24 @@ const PANEL_W_MIN=320, PANEL_W_DEF=380;
 /* [★ 실측으로 잡음] 백그라운드 탭은 innerWidth가 **0**이다. 그대로 두면 최대폭이 0이 되어
    저장된 폭이 최소치(320)로 깎이고, 그 값이 localStorage에 굳는다 — 탭을 다시 열면
    패널이 좁아져 있다. **최대폭은 최소폭 아래로 내려가지 않게** 바닥을 깐다. */
-function panelWMax(){return Math.max(PANEL_W_MIN,Math.min(720,Math.round(innerWidth*0.6)));}
+function panelWMaxFor(vw){return Math.max(PANEL_W_MIN,Math.min(720,Math.round(vw*0.6)));}
+function panelWMax(){return panelWMaxFor(innerWidth);}
+/** 저장된 폭을 지금 화면에 맞게 자른다.
+    [★ 2026-08-30 결함 수정] ~~바닥만 깔면 된다~~ → **못 재는 상태면 아예 손대지 않는다.**
+    백그라운드 탭은 `innerWidth`가 0이라 `panelWMaxFor(0)`이 하한인 320을 돌려준다.
+    그러면 저장돼 있던 720이 320으로 잘리고, applyPanelW가 그 값을 panelW에 되쓰고,
+    다음 saveUiPref가 그걸 굳혔다 — **탭을 다시 열면 패널이 좁아져 있다.**
+    바닥(PANEL_W_MIN)은 0으로 깎이는 것만 막았지 값이 깎이는 것 자체는 못 막았다.
+    실제로 이 회차 실측 중에 720 → 320으로 깎이는 것을 확인했다.
+    vw가 0 이하면 자르지 말고 그대로 돌려준다 — 화면을 다시 잴 수 있을 때 맞추면 된다. */
+function clampPanelW(w,vw){
+  if(!(vw>0))return w;
+  return Math.max(PANEL_W_MIN,Math.min(panelWMaxFor(vw),w));}
 let panelW=(()=>{
   try{const v=JSON.parse(localStorage.getItem(UI_KEY)||'{}').panelW;
     return Number.isFinite(v)?v:PANEL_W_DEF;}catch{return PANEL_W_DEF;}})();
 function applyPanelW(){
-  const w=Math.max(PANEL_W_MIN,Math.min(panelWMax(),panelW));
+  const w=clampPanelW(panelW,innerWidth);
   panelW=w;
   document.documentElement.style.setProperty('--panel-w',w+'px');}
 
@@ -6304,7 +6316,11 @@ function saveUiPref(){
   try{
     const o=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     o.treeCollapsed=treeCollapsed;
-    o.panelW=panelW;
+    /* [2026-08-30] 화면을 못 재는 상태(백그라운드 탭, innerWidth 0)에서는 폭을 **저장하지 않는다.**
+       위 clampPanelW가 이미 값을 지키지만, 저장 쪽에도 같은 문턱을 둔다 — 폭은 화면에서
+       유도한 값이고, 화면을 못 재는 순간의 유도값은 무엇이든 믿을 수 없다.
+       나머지 항목(접힘·도움말)은 사람이 누른 결과라 그대로 저장한다. */
+    if(innerWidth>0)o.panelW=panelW;
     o.helpOpen=helpOpen;
     delete o.pinchGain;   /* [2026-08-30] 임시 항목이었다 — 위 PINCH_GAIN 주석 참고 */
     localStorage.setItem(UI_KEY,JSON.stringify(o));
@@ -8185,6 +8201,13 @@ function sajuSelfTest(){
      /수·목 기운이 힘이 됩니다/.test(txt(w))&&/화·토·금 기운이 힘이 됩니다/.test(txt(st)),
      '신약→'+(txt(w).match(/편이라 ([^ ]+) 기운/)||[])[1]+' / 신강→'+(txt(st).match(/편이라 ([^ ]+) 기운/)||[])[1]);
   }
+  /* 24. 패널 폭 — 화면을 못 재는 상태에서 저장값이 깎이면 안 된다 [2026-08-30] */
+  T('panelWBg: innerWidth 0이면 저장 폭을 그대로 둔다',
+    clampPanelW(720,0)===720&&clampPanelW(720,-1)===720&&clampPanelW(380,0)===380,
+    'vw=0 → '+clampPanelW(720,0));
+  T('panelWFg: 화면을 잴 수 있으면 종전대로 자른다',
+    clampPanelW(720,1600)===720&&clampPanelW(720,600)===360&&clampPanelW(100,1600)===PANEL_W_MIN,
+    '1600→'+clampPanelW(720,1600)+' / 600→'+clampPanelW(720,600)+' / 하한→'+clampPanelW(100,1600));
   /* 17. 섹션 조립 — 빈 섹션을 만들지 않는다 */
   const secA=gSections({ms:[],cnt:{mok:0,hwa:0,to:0,geum:0,su:0},total:0});
   T('gSecEmpty: 전부 비면 상성란 자체가 없다', secA==='', String(secA).slice(0,30));
