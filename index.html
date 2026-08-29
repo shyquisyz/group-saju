@@ -1029,9 +1029,14 @@
     #panel.tall{max-height:none}
     #panel .draghandle{display:none}
     /* 폭 조절 손잡이 — 오른쪽 가장자리. 평소엔 안 보이고 갖다 대면 드러난다 */
-    #panelresize{display:block;position:absolute;top:0;right:-3px;width:8px;height:100%;
+    /* [2026-08-30] ~~right:-3px~~ → **right:0**. 손잡이가 패널 오른쪽 경계를 3px 넘어가
+       position:absolute인 채로 스크롤 영역을 늘렸다 — 패널 폭 320px에서 scrollWidth 312 >
+       clientWidth 309로 **가로 스크롤이 3px 생겼다**(실측). 폰트 개편과 무관한 기존 결함이고,
+       초과량이 정확히 3px이며 넘치는 텍스트 요소가 0건인 것으로 원인을 특정했다.
+       경계를 걸치던 잡는 맛은 줄지만 8px 폭은 그대로라 잡는 데 지장이 없다. */
+    #panelresize{display:block;position:absolute;top:0;right:0;width:8px;height:100%;
       cursor:col-resize;z-index:3;touch-action:none}
-    #panelresize::after{content:'';position:absolute;top:0;left:2px;width:2px;height:100%;
+    #panelresize::after{content:'';position:absolute;top:0;right:0;width:2px;height:100%;
       background:var(--gold);opacity:0;transition:opacity .15s}
     #panelresize:hover::after,body.panel-resizing #panelresize::after{opacity:.55}
     body.panel-resizing{cursor:col-resize;user-select:none}
