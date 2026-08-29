@@ -1031,7 +1031,13 @@
      ::before(44px)가 28px짜리 버튼을 좌우 8px씩 넘쳐 scrollWidth가 튀었다(실측 36 > 28).
      이 버튼은 데스크톱에서 `body.panel-open #panelclose{display:none}`으로 감춰지므로
      **사실상 모바일 전용**이다 — 모바일에서 44px은 커 보이는 게 아니라 맞는 크기다. */
-  #panelclose{position:sticky;top:0;float:right;width:44px;height:44px;margin:-10px -12px 0 8px;
+  /* [★ 2026-08-31 실측으로 밝혀진 진짜 원인] `#panel`이 **display:flex(column)**이라
+     `float:right`가 **무시된다** — 플렉스 아이템에는 float가 안 먹는다. 그래서 이 버튼은
+     오른쪽으로 안 가고 **왼쪽 위**에 있었고, 세로 축이 주축이라 flex-shrink에 눌려
+     44px을 줘도 22px로 찌그러졌다(실측). float를 믿고 30px로 적어 둔 채 아무도 몰랐다.
+     flex-shrink를 끄고 align-self로 오른쪽에 붙인다 — 시트 넷의 ✕와 같은 자리가 된다. */
+  #panelclose{position:sticky;top:0;flex:0 0 44px;align-self:flex-end;
+    width:44px;height:44px;margin:-10px -12px 0 8px;
     display:grid;place-items:center;
     border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.05);
     color:var(--mut);font-size:var(--fs-sm);cursor:pointer;z-index:3;font-family:inherit}
