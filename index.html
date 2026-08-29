@@ -1845,6 +1845,43 @@ const GROUP_TOWARD={
   재성:'챙기게 되는 결',관성:'기준과 부담을 주는 결',
   인성:'받쳐 주는 결'};
 
+/** 그룹 한 덩어리를 "나 기준"으로 본 한 문단. **기존 오행 분석은 손대지 않고 덧붙인다** —
+    축이 다르기 때문이다(오행 = 사람들끼리, 십신 = 나와 상대).
+    [분량] 그룹 패널이 이미 다섯 문단이라 **한 문단을 넘기지 않는다**(사용자 지시).
+    사람이 많아도 계열별로 묶어 세므로 인원수와 무관하게 길이가 일정하다. */
+function groupTowardMe(ms,here){
+  const me=nodes.find(x=>x.isMe);
+  if(!me)return '';
+  const others=ms.filter(x=>x!==me);
+  if(!others.length)return '';
+  const cnt={비겁:0,식상:0,재성:0,관성:0,인성:0};
+  others.forEach(o=>{cnt[TEN_GOD_GROUP[relGod(me,o)]]++;});
+  const ks=Object.keys(cnt).filter(k=>cnt[k]>0);
+  if(!ks.length)return '';
+  const mx=Math.max.apply(null,ks.map(k=>cnt[k]));
+  const tops=ks.filter(k=>cnt[k]===mx);
+  /* [★] 항목이 괄호나 수사로 끝나 조사를 글자 끝에서 못 뽑는다 — joinPowers와 같은 방식으로
+     조사 기준 낱말(base)을 따로 들고 다닌다. */
+  const items=ks.map(k=>({t:GROUP_POWER[k]+'('+k+')'+(cnt[k]>1?' '+NUM_KO[cnt[k]]:''),
+                          base:cnt[k]>1?NUM_KO[cnt[k]]:GROUP_POWER[k]}));
+  let head,base;
+  if(items.length===1){head=items[0].t;base=items[0].base;}
+  else if(items.length===2){
+    head=items[0].t+particle(items[0].base,'과와')+' '+items[1].t;base=items[1].base;}
+  else {head=items.slice(0,-1).map(x=>x.t).join(', ')+', '+items[items.length-1].t;
+        base=items[items.length-1].base;}
+  /* 고르게 퍼졌는가 / 한쪽으로 몰렸는가 */
+  let tail='';
+  if(tops.length===ks.length&&mx===1&&ks.length>=3)
+    tail=' 한쪽으로 쏠리지 않아 역할이 나뉘어 있습니다.';
+  else if(mx>=2&&tops.length===1)
+    tail=` 그중 ${GROUP_TOWARD[tops[0]]}${particle(GROUP_TOWARD[tops[0]],'이가')} 가장 두껍습니다.`;
+  /* [2026-08-30] 부르는 말을 호출부에서 받는다 — 그룹 패널은 "이 그룹", 관계 보기·가상 성계는
+     "이 조합"이다(§5.7 3단계에서 가른 용어). 여기만 "그룹"으로 두면 용어가 어긋난다. */
+  const W=here||'이 그룹';
+  if(others.length===1)return `나에게 ${W}은 ${head}${particle(base,'을를')} 지닌 한 사람입니다.`;
+  return `나에게 ${W}은 ${head}${particle(base,'이가')} 모인 곳입니다.${tail}`;}
+
 /** a가 b를 어떻게 보는가 — 일간 대 일간. 시주와 무관해 삼주여도 확정적이다. */
 function relGod(a,b){return tenGod(a.stemIdx,b.stemIdx);}
 
@@ -6434,6 +6471,11 @@ function analysisInsightBody(A,mode){
     ?`긴장을 가장 많이 받는 자리는 <b>${A.pressed.name}</b>(받는 쪽 ${A.geukRecv[A.pressed.id]||0}회) — 이 사람의 컨디션이 성계의 조기경보입니다.`
     :`긴장을 가장 많이 받는 자리는 <b>${A.pressed.name}</b> — 받는 쪽 ${A.geukRecv[A.pressed.id]||0}회로 ${W.in}에서 가장 많습니다.`);
   if(A.missing.length)body.push(`${W.here}에 없는 기운: <b>${A.missing.map(e=>EL_INFO[e].name).join(', ')}</b>.`);
+  /* [2026-08-30] 십신 한 문단을 맨 뒤에 덧붙인다. 위 문장들은 **사람들끼리(오행)**를 말하고
+     이 문장은 **나와 그룹(십신)**을 말한다 — 축이 달라 섞이지 않는다.
+     가상 성계·관계 보기에도 같이 붙인다. "나 없는 조합"이면 함수가 빈 문자열을 돌려준다. */
+  const tw=groupTowardMe(A.ms,W.here);
+  if(tw)body.push(tw);
   return body;}
 function showGroup(g){
   const A=g.analysis||analyzeGroup(g);
