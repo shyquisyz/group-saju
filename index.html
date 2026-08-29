@@ -1023,6 +1023,30 @@
     0%{border-color:var(--gold);color:var(--ink);background:rgba(232,198,106,.12)}
     100%{border-color:var(--line);color:var(--mut);background:transparent}}
   .memrow.on .chk{background:var(--ink);border-color:var(--ink);color:#101018}
+  /* ═══ 두 단 도시 선택기 [2026-08-31] ═══ 왼쪽 권역 · 오른쪽 도시.
+     [320px] 왼쪽을 고정 폭(112px)으로 두고 오른쪽이 남는 만큼 쓴다 — 둘 다 비율로 두면
+     좁은 화면에서 도시 이름이 두 줄로 접힌다(실측). 세로는 각각 따로 스크롤한다.
+     [터치] 모든 항목 44px. 어르신 기준은 여기도 같다. */
+  .city-native{display:none}
+  .citypick{display:flex;gap:8px;border:1px solid var(--line);border-radius:8px;
+    background:rgba(255,255,255,.03);padding:6px;height:224px;overflow:hidden}
+  .citycol{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;
+    scrollbar-color:rgba(255,255,255,.16) transparent}
+  .cityregs{flex:0 0 112px;border-right:1px solid var(--line);padding-right:6px}
+  .citycities{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+  .cityreg,.citybtn{display:block;width:100%;min-height:44px;padding:8px 10px;
+    border:0;border-radius:7px;background:transparent;color:var(--mut);
+    font-family:inherit;font-size:var(--fs-sm);text-align:left;cursor:pointer;
+    word-break:keep-all;line-height:1.35}
+  .cityreg.on{background:rgba(255,255,255,.10);color:var(--ink);font-weight:700}
+  .citybtn.on{background:var(--ink);color:#101018;font-weight:700}
+  .cityreg:active,.citybtn:active{opacity:.75}
+  /* [★ 임시, 2026-08-31] 핀치 감도 선택. 확정되면 이 규칙도 함께 지운다 */
+  .pinchrow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .pinchrow button{flex:1 1 0;min-width:64px;min-height:44px;padding:8px 6px;
+    border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.05);
+    color:var(--mut);font-family:inherit;font-size:var(--fs-sm);cursor:pointer}
+  .pinchrow button.on{background:var(--ink);color:#101018;border-color:var(--ink);font-weight:700}
   /* ── v0.7: 패널 X 버튼 + 데스크톱 좌측 패널 + 그룹 트리 ── */
   /* ═══ 스크롤 막대 [2026-08-30] ═══ 기본 스크롤바가 우주 배경 위에서 밝은 회색 띠로 떠서
      UI가 하나 더 있는 것처럼 보였다. 얇고 어둡게, 손을 올렸을 때만 살짝 드러나게 한다. */
@@ -1044,16 +1068,25 @@
      ::before(44px)가 28px짜리 버튼을 좌우 8px씩 넘쳐 scrollWidth가 튀었다(실측 36 > 28).
      이 버튼은 데스크톱에서 `body.panel-open #panelclose{display:none}`으로 감춰지므로
      **사실상 모바일 전용**이다 — 모바일에서 44px은 커 보이는 게 아니라 맞는 크기다. */
-  /* [★ 2026-08-31 실측으로 밝혀진 진짜 원인] `#panel`이 **display:flex(column)**이라
-     `float:right`가 **무시된다** — 플렉스 아이템에는 float가 안 먹는다. 그래서 이 버튼은
-     오른쪽으로 안 가고 **왼쪽 위**에 있었고, 세로 축이 주축이라 flex-shrink에 눌려
-     44px을 줘도 22px로 찌그러졌다(실측). float를 믿고 30px로 적어 둔 채 아무도 몰랐다.
-     flex-shrink를 끄고 align-self로 오른쪽에 붙인다 — 시트 넷의 ✕와 같은 자리가 된다. */
-  #panelclose{position:sticky;top:0;flex:0 0 44px;align-self:flex-end;
-    width:44px;height:44px;margin:-10px -12px 0 8px;
+  /* ═══ 패널 머리 [2026-08-31] ═══ 한 줄에 **이름 + 닫기**.
+     [전 이력] `float:right`가 flex 아이템에 안 먹어 ✕가 왼쪽에 22px로 찌그러져 있었고,
+     그걸 44×44로 고쳤더니 이번엔 그 줄이 통째로 비어 자리를 낭비했다(실기기 지적).
+     이제 그 줄에 이름을 넣어 함께 쓴다.
+     [닫기] 보이는 알약은 작게(30×30), 누르는 판은 ::before로 44px. 딱지·케미 쌍과 같은 방식.
+     [이름] 본문 h2와 같은 글이라 모바일에서는 **h2를 감춘다** — 같은 이름이 두 번 크게
+     나오면 안 된다(사용자 지시). 머리가 sticky라 스크롤해도 지금 무엇을 보는지 남는다. */
+  #phead{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:8px;
+    margin:0 -20px 8px;padding:2px 20px 8px;
+    background:linear-gradient(to bottom,rgba(18,19,30,.97) 78%,rgba(18,19,30,0))}
+  #pheadname{flex:1 1 auto;min-width:0;font-size:var(--fs-base);font-weight:700;
+    color:var(--ink);line-height:1.35;word-break:keep-all}
+  #panel h2{display:none}   /* 이름은 머리가 맡는다(모바일) */
+  #panelclose{position:relative;flex:0 0 30px;width:30px;height:30px;
     display:grid;place-items:center;
     border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.05);
-    color:var(--mut);font-size:var(--fs-sm);cursor:pointer;z-index:3;font-family:inherit}
+    color:var(--mut);font-size:var(--fs-sm);cursor:pointer;font-family:inherit}
+  #panelclose::before{content:'';position:absolute;left:50%;top:50%;
+    transform:translate(-50%,-50%);width:44px;height:44px}
   #panelclose:active{opacity:.7}
   #panelresize{display:none}
   /* [★ 2026-08-31 모바일 실측] 닫기 반원(#paneldock)이 **모바일에서 항상 떠 있었다** —
@@ -1251,6 +1284,9 @@
     body.panel-open #paneldock{display:block}
     /* 데스크톱에서는 패널 안 ✕ 대신 바깥 반원을 쓴다 — 여는 버튼과 대칭이 되게 */
     body.panel-open #panelclose{display:none}
+    /* [2026-08-31] 데스크톱은 반원 방식 그대로 — 머리를 감추고 본문 h2를 되살린다 */
+    #phead{display:none}
+    #panel h2{display:block}
     /* [4] 패널이 닫히면 태그 바가 **왼쪽 끝까지** 온다. 구 규칙은 left:380px 고정이라
        패널이 닫혀도 그만큼 비어 있었다. */
     #tagbar{left:0}
@@ -1293,7 +1329,12 @@
 <!-- [2026-08-28] #wipehost — "저장된 내용 모두 지우기"가 사는 자리. **패널 맨 아래**다.
      그룹 트리 끝에 있던 것을 옮겼다: 트리가 패널 위쪽이라 사람을 고르면 그 아래로 인물 카드가
      붙어 지우기 버튼이 화면 한가운데에 놓였다. -->
-<div id="panel"><button id="panelclose" aria-label="패널 닫기">✕</button><div class="draghandle" id="draghandle"><div class="grip"></div></div><div id="grouptree"></div><div id="panelbody"></div><div id="wipehost"></div><div id="panelresize" title="끌어서 폭 조절"></div></div>
+<div id="panel"><div class="draghandle" id="draghandle"><div class="grip"></div></div><!--
+  [★ 2026-08-31] 모바일 패널 머리. 왼쪽에 지금 보는 것의 이름, 오른쪽에 닫기.
+  닫기 ✕만 44×44로 한 줄을 통째로 쓰던 자리를 이름과 나눠 쓴다.
+  데스크톱에서는 이 줄 전체를 감춘다(반원 방식 유지) — 안에 든 #panelclose도 함께 감춰지는데,
+  데스크톱은 원래 패널이 열리면 #panelclose를 숨기던 동작이라 결과가 같다. -->
+<div id="phead"><span id="pheadname"></span><button id="panelclose" aria-label="패널 닫기">✕</button></div><div id="grouptree"></div><div id="panelbody"></div><div id="wipehost"></div><div id="panelresize" title="끌어서 폭 조절"></div></div>
 
 <!-- ═══ 설정 [2026-08-28] ═══
      "저장된 내용 모두 지우기"가 패널 바닥에 그대로 나와 있어 어색했다.
@@ -1309,6 +1350,14 @@
       <b>내보내기 · 불러오기</b>
       <small>파일 하나로 백업하고, 다른 기기에서 그 파일로 되살립니다.</small></button>
     <div id="set-undohost"></div>
+  </div>
+
+  <!-- [★ 임시, 2026-08-31] 실기기에서 골라 확정하기 위한 항목이다.
+       확정되면 이 블록과 PINCH_GAINS를 함께 걷고 계수 하나만 남긴다. -->
+  <div class="set-sec">
+    <div class="set-h">핀치 감도 <span class="opt">임시</span></div>
+    <div class="set-note">두 손가락으로 우주를 확대·축소하는 속도입니다. 폰에서 네 가지를 비교해 보고 정할 예정이라 잠시 열어 둔 항목입니다.</div>
+    <div class="pinchrow" id="set-pinch"></div>
   </div>
 
   <div class="set-sec">
@@ -1762,6 +1811,54 @@ function cityOptionsHtml(){
       +g.list.map(([c])=>`<option value="${c}">${c}</option>`).join('')+`</optgroup>`).join('')
     +`<optgroup label="그 밖"><option value="${CITY_CUSTOM}">${CITY_CUSTOM}</option>`
     +`<option value="${CITY_UNKNOWN}">${CITY_UNKNOWN}</option></optgroup>`;}
+/* ═══════ 두 단 도시 선택기 [2026-08-31] ═══════
+   [문제] 한 줄 목록 60개는 "자주 찾는 도시"를 맨 위에 얹어도 여전히 길다.
+   [방식] 왼쪽 = 권역, 오른쪽 = 그 권역의 도시. 권역을 누르면 오른쪽이 바뀐다.
+   [★ 저장 값은 그대로] `<select>`를 지우지 않고 **화면에서만 감춘다.** 선택기는 그 select의
+   value를 읽고 쓰고 change를 쏜다 — 도시명·경도(CITY_LON)·검증·저장 경로를 하나도 안 건드린다.
+   기존 코드가 `selCity.value=…`로 직접 쓰는 자리도 그대로 살아 있고, refresh()가 화면을 맞춘다.
+   [빌더는 하나] 온보딩과 인물 시트가 이 함수 하나를 부른다 — 지난 회차에 두 벌로 갈라져
+   한쪽만 고쳤던 그 사고를 막으려고 목록 조립을 합쳤는데, UI도 같은 이유로 합친다.
+   ["모름"·"직접 입력"] 마지막 "그 밖" 권역에 그대로 둔다 — 없애면 모르는 사람의 길이 막힌다. */
+function cityPanes(){
+  return [{label:'자주 찾는 도시',list:CITY_FAVS.filter(c=>CITY_LON[c]!==undefined)}]
+    .concat(CITY_GROUPS.map(g=>({label:g.region,list:g.list.map(x=>x[0])})))
+    .concat([{label:'그 밖',list:[CITY_CUSTOM,CITY_UNKNOWN]}]);}
+function buildCityPicker(sel){
+  if(!sel)return null;
+  if(sel._picker){sel._picker.refresh();return sel._picker;}
+  sel.classList.add('city-native');
+  const wrap=document.createElement('div');wrap.className='citypick';
+  const colR=document.createElement('div');colR.className='citycol cityregs';
+  const colC=document.createElement('div');colC.className='citycol citycities';
+  wrap.appendChild(colR);wrap.appendChild(colC);
+  sel.parentNode.insertBefore(wrap,sel.nextSibling);
+  const panes=cityPanes();
+  let cur=0;
+  const paintCities=()=>{
+    colC.innerHTML='';
+    panes[cur].list.forEach(c=>{
+      const b=document.createElement('button');b.type='button';b.className='citybtn';
+      b.textContent=c;
+      if(sel.value===c)b.classList.add('on');
+      b.onclick=()=>{sel.value=c;sel.dispatchEvent(new Event('change'));
+        [...colC.children].forEach(x=>x.classList.toggle('on',x.textContent===c));};
+      colC.appendChild(b);});};
+  panes.forEach((pn,i)=>{
+    const b=document.createElement('button');b.type='button';b.className='cityreg';
+    b.textContent=pn.label;
+    b.onclick=()=>{cur=i;[...colR.children].forEach((x,j)=>x.classList.toggle('on',j===i));
+      paintCities();colC.scrollTop=0;};
+    colR.appendChild(b);});
+  const refresh=()=>{
+    const v=sel.value;
+    let idx=panes.findIndex(pn=>pn.list.indexOf(v)>=0);
+    if(idx<0)idx=0;
+    cur=idx;
+    [...colR.children].forEach((x,j)=>x.classList.toggle('on',j===cur));
+    paintCities();};
+  sel._picker={refresh};refresh();
+  return sel._picker;}
 /* 표의 자동완성 목록(datalist)은 그룹을 못 쓰므로 **순서**로 같은 뜻을 낸다 */
 function cityDatalistHtml(){
   const rest=[];CITY_GROUPS.forEach(g=>g.list.forEach(([c])=>{if(CITY_FAVS.indexOf(c)<0)rest.push(c);}));
@@ -3484,6 +3581,18 @@ function panelInsetNow(){
    구 CSS는 `#panel.open+#panelopen`이었는데 둘 사이에 설정 시트가 끼어 있어 인접 선택자가
    영영 매치되지 않았다 — 그게 "그룹"과 "설정" 버튼이 겹쳐 보이던 원인이다.
    호출부마다 훅을 다는 대신 camTick의 기존 폴링에 얹는다(v0.7부터 쓰던 방식). */
+/** 패널 머리의 이름을 본문 h2에서 가져온다.
+    [왜 폴링인가] 패널을 그리는 곳이 showNode·showGroup·showEdge·showVirtualSlot·
+    showRelationView·미분류까지 여섯이라 각각에 걸면 언젠가 하나를 빠뜨린다 —
+    body.panel-open 동기화가 같은 이유로 여기 얹혀 있다. 값이 같으면 DOM을 안 건드린다. */
+let pheadLast='';
+function syncPanelHead(){
+  const h=pbody&&pbody.querySelector('h2');
+  const t=h?h.textContent.trim():'';
+  if(t===pheadLast)return;
+  pheadLast=t;
+  const el=document.getElementById('pheadname');
+  if(el)el.textContent=t;}
 function syncPanelBodyClass(){
   if(!panelEl)panelEl=document.getElementById('panel');
   /* [2026-08-31] ~~innerWidth>=768~~ 조건을 뺐다 — 모바일에도 붙인다.
@@ -3582,6 +3691,7 @@ function mobileFocusBias(){
   return V2_TUNABLES.MOBILE_FOCUS_BIAS_Y;}
 function camTick(){
   syncPanelBodyClass();
+  syncPanelHead();
   if(panelInsetNow()!==panelInset)resize();
   /* [버그 5 안전망] 포커스 대상이 이번 장면에 없으면 즉시 포기하고 원래 프레이밍으로 되돌린다.
      **현재 visible이 아니라 "무대 목표값"으로 판정하는 게 핵심** — 장면 전환 0.7초 동안은
@@ -6122,6 +6232,13 @@ let helpOpen=(()=>{
   try{const v=JSON.parse(localStorage.getItem(UI_KEY)||'{}').helpOpen;
     return (v&&typeof v==='object')?v:{};}catch{return {};}})();
 function helpIsOpen(k){return helpOpen[k]!==false;}
+/* [★ 임시, 2026-08-31] 핀치 감도. 1이 지금까지의 동작이고 값이 클수록 빨라진다.
+   실기기에서 네 후보를 비교해 고르기 위한 것이라, 확정되면 이 변수와 설정 항목을
+   함께 걷어내고 계수 하나만 남긴다. */
+const PINCH_GAINS=[1,1.5,2,3];
+let pinchGain=(()=>{
+  try{const v=JSON.parse(localStorage.getItem(UI_KEY)||'{}').pinchGain;
+    return PINCH_GAINS.indexOf(v)>=0?v:1;}catch{return 1;}})();
 let treeCollapsed=(()=>{
   try{return JSON.parse(localStorage.getItem(UI_KEY)||'{}').treeCollapsed===true;}
   catch{return false;}})();
@@ -6148,6 +6265,7 @@ function saveUiPref(){
     o.treeCollapsed=treeCollapsed;
     o.panelW=panelW;
     o.helpOpen=helpOpen;
+    o.pinchGain=pinchGain;   /* [임시] 위 PINCH_GAINS 주석 참고 */
     localStorage.setItem(UI_KEY,JSON.stringify(o));
   }catch{/* 저장이 막혀 있어도 이번 세션 동안은 접힌 채로 동작한다 */}}
 function renderTree(){
@@ -7757,10 +7875,23 @@ canvas.addEventListener('touchmove',e=>{if(e.touches.length===2){
   /* [수정 3] 손가락 간 거리 변화(d)→줌, 중심점 이동(cx,cy)→팬. 하나의 두 손가락 제스처에서
      서로 다른 성분을 동시에 뽑구성원B므로 "핀치냐 팬이냐"를 모드로 나눠 고를 필요가 없다 —
      가만히 좁히기만 하면 순수 줌, 가만히 옮기기만 하면 순수 팬, 둘 다 하면 둘 다 반영된다. */
-  if(pinch)zoomBy(pinch/d>1?Math.min(1.06,pinch/d):Math.max(.94,pinch/d));
+  /* ═══ [2026-08-31] 핀치 감도 ═══
+     [현재 계수] 이벤트마다 배율은 손가락 간격의 비(pinch/d)이고, **±6%로 잘라** 왔다
+     (Math.min(1.06,·) / Math.max(.94,·)). 느리다는 체감의 정체가 이 상한이다 —
+     손가락을 아무리 빨리 벌려도 한 이벤트에 6%까지만 움직인다.
+     [올리는 방법] 비에 지수를 씌우고 상한도 같은 지수로 함께 올린다.
+     gain=1이면 Math.pow(x,1)=x, 상한도 1.06/0.94 그대로라 **지금과 완전히 같다.**
+     [★ 임시] 설정의 "핀치 감도"는 실기기에서 고르기 위한 **임시 항목**이다.
+     확정되면 선택지를 걷고 값 하나만 남긴다(다음 회차).
+     [범위 불변] zoomBy가 cam.R_MIN/R_MAX로 자르는 것은 그대로다 — 빨라지는 건 속도지 범위가 아니다. */
+  if(pinch){
+    const g=pinchGain, r=pinch/d;
+    const up=Math.pow(1.06,g), dn=Math.pow(.94,g), f=Math.pow(r,g);
+    zoomBy(f>1?Math.min(up,f):Math.max(dn,f));}
   if(pinchCenter)panBy(cx-pinchCenter.x,cy-pinchCenter.y);
   pinch=d;pinchCenter={x:cx,y:cy};}},{passive:true});
-canvas.addEventListener('touchend',()=>{pinch=0;pinchCenter=null;});
+/* 핀치가 끝난 직후의 손가락 뗌이 더블탭으로 세지 않게 연쇄를 끊는다 */
+canvas.addEventListener('touchend',()=>{if(pinch)lastTapT=0;pinch=0;pinchCenter=null;});
 
 /* ═════════ 선택 & 패널 ═════════ */
 const ray=new THREE.Raycaster(),ptr=new THREE.Vector2();
@@ -7785,8 +7916,33 @@ function meshForMemberInGroup(n,g){
   if(n.orbit&&n.orbit.group===g)return n.mesh;
   const inst=groupInstances.get(n.id+'|'+g.id);
   return inst?inst.mesh:n.mesh;}
+/* ═══ 더블탭 = 전체 보기 [2026-08-31] ═══
+   [원인] 캔버스에는 더블탭 핸들러가 **없었다.** 그래서 짧게 두 번 두드리면 click이 두 번 나고
+   **선택이 두 번** 먹는다 — 패널을 닫고 같은 자리를 두 번 치면 첫 탭에서 그 사람이 다시 뽑혀
+   "닫았는데 같은 패널이 또 열린다"로 보인다. 44px 최근접 폴백(nearestMeshOnScreen)이 있어
+   행성을 정확히 안 눌러도 뽑히므로 더 자주 걸린다.
+   [고른 방식 — 첫 탭 즉시 선택, 두 번째 탭이 덮는다]
+   반대안(더블탭을 기다렸다가 선택)은 **모든 선택에 250ms 지연**을 넣는다. 선택은 이 앱에서
+   가장 잦은 동작이고 더블탭은 드물다 — 드문 동작을 위해 잦은 동작을 느리게 만들지 않는다.
+   대신 패널이 잠깐 떴다 닫히는데, 그건 첫 탭이 먹혔다는 신호이기도 하다.
+   [오인식 방지] 아래 moved>8 가드가 드래그를 이미 걸러내고, 핀치 중에는 activeTouches가 2라
+   click 자체가 잘 안 난다. 그 위에 **두 탭 사이 거리**(24px)까지 본다.
+   [무대] 그룹 안이면 fitGroup(그 성계 전체), 은하면 fitGalaxy. 그룹에서 은하로 튀어나가면
+   맥락을 잃는다 — closePanel이 쓰던 판단과 같은 규칙이다.
+   [데스크톱] 같은 핸들러가 마우스 click에도 걸리므로 **더블클릭도 같은 동작**이 된다. */
+const DBLTAP_MS=320, DBLTAP_PX=24;
+let lastTapT=0,lastTapX=0,lastTapY=0;
 canvas.addEventListener('click',e=>{
-  if(moved>8)return;
+  if(moved>8){lastTapT=0;return;}   /* 드래그였다 — 더블탭 연쇄도 끊는다 */
+  {const now=performance.now();
+   const near=Math.hypot(e.clientX-lastTapX,e.clientY-lastTapY)<=DBLTAP_PX;
+   if(now-lastTapT<=DBLTAP_MS&&near){
+     lastTapT=0;
+     panel.classList.remove('open','tall');
+     deselect();focusedNode=null;focusedMesh=null;
+     if(activeGroup)fitGroup(activeGroup);else fitGalaxy();
+     return;}
+   lastTapT=now;lastTapX=e.clientX;lastTapY=e.clientY;}
   /* [수정 1] 캔버스가 패널 폭만큼 좁아지므로 클릭 좌표도 뷰포트가 아니라 캔버스 기준으로
      정규화해야 한다 — innerWidth/innerHeight를 그대로 쓰면 패널이 열린 순간 X가 어긋난다. */
   const cr=canvas.getBoundingClientRect();
@@ -8571,6 +8727,18 @@ document.querySelectorAll('#createtabs .tab').forEach(b=>b.onclick=()=>{
      조용히 멤버가 되면 안 된다(아래 gsWantMember 주석 참고) */
   gsWantMember=false;
   setCreateTab(b.dataset.tab,false);});
+/* [★ 임시, 2026-08-31] 핀치 감도 선택지 배선 */
+(function(){
+  const host=document.getElementById('set-pinch'); if(!host)return;
+  const LABEL={1:'지금',1.5:'1.5배',2:'2배',3:'3배'};
+  PINCH_GAINS.forEach(g=>{
+    const b=document.createElement('button');b.type='button';
+    b.textContent=LABEL[g]||(g+'배');
+    b.onclick=()=>{pinchGain=g;saveUiPref();
+      [...host.children].forEach((x,i)=>x.classList.toggle('on',PINCH_GAINS[i]===g));};
+    host.appendChild(b);});
+  [...host.children].forEach((x,i)=>x.classList.toggle('on',PINCH_GAINS[i]===pinchGain));
+})();
 dim.onclick=closeSheets;
 /* [2026-08-31] 시트 넷의 ✕. 배경 탭(dim)은 그대로 두고 **보이는 손잡이**를 더한 것이다. */
 document.querySelectorAll('.sheetclose').forEach(b=>b.onclick=closeSheets);
@@ -8595,6 +8763,7 @@ const selY=document.getElementById('f-y'),selM=document.getElementById('f-m'),se
   selCity.innerHTML=cityOptionsHtml();
   selCity.value='서울';
   selCity.onchange=()=>{syncCityCustom();};
+  buildCityPicker(selCity);   /* [2026-08-31] 화면만 두 단으로. 값은 이 select가 그대로 갖는다 */
   const cc=document.getElementById('f-city-custom');
   })();
 /* ═══ 성별 [2026-08-28] ═══
@@ -8622,7 +8791,9 @@ let fSex;   // 인물 시트의 현재 성별 값 — undefined = 아직 안 고
 /* 직접 입력 칸은 그 항목을 골랐을 때만 보인다 */
 function syncCityCustom(){
   const cc=document.getElementById('f-city-custom');
-  if(cc)cc.style.display=(selCity.value===CITY_CUSTOM)?'block':'none';}
+  if(cc)cc.style.display=(selCity.value===CITY_CUSTOM)?'block':'none';
+  /* 코드가 selCity.value를 직접 쓴 뒤에도 화면이 따라오게 — 이 함수가 그 뒤에 늘 불린다 */
+  if(selCity._picker)selCity._picker.refresh();}
 /* 지금 시트가 가리키는 출생지 — 직접 입력이면 적은 이름을, 아니면 고른 도시를 돌려준다 */
 function currentCity(){
   if(selCity.value!==CITY_CUSTOM)return selCity.value;
@@ -9510,6 +9681,8 @@ function obRenderSijin(){renderTime('ob');}   /* 한 명 화면과 같은 컨트
   /* 도시 목록은 인물 시트와 같은 출처(CITY_GROUPS)를 쓴다 — 두 벌로 갈라지면 한쪽만
      고쳤을 때 조용히 어긋난다 */
   obCity.innerHTML=cityOptionsHtml();
+  /* 인물 시트와 **같은 함수**를 부른다 — UI가 두 벌로 갈라지지 않게(지난 회차의 사고 방지) */
+  setTimeout(()=>buildCityPicker(obCity),0);
   obCity.value='서울';
   const occ=document.getElementById('ob-city-custom');
   obCity.onchange=()=>{if(occ)occ.style.display=(obCity.value===CITY_CUSTOM)?'block':'none';};
