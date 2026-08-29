@@ -789,15 +789,35 @@
     100%{border-color:var(--line);color:var(--mut);background:transparent}}
   .memrow.on .chk{background:var(--ink);border-color:var(--ink);color:#101018}
   /* ── v0.7: 패널 X 버튼 + 데스크톱 좌측 패널 + 그룹 트리 ── */
+  /* ═══ 스크롤 막대 [2026-08-30] ═══ 기본 스크롤바가 우주 배경 위에서 밝은 회색 띠로 떠서
+     UI가 하나 더 있는 것처럼 보였다. 얇고 어둡게, 손을 올렸을 때만 살짝 드러나게 한다. */
+  #panel,.sheet,.obcard{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}
+  #panel::-webkit-scrollbar,.sheet::-webkit-scrollbar,.obcard::-webkit-scrollbar{width:8px}
+  #panel::-webkit-scrollbar-track,.sheet::-webkit-scrollbar-track,.obcard::-webkit-scrollbar-track{
+    background:transparent}
+  #panel::-webkit-scrollbar-thumb,.sheet::-webkit-scrollbar-thumb,.obcard::-webkit-scrollbar-thumb{
+    background:rgba(255,255,255,.14);border-radius:99px;
+    border:2px solid transparent;background-clip:content-box}
+  #panel:hover::-webkit-scrollbar-thumb,.sheet:hover::-webkit-scrollbar-thumb,
+  .obcard:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,.26);background-clip:content-box}
   #panelclose{position:sticky;top:0;float:right;width:30px;height:30px;margin:-4px -6px 0 8px;
     border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.05);
     color:var(--mut);font-size:var(--fs-md);cursor:pointer;z-index:3;font-family:inherit}
   #panelclose:active{opacity:.7}
   #panelresize{display:none}
-  #panelopen{display:none;position:fixed;left:18px;bottom:18px;z-index:6;padding:12px 16px;
-    border:1px solid rgba(255,255,255,.14);border-radius:12px;background:rgba(28,29,44,.9);
-    backdrop-filter:blur(8px);color:var(--ink);font-size:var(--fs-md);font-weight:600;cursor:pointer;
-    box-shadow:0 6px 24px rgba(0,0,0,.5);font-family:inherit}
+  /* ═══ 여닫는 반원 [2026-08-30] ═══
+     ~~좌하단 알약 버튼~~ → **화면 왼쪽 중앙에 붙은 반원.** 좌하단에서는 패널 안 "설정"과
+     자리를 다퉜고(겹침 버그의 뿌리), 세로 중앙은 아무것도 없는 자리라 부딪힐 것이 없다.
+     여는 버튼(화면 왼쪽)과 닫는 버튼(패널 오른쪽 바깥)이 **같은 모양으로 대칭**을 이룬다 —
+     화살표 방향만 반대다. */
+  .halfbtn{position:fixed;top:50%;transform:translateY(-50%);z-index:7;
+    width:26px;height:76px;padding:0;border:1px solid rgba(255,255,255,.14);border-left:0;
+    border-radius:0 38px 38px 0;background:rgba(28,29,44,.92);backdrop-filter:blur(8px);
+    color:var(--mut);font-size:var(--fs-md);line-height:1;cursor:pointer;font-family:inherit;
+    box-shadow:4px 0 18px rgba(0,0,0,.45);transition:color .15s,background .15s}
+  .halfbtn:hover{color:var(--ink);background:rgba(40,42,62,.95)}
+  .halfbtn:active{opacity:.8}
+  #panelopen{display:none;left:0}
   #grouptree{display:none}
   .gtree{margin:2px 0 16px;display:flex;flex-direction:column;gap:2px}
   .gtree .trow{display:flex;align-items:center;gap:6px;padding:8px;border-radius:6px;
@@ -952,6 +972,14 @@
        "☰ 그룹" 버튼이 좌하단에 남아 패널 안 "설정" 버튼과 겹쳐 보였다.
        상태를 body 클래스로 올려 위치와 무관하게 만든다(매 프레임 동기화). */
     body.panel-open #panelopen{display:none}
+    /* 닫는 반원 — 패널 **바깥** 오른쪽 중앙. 패널이 overflow-y:auto라 안에 두면 잘리므로
+       화면 기준(fixed)으로 두고 왼쪽 위치를 패널 폭에 맞춘다.
+       [한 가지] 이 76px 구간은 폭 조절 손잡이 위에 얹힌다 — 그 구간에서는 끌 수 없고
+       위아래로 비켜서 끌면 된다. 버튼이 손잡이보다 훨씬 크고 자주 쓰이므로 버튼을 위에 뒀다. */
+    #paneldock{display:none;left:var(--panel-w,380px)}
+    body.panel-open #paneldock{display:block}
+    /* 데스크톱에서는 패널 안 ✕ 대신 바깥 반원을 쓴다 — 여는 버튼과 대칭이 되게 */
+    body.panel-open #panelclose{display:none}
     /* [4] 패널이 닫히면 태그 바가 **왼쪽 끝까지** 온다. 구 규칙은 left:380px 고정이라
        패널이 닫혀도 그만큼 비어 있었다. */
     #tagbar{left:0}
@@ -1019,7 +1047,9 @@
     <div id="set-wipehost"></div>
   </div>
 </div>
-<button id="panelopen">☰ 그룹</button>
+<!-- [2026-08-30] 여닫는 반원 한 쌍. 화면 왼쪽 중앙 ↔ 패널 오른쪽 바깥 중앙 -->
+<button id="panelopen" class="halfbtn" aria-label="그룹 패널 열기" title="그룹 패널 열기">›</button>
+<button id="paneldock" class="halfbtn" aria-label="패널 닫기" title="패널 닫기">‹</button>
 <div id="tagbar"></div>
 <div id="dim"></div>
 
@@ -7294,6 +7324,7 @@ function closePanel(){
   panel.classList.remove('open','tall');deselect();
   if(activeGroup)fitGroup(activeGroup);else fitGalaxy();}
 document.getElementById('panelclose').onclick=closePanel;
+document.getElementById('paneldock').onclick=closePanel;
 
 /* [★ 2026-08-30] body.panel-open 동기화를 **rAF 폴링에만 맡기지 않는다.**
    창이 백그라운드면 rAF가 멈춰 클래스가 낡은 채로 남는다(실측: 패널을 닫아도
