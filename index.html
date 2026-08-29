@@ -110,7 +110,8 @@
   .rel-item{display:flex;align-items:center;gap:8px;font-size:var(--fs-md);padding:9px 11px;
     background:rgba(255,255,255,.05);border-radius:3px;cursor:pointer}
   .rel-item .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;box-shadow:0 0 8px currentColor}
-  .rel-item .k{font-family:'Space Mono',monospace;font-size:var(--fs-xs);color:var(--mut);margin-left:auto}
+    /* 관계 목록의 십신 이름 — 이름 옆 부가가 아니라 **관계 그 자체**라 읽어야 한다 */
+  .rel-item .k{font-family:inherit;font-size:var(--fs-sm);color:var(--mut);margin-left:auto}
   .gbar{display:flex;height:9px;border-radius:99px;overflow:hidden;margin:10px 0 4px}
   .gbar i{display:block;height:100%}
   .glegend{font-size:var(--fs-sm);color:var(--mut);margin-bottom:8px}
@@ -516,7 +517,7 @@
   /* [2026-08-28] 인물 패널 뒤로 가기. 카드 맨 위, 태그 줄보다 앞이다 */
   .pback{display:inline-flex;align-items:center;margin:0 0 10px;padding:5px 10px 5px 8px;
     border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04);
-    color:var(--mut);font-family:inherit;font-size:var(--fs-xs);font-weight:600;cursor:pointer;
+    color:var(--mut);font-family:inherit;font-size:var(--fs-sm);font-weight:600;cursor:pointer;
     max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pback:hover{color:var(--ink);border-color:rgba(255,255,255,.25)}
 
@@ -582,7 +583,8 @@
   .sjch{font-size:var(--fs-xl);font-weight:700;line-height:1.15}
   .sjunk{font-size:var(--fs-md);color:var(--mut);opacity:.6;padding:8px 0 14px}
   /* [L3] 십신·운성·지장간 줄. 표가 세로로 길어지므로 글자를 작게 쥔다 */
-  .sjg{font-size:var(--fs-xs);color:var(--mut);line-height:1.5;letter-spacing:-.02em}
+  /* 십신·운성은 표의 핵심 정보다. 패널 폭을 넓힐 수 있게 됐으니 13px로 올린다 */
+  .sjg{font-size:var(--fs-sm);color:var(--mut);line-height:1.45;letter-spacing:-.02em}
   .sjg b{color:var(--ink);font-weight:700}
   .sjg.sjun{color:var(--gold);opacity:.85}
   /* 지장간은 참고 자료라 작게 두되, 음수 자간까지 주면 한자가 뭉개진다(실측) */
@@ -612,10 +614,14 @@
   .sjgyox .ox.on{color:var(--gold);opacity:1}
   .sjgynum{display:block;font-size:var(--fs-xs);opacity:.75;margin-top:2px}
   .sjwhy{margin-top:7px}
-  .sjwhy summary{font-size:var(--fs-xs);color:var(--mut);cursor:pointer;
+  /* 누르는 것은 11px로 두지 않는다 — 읽고 눌러야 하는 대상이다 */
+  .sjwhy summary{font-size:var(--fs-sm);color:var(--mut);cursor:pointer;
     text-decoration:underline;text-underline-offset:3px;list-style:none}
   .sjwhy summary::-webkit-details-marker{display:none}
-  .sjwhy p{font-size:var(--fs-xs);color:var(--mut);line-height:1.6;margin:6px 0 0}
+  /* [2026-08-30 폰트 재조사] 11px가 패널 안 44곳으로 가장 많았다. **읽는 글**만 13px로 올린다 —
+     라벨·태그·아이콘은 11px로 둔다(그건 읽는 게 아니라 구분하는 것이다).
+     판정 근거는 문장이라 11px로는 눈이 미끄러진다. */
+  .sjwhy p{font-size:var(--fs-sm);color:var(--mut);line-height:1.65;margin:6px 0 0}
   .sjwhy b{color:var(--ink)}
   .sjwhynote{border-top:1px dotted var(--line);padding-top:6px;margin-top:7px !important}
   .sjel.zero{color:var(--mut);opacity:.45;font-weight:400}
@@ -787,6 +793,7 @@
     border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.05);
     color:var(--mut);font-size:var(--fs-md);cursor:pointer;z-index:3;font-family:inherit}
   #panelclose:active{opacity:.7}
+  #panelresize{display:none}
   #panelopen{display:none;position:fixed;left:18px;bottom:18px;z-index:6;padding:12px 16px;
     border:1px solid rgba(255,255,255,.14);border-radius:12px;background:rgba(28,29,44,.9);
     backdrop-filter:blur(8px);color:var(--ink);font-size:var(--fs-md);font-weight:600;cursor:pointer;
@@ -797,7 +804,7 @@
     font-size:var(--fs-md);font-weight:600;cursor:pointer}
   .gtree .trow:hover{background:rgba(255,255,255,.05)}
   .gtree .trow.on{background:rgba(255,255,255,.1)}
-  .gtree .trow .cnt{font-family:'Space Mono',monospace;font-size:var(--fs-xs);color:var(--mut);margin-left:auto;font-weight:400}
+  .gtree .trow .cnt{font-family:'Space Mono',monospace;font-size:var(--fs-sm);color:var(--mut);margin-left:auto;font-weight:400}
   .gtree .tw{width:16px;text-align:center;color:var(--mut);font-size:var(--fs-xs);flex-shrink:0}
   .gtree .newg{color:var(--mut);border:1px dashed var(--line);font-weight:500;justify-content:center}
   /* ── v2 §5.3: 하단 태그 패널 ── #panel(상세 분석)과 역할이 다르다 — 이쪽은 이름 색인.
@@ -922,16 +929,35 @@
          있나). 사이에 선을 긋고 여백을 줘서 경계를 눈에 보이게 한다. */
       padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--line)}
     #panelopen{display:block}
-    #panel.open+#panelopen{display:none}
-    #panel{left:0;top:0;bottom:0;right:auto;width:380px;height:100%;max-height:none;
+    /* ~~#panel.open+#panelopen~~ 제거 — 둘 사이에 설정 시트가 끼어 **영영 매치되지 않던** 규칙.
+       body.panel-open 으로 대체했다(아래). */
+    /* [2026-08-30] 폭을 **변수**로 뺐다 — 사용자가 가장자리를 끌어 조절하고 그 값이 기억된다.
+       380px은 글이 길어지면서 답답해졌다(개인 해석 4문단 · 관계 3문단 · 사주 표 7행). */
+    #panel{left:0;top:0;bottom:0;right:auto;width:var(--panel-w,380px);height:100%;max-height:none;
       border-radius:0;border-top:0;border-right:1px solid var(--line);z-index:6;
       transform:translateX(-105%);box-shadow:8px 0 40px rgba(0,0,0,.4)}
     #panel.open{transform:translateX(0)}
     #panel.tall{max-height:none}
     #panel .draghandle{display:none}
+    /* 폭 조절 손잡이 — 오른쪽 가장자리. 평소엔 안 보이고 갖다 대면 드러난다 */
+    #panelresize{display:block;position:absolute;top:0;right:-3px;width:8px;height:100%;
+      cursor:col-resize;z-index:3;touch-action:none}
+    #panelresize::after{content:'';position:absolute;top:0;left:2px;width:2px;height:100%;
+      background:var(--gold);opacity:0;transition:opacity .15s}
+    #panelresize:hover::after,body.panel-resizing #panelresize::after{opacity:.55}
+    body.panel-resizing{cursor:col-resize;user-select:none}
+    body.panel-resizing #panel{transition:none}
+    /* [★ 겹침 버그, 2026-08-30] 구 규칙은 `#panel.open+#panelopen`이었는데 **둘 사이에
+       설정 시트가 끼어 있어 인접 선택자가 영영 매치되지 않았다.** 그래서 패널이 열려 있어도
+       "☰ 그룹" 버튼이 좌하단에 남아 패널 안 "설정" 버튼과 겹쳐 보였다.
+       상태를 body 클래스로 올려 위치와 무관하게 만든다(매 프레임 동기화). */
+    body.panel-open #panelopen{display:none}
+    /* [4] 패널이 닫히면 태그 바가 **왼쪽 끝까지** 온다. 구 규칙은 left:380px 고정이라
+       패널이 닫혀도 그만큼 비어 있었다. */
+    #tagbar{left:0}
+    body.panel-open #tagbar{left:var(--panel-w,380px)}
     /* [UI재검토 2] padding-bottom / .tb-newgrp 숨김 규칙 모두 제거 — 전자는 이제 단축
        padding에 포함돼 있고, 후자는 요소 자체가 없어졌다(데스크톱 트리의 "+ 새 그룹"은 유지). */
-    #tagbar{left:380px}
     /* [UI재검토 3] 데스크톱에서 시트가 화면 폭 전체를 먹었다(실측 2560px — "저장" 버튼 하나가
        2520px). 좌측 패널과 같은 기준선(left:380px)에 붙이고 폭을 600px로 묶는다.~~
        → **[2026-08-27] 무효.** 시트가 화면 가운데 모달이 되면서 폭이 이미 560px로 묶여 있고
@@ -965,7 +991,7 @@
 <!-- [2026-08-28] #wipehost — "저장된 내용 모두 지우기"가 사는 자리. **패널 맨 아래**다.
      그룹 트리 끝에 있던 것을 옮겼다: 트리가 패널 위쪽이라 사람을 고르면 그 아래로 인물 카드가
      붙어 지우기 버튼이 화면 한가운데에 놓였다. -->
-<div id="panel"><button id="panelclose" aria-label="패널 닫기">✕</button><div class="draghandle" id="draghandle"><div class="grip"></div></div><div id="grouptree"></div><div id="panelbody"></div><div id="wipehost"></div></div>
+<div id="panel"><button id="panelclose" aria-label="패널 닫기">✕</button><div class="draghandle" id="draghandle"><div class="grip"></div></div><div id="grouptree"></div><div id="panelbody"></div><div id="wipehost"></div><div id="panelresize" title="끌어서 폭 조절"></div></div>
 
 <!-- ═══ 설정 [2026-08-28] ═══
      "저장된 내용 모두 지우기"가 패널 바닥에 그대로 나와 있어 어색했다.
@@ -2795,7 +2821,16 @@ let panelInset=0;
 let panelEl=null;
 function panelInsetNow(){
   if(!panelEl)panelEl=document.getElementById('panel');
-  return(panelEl&&innerWidth>=768&&panelEl.classList.contains('open'))?380:0;}
+  return(panelEl&&innerWidth>=768&&panelEl.classList.contains('open'))?panelW:0;}
+/* [★ 2026-08-30] 패널 열림 상태를 **body 클래스로 올린다.**
+   구 CSS는 `#panel.open+#panelopen`이었는데 둘 사이에 설정 시트가 끼어 있어 인접 선택자가
+   영영 매치되지 않았다 — 그게 "그룹"과 "설정" 버튼이 겹쳐 보이던 원인이다.
+   호출부마다 훅을 다는 대신 camTick의 기존 폴링에 얹는다(v0.7부터 쓰던 방식). */
+function syncPanelBodyClass(){
+  if(!panelEl)panelEl=document.getElementById('panel');
+  const on=!!(panelEl&&innerWidth>=768&&panelEl.classList.contains('open'));
+  if(document.body.classList.contains('panel-open')!==on)
+    document.body.classList.toggle('panel-open',on);}
 function applyCanvasBox(){
   panelInset=panelInsetNow();
   canvas.style.left=panelInset+'px';
@@ -2877,6 +2912,7 @@ scene.fog.far=camera.far-5;
    showRelationView/시트들/#panelopen…) 각각에 훅을 다는 것보다, v0.7이 쓰던 "camTick에서 매 프레임
    확인하되 값이 바뀔 때만 실제 작업" 구조를 그대로 물려받는 게 안전하다. */
 function camTick(){
+  syncPanelBodyClass();
   if(panelInsetNow()!==panelInset)resize();
   /* [버그 5 안전망] 포커스 대상이 이번 장면에 없으면 즉시 포기하고 원래 프레이밍으로 되돌린다.
      **현재 visible이 아니라 "무대 목표값"으로 판정하는 게 핵심** — 장면 전환 0.7초 동안은
@@ -5387,10 +5423,28 @@ const UI_KEY='groupsaju:ui';
 let treeCollapsed=(()=>{
   try{return JSON.parse(localStorage.getItem(UI_KEY)||'{}').treeCollapsed===true;}
   catch{return false;}})();
+/* ── 패널 폭 [2026-08-30] ──
+   [범위] 최소 320 — 사주 표가 4열이라 그보다 좁으면 글자가 겹친다(실측).
+          최대는 화면의 60%와 720px 중 작은 값 — 은하가 가려지면 이 앱의 의미가 없다.
+   [모바일] 바텀시트라 폭 개념이 없다. 데스크톱(>=768)에서만 쓴다. */
+const PANEL_W_MIN=320, PANEL_W_DEF=380;
+/* [★ 실측으로 잡음] 백그라운드 탭은 innerWidth가 **0**이다. 그대로 두면 최대폭이 0이 되어
+   저장된 폭이 최소치(320)로 깎이고, 그 값이 localStorage에 굳는다 — 탭을 다시 열면
+   패널이 좁아져 있다. **최대폭은 최소폭 아래로 내려가지 않게** 바닥을 깐다. */
+function panelWMax(){return Math.max(PANEL_W_MIN,Math.min(720,Math.round(innerWidth*0.6)));}
+let panelW=(()=>{
+  try{const v=JSON.parse(localStorage.getItem(UI_KEY)||'{}').panelW;
+    return Number.isFinite(v)?v:PANEL_W_DEF;}catch{return PANEL_W_DEF;}})();
+function applyPanelW(){
+  const w=Math.max(PANEL_W_MIN,Math.min(panelWMax(),panelW));
+  panelW=w;
+  document.documentElement.style.setProperty('--panel-w',w+'px');}
+
 function saveUiPref(){
   try{
     const o=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
     o.treeCollapsed=treeCollapsed;
+    o.panelW=panelW;
     localStorage.setItem(UI_KEY,JSON.stringify(o));
   }catch{/* 저장이 막혀 있어도 이번 세션 동안은 접힌 채로 동작한다 */}}
 function renderTree(){
@@ -7240,8 +7294,60 @@ function closePanel(){
   panel.classList.remove('open','tall');deselect();
   if(activeGroup)fitGroup(activeGroup);else fitGalaxy();}
 document.getElementById('panelclose').onclick=closePanel;
+
+/* [★ 2026-08-30] body.panel-open 동기화를 **rAF 폴링에만 맡기지 않는다.**
+   창이 백그라운드면 rAF가 멈춰 클래스가 낡은 채로 남는다(실측: 패널을 닫아도
+   body.panel-open이 true, 태그바 left가 380px 그대로).
+   class 속성 변화를 직접 지켜보면 프레임과 무관하게 맞는다. camTick의 폴링은 이중 방어로 남긴다. */
+(function(){
+  const el=document.getElementById('panel'); if(!el||!window.MutationObserver)return;
+  new MutationObserver(syncPanelBodyClass).observe(el,{attributes:true,attributeFilter:['class']});
+  syncPanelBodyClass();
+})();
+
+/* ═══ 패널 폭 조절 [2026-08-30] ═══
+   [왜] 글이 길어지면서 380px이 답답해졌다 — 사주 표 7행 + 개인 해석 4문단 + 관계 3문단.
+   [무엇을 잡나] 포인터 이벤트 하나로 마우스·터치·펜을 함께 받는다. setPointerCapture로
+   손가락이 핸들 밖으로 나가도 계속 따라온다.
+   [렌더] 드래그 중에는 transition을 끄고(body.panel-resizing) 매 이동마다 캔버스를 다시 잡는다 —
+   안 그러면 은하가 패널 밑으로 밀려 들어간 채로 남는다.
+   [저장] 놓을 때 한 번만 쓴다. 이동마다 쓰면 localStorage에 수백 번 쓰게 된다. */
+(function(){
+  const h=document.getElementById('panelresize'); if(!h)return;
+  let dragging=false;
+  h.addEventListener('pointerdown',e=>{
+    if(innerWidth<768)return;
+    dragging=true; h.setPointerCapture(e.pointerId);
+    document.body.classList.add('panel-resizing');
+    e.preventDefault(); e.stopPropagation();});
+  h.addEventListener('pointermove',e=>{
+    if(!dragging)return;
+    panelW=Math.max(PANEL_W_MIN,Math.min(panelWMax(),Math.round(e.clientX)));
+    applyPanelW();
+    if(typeof applyCanvasBox==='function'){applyCanvasBox();resize();}});
+  const end=e=>{
+    if(!dragging)return;
+    dragging=false;
+    try{h.releasePointerCapture(e.pointerId);}catch(_){}
+    document.body.classList.remove('panel-resizing');
+    saveUiPref();};
+  h.addEventListener('pointerup',end);
+  h.addEventListener('pointercancel',end);
+  /* 더블클릭하면 기본 폭으로 되돌린다 — 끌다가 이상해졌을 때 빠져나올 길 */
+  h.addEventListener('dblclick',()=>{
+    panelW=PANEL_W_DEF; applyPanelW();
+    if(typeof applyCanvasBox==='function'){applyCanvasBox();resize();}
+    saveUiPref();});
+  /* 창을 줄이면 최대폭이 줄어든다 — 그때 패널이 화면을 다 먹지 않게 다시 잡는다 */
+  addEventListener('resize',()=>{const before=panelW;applyPanelW();
+    if(panelW!==before&&typeof applyCanvasBox==='function'){applyCanvasBox();}});
+})();
 document.getElementById('panelopen').onclick=()=>panel.classList.add('open');
-if(innerWidth>=768)panel.classList.add('open'); /* 데스크톱은 트리 패널 기본 열림 */
+/* [2026-08-30] ~~데스크톱은 트리 패널 기본 열림~~ → **닫힌 채로 시작한다.**
+   패널이 은하를 가려, 처음 열었을 때 이 앱이 무엇인지 보여 주는 화면이 절반만 보였다.
+   사람이나 그룹을 누르면 showNode/showGroup이 그때 연다(이미 그렇게 돼 있다).
+   좌하단 "☰ 그룹" 버튼이 다시 여는 손잡이다. */
+applyPanelW();
 
 /* ═════════ 사람 추가/수정 시트 ═════════ */
 /* [2026-08-27] ~~addsheet / grpsheet 두 시트~~ → 생성 모달 하나(createsheet) 안의 두 탭.
