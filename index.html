@@ -1829,15 +1829,16 @@ function personReading(n){
   const tops=ks.filter(k=>cnt[k]===mx), zeros=ks.filter(k=>cnt[k]===0);
   const sents=[];
   if(mx>=2){
-    const names=tops.map(k=>GROUP_SEAT[k]);
-    const head=joinSeats(names), last=names[names.length-1];
+    /* [★ 실측으로 잡음] 조사를 **마지막 낱말**에서 뽑았더니 셋 이상 동률일 때 "…자리 셋가"가
+       나왔다 — joinSeats가 끝에 수사('셋')를 붙이는데 조사는 그 앞 '자리'를 보고 골랐기
+       때문이다. 조사는 **실제로 출력되는 문자열의 끝**에서 뽑아야 한다.
+       데모 8인에는 세 계열 동률이 없어 안 걸렸고, 배포 데이터에서 드러났다. */
+    const head=joinSeats(tops.map(k=>GROUP_SEAT[k]));
     const num=NUM_KO[mx]+(tops.length>1?'씩':'');
-    sents.push(`${head}${particle(last,'이가')} ${num}${ro(num)} 가장 두텁습니다(${tops.map(k=>k+' '+cnt[k]).join(' · ')}).`); }
+    sents.push(`${head}${particle(head,'이가')} ${num}${ro(num)} 가장 두텁습니다(${tops.map(k=>k+' '+cnt[k]).join(' · ')}).`); }
   if(zeros.length){
-    const names=zeros.map(k=>GROUP_SEAT[k]);
-    const head=joinSeats(names);
-    const tail=zeros.length>=3?'셋':names[names.length-1];
-    sents.push(`반면 ${head}${particle(tail,'은는')} 지금 아는 ${NUM_KO[letters]} 글자 안에서 보이지 않습니다(${zeros.map(k=>k+' 0').join(' · ')}).`);
+    const head=joinSeats(zeros.map(k=>GROUP_SEAT[k]));
+    sents.push(`반면 ${head}${particle(head,'은는')} 지금 아는 ${NUM_KO[letters]} 글자 안에서 보이지 않습니다(${zeros.map(k=>k+' 0').join(' · ')}).`);
     sents.push('없다는 뜻이 아니라 <b>타고난 무기가 아니라는 뜻</b>이라, 그쪽은 살면서 배워 채우는 영역이 됩니다.');
   }else if(sents.length){
     sents.push('다섯 자리가 모두 채워져 있어 한쪽으로 크게 쏠리지는 않습니다.');
