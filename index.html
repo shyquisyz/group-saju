@@ -1027,10 +1027,12 @@
   #panel:hover::-webkit-scrollbar-thumb,.sheet:hover::-webkit-scrollbar-thumb,
   .obcard:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,.26);background-clip:content-box}
   /* [2026-08-31] 실측 22px — 모바일에서 패널을 닫는 주 손잡이인데 기준 미달이었다.
-     보이는 크기는 그대로 두고 **누르는 판만** ::before로 44px을 채운다(딱지·케미 쌍과 같은 방식). */
-  #panelclose::before{content:'';position:absolute;left:50%;top:50%;
-    transform:translate(-50%,-50%);width:44px;height:44px}
-  #panelclose{position:sticky;top:0;float:right;width:30px;height:30px;margin:-4px -6px 0 8px;
+     ~~::before로 누르는 판만 넓히기~~ → **버튼 자체를 44×44로.**
+     ::before(44px)가 28px짜리 버튼을 좌우 8px씩 넘쳐 scrollWidth가 튀었다(실측 36 > 28).
+     이 버튼은 데스크톱에서 `body.panel-open #panelclose{display:none}`으로 감춰지므로
+     **사실상 모바일 전용**이다 — 모바일에서 44px은 커 보이는 게 아니라 맞는 크기다. */
+  #panelclose{position:sticky;top:0;float:right;width:44px;height:44px;margin:-10px -12px 0 8px;
+    display:grid;place-items:center;
     border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.05);
     color:var(--mut);font-size:var(--fs-sm);cursor:pointer;z-index:3;font-family:inherit}
   #panelclose:active{opacity:.7}
