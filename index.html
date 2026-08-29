@@ -1023,32 +1023,41 @@
     0%{border-color:var(--gold);color:var(--ink);background:rgba(232,198,106,.12)}
     100%{border-color:var(--line);color:var(--mut);background:transparent}}
   .memrow.on .chk{background:var(--ink);border-color:var(--ink);color:#101018}
-  /* ═══ 두 단 도시 선택기 [2026-08-31] ═══ 왼쪽 권역 · 오른쪽 도시.
-     [320px] 왼쪽을 고정 폭(112px)으로 두고 오른쪽이 남는 만큼 쓴다 — 둘 다 비율로 두면
-     좁은 화면에서 도시 이름이 두 줄로 접힌다(실측). 세로는 각각 따로 스크롤한다.
-     [터치] 모든 항목 44px. 어르신 기준은 여기도 같다. */
+  /* ═══ 도시 선택기 — 탭 + 격자 [2026-08-30] ═══
+     ~~두 단(왼쪽 권역 / 오른쪽 도시)~~ → **위 탭 줄 + 아래 버튼 격자.**
+     [왜 바꿨나] 두 단은 권역 칸이 한 번 고른 뒤에도 가로 112px을 상시 차지했다.
+     320px에서 도시 칸에 남는 폭이 106px뿐이라 한 줄에 하나씩만 들어갔고, 그래서
+     세로로 길게 굴려야 했다. 탭으로 올리면 그 폭이 전부 도시 쪽으로 간다.
+     [탭 줄] 가로 스크롤. 마지막 탭이 오른쪽 끝에 **일부만 걸치게** 자바스크립트가
+     맞춘다(fitCityTabs) — 딱 떨어지면 뒤에 더 있다는 걸 모른다. 오른쪽 페이드도 같은 신호다.
+     [격자] auto-fill minmax(78px,1fr) — 320px에서 2열, 390px에서 3열, 데스크톱에서 5열이
+     된다(실측). 도시 이름은 최대 세 글자(의정부·남양주·서귀포)라 78px에 넉넉히 들어간다.
+     [높이] 탭 44 + 사이 8 + 격자 168 = 220px. 두 단 방식의 224px보다 작다.
+     [터치] 탭·격자 칸 모두 44px. */
   .city-native{display:none}
-  .citypick{display:flex;gap:8px;border:1px solid var(--line);border-radius:8px;
-    background:rgba(255,255,255,.03);padding:6px;height:224px;overflow:hidden}
-  .citycol{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;
-    scrollbar-color:rgba(255,255,255,.16) transparent}
-  .cityregs{flex:0 0 112px;border-right:1px solid var(--line);padding-right:6px}
-  .citycities{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
-  .cityreg,.citybtn{display:block;width:100%;min-height:44px;padding:8px 10px;
-    border:0;border-radius:7px;background:transparent;color:var(--mut);
-    font-family:inherit;font-size:var(--fs-sm);text-align:left;cursor:pointer;
-    word-break:keep-all;line-height:1.35}
-  .cityreg.on{background:rgba(255,255,255,.10);color:var(--ink);font-weight:700}
-  .citybtn.on{background:var(--ink);color:#101018;font-weight:700}
-  .cityreg:active,.citybtn:active{opacity:.75}
-  /* [★ 임시, 2026-08-31] 핀치 감도 선택. 확정되면 이 규칙도 함께 지운다 */
-  /* [320px 실측] min-width 64px이면 4개(64*4+6*3=274)가 240px 안에 못 들어가
-     "3배"만 다음 줄로 밀려 혼자 240px로 늘어났다. 52px이면 226px이라 한 줄에 들어간다 */
-  .pinchrow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-  .pinchrow button{flex:1 1 0;min-width:52px;min-height:44px;padding:8px 4px;
-    border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.05);
-    color:var(--mut);font-family:inherit;font-size:var(--fs-sm);cursor:pointer}
-  .pinchrow button.on{background:var(--ink);color:#101018;border-color:var(--ink);font-weight:700}
+  .citysel{display:block}
+  .citytabs{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;
+    overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;margin-bottom:8px}
+  .citytabs::-webkit-scrollbar{display:none}
+  .citytabs.more{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent);
+    mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent)}
+  .citytab{flex:0 0 auto;min-height:44px;padding:8px 12px;border:1px solid var(--line);
+    border-radius:999px;background:rgba(255,255,255,.04);color:var(--mut-2);
+    font-family:inherit;font-size:var(--fs-sm);white-space:nowrap;cursor:pointer}
+  .citytab.on{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.28);
+    color:var(--ink);font-weight:700}
+  .citygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;
+    height:168px;overflow-y:auto;overscroll-behavior:contain;
+    border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.03);
+    padding:6px;align-content:start;
+    scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}
+  .citycell{min-height:44px;padding:8px 4px;border:1px solid transparent;border-radius:7px;
+    background:rgba(255,255,255,.05);color:var(--mut);
+    font-family:inherit;font-size:var(--fs-sm);text-align:center;cursor:pointer;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .citycell.on{background:var(--ink);color:#101018;font-weight:700}
+  .citytab:active,.citycell:active{opacity:.75}
   /* ── v0.7: 패널 X 버튼 + 데스크톱 좌측 패널 + 그룹 트리 ── */
   /* ═══ 스크롤 막대 [2026-08-30] ═══ 기본 스크롤바가 우주 배경 위에서 밝은 회색 띠로 떠서
      UI가 하나 더 있는 것처럼 보였다. 얇고 어둡게, 손을 올렸을 때만 살짝 드러나게 한다. */
@@ -1352,14 +1361,6 @@
       <b>내보내기 · 불러오기</b>
       <small>파일 하나로 백업하고, 다른 기기에서 그 파일로 되살립니다.</small></button>
     <div id="set-undohost"></div>
-  </div>
-
-  <!-- [★ 임시, 2026-08-31] 실기기에서 골라 확정하기 위한 항목이다.
-       확정되면 이 블록과 PINCH_GAINS를 함께 걷고 계수 하나만 남긴다. -->
-  <div class="set-sec">
-    <div class="set-h">핀치 감도 <span class="opt">임시</span></div>
-    <div class="set-note">두 손가락으로 우주를 확대·축소하는 속도입니다. 폰에서 네 가지를 비교해 보고 정할 예정이라 잠시 열어 둔 항목입니다.</div>
-    <div class="pinchrow" id="set-pinch"></div>
   </div>
 
   <div class="set-sec">
@@ -1813,53 +1814,90 @@ function cityOptionsHtml(){
       +g.list.map(([c])=>`<option value="${c}">${c}</option>`).join('')+`</optgroup>`).join('')
     +`<optgroup label="그 밖"><option value="${CITY_CUSTOM}">${CITY_CUSTOM}</option>`
     +`<option value="${CITY_UNKNOWN}">${CITY_UNKNOWN}</option></optgroup>`;}
-/* ═══════ 두 단 도시 선택기 [2026-08-31] ═══════
-   [문제] 한 줄 목록 60개는 "자주 찾는 도시"를 맨 위에 얹어도 여전히 길다.
-   [방식] 왼쪽 = 권역, 오른쪽 = 그 권역의 도시. 권역을 누르면 오른쪽이 바뀐다.
+/* ═══════ 도시 선택기 — 탭 + 격자 [2026-08-30] ═══════
+   [문제] ~~두 단(왼쪽 권역 · 오른쪽 도시)~~은 권역 칸이 한 번 고른 뒤에도 가로를 상시
+   차지해 320px에서 도시 쪽에 106px밖에 안 남았다. 위쪽 탭 한 줄로 올리고 아래를 격자로 쓴다.
    [★ 저장 값은 그대로] `<select>`를 지우지 않고 **화면에서만 감춘다.** 선택기는 그 select의
    value를 읽고 쓰고 change를 쏜다 — 도시명·경도(CITY_LON)·검증·저장 경로를 하나도 안 건드린다.
    기존 코드가 `selCity.value=…`로 직접 쓰는 자리도 그대로 살아 있고, refresh()가 화면을 맞춘다.
-   [빌더는 하나] 온보딩과 인물 시트가 이 함수 하나를 부른다 — 지난 회차에 두 벌로 갈라져
-   한쪽만 고쳤던 그 사고를 막으려고 목록 조립을 합쳤는데, UI도 같은 이유로 합친다.
-   ["모름"·"직접 입력"] 마지막 "그 밖" 권역에 그대로 둔다 — 없애면 모르는 사람의 길이 막힌다. */
+   [빌더는 하나] 온보딩과 인물 시트가 이 함수 하나를 부른다 — 목록이 두 벌로 갈라져
+   한쪽만 고쳤던 사고를 겪은 자리라, UI도 한 벌로 둔다.
+   ["모름"·"직접 입력"] 마지막 "그 밖" 탭에 그대로 둔다 — 없애면 모르는 사람의 길이 막힌다. */
 function cityPanes(){
   return [{label:'자주 찾는 도시',list:CITY_FAVS.filter(c=>CITY_LON[c]!==undefined)}]
     .concat(CITY_GROUPS.map(g=>({label:g.region,list:g.list.map(x=>x[0])})))
     .concat([{label:'그 밖',list:[CITY_CUSTOM,CITY_UNKNOWN]}]);}
+/** 탭 줄의 오른쪽 끝에 **탭 하나가 일부만 걸치도록** 왼쪽 여백을 미세하게 민다.
+    [왜 필요한가] 경계가 화면 끝에 딱 맞아떨어지면 뒤에 더 있다는 신호가 사라진다.
+    [어떻게] padding-left를 0..14px 훑으며 끝에 걸친 탭의 보이는 폭(peek)이
+    12px 이상, (그 탭 폭 - 10)px 이하가 되는 첫 값을 쓴다 — 너무 조금 보이면 얼룩처럼
+    보이고, 거의 다 보이면 딱 떨어진 것과 구별이 안 된다.
+    [한계] 그 범위를 못 찾으면 0으로 되돌리고 페이드(.more)에 맡긴다 — 여백을 더 밀면
+    탭 줄이 왼쪽에서 어긋나 보인다. 못 찾았는지는 반환값의 fallback으로 확인한다. */
+function fitCityTabs(tabs){
+  tabs.style.paddingLeft='0px';
+  const W=tabs.clientWidth, kids=[...tabs.children];
+  if(!kids.length)return {scroll:false,pad:0,peek:0};
+  const last=kids[kids.length-1];
+  tabs.classList.toggle('more',last.offsetLeft+last.offsetWidth>W+1);
+  if(last.offsetLeft+last.offsetWidth<=W+1)return {scroll:false,pad:0,peek:0};
+  let best=null;
+  for(let pad=0;pad<=14;pad++){
+    tabs.style.paddingLeft=pad+'px';
+    const b=kids.find(x=>x.offsetLeft+x.offsetWidth>W);
+    if(!b)break;
+    const peek=W-b.offsetLeft, ratio=peek/b.offsetWidth;
+    if(peek<12||peek>b.offsetWidth-10)continue;
+    /* 후보 중 **60% 즈음 보이는 것**을 고른다 — 첫 합격을 그냥 쓰면 81%처럼
+       "거의 다 보이는" 값이 걸려 딱 떨어진 것과 구별이 잘 안 된다(실측). */
+    const score=Math.abs(ratio-0.6);
+    if(!best||score<best.score)best={pad,peek:Math.round(peek),ratio:+ratio.toFixed(2),
+      tab:b.textContent,score};}
+  if(best){tabs.style.paddingLeft=best.pad+'px';delete best.score;return Object.assign({scroll:true},best);}
+  tabs.style.paddingLeft='0px';
+  const b=kids.find(x=>x.offsetLeft+x.offsetWidth>W);
+  return {scroll:true,pad:0,peek:b?Math.round(W-b.offsetLeft):0,tab:b&&b.textContent,fallback:true};}
 function buildCityPicker(sel){
   if(!sel)return null;
   if(sel._picker){sel._picker.refresh();return sel._picker;}
   sel.classList.add('city-native');
-  const wrap=document.createElement('div');wrap.className='citypick';
-  const colR=document.createElement('div');colR.className='citycol cityregs';
-  const colC=document.createElement('div');colC.className='citycol citycities';
-  wrap.appendChild(colR);wrap.appendChild(colC);
+  const wrap=document.createElement('div');wrap.className='citysel';
+  const tabs=document.createElement('div');tabs.className='citytabs';
+  const grid=document.createElement('div');grid.className='citygrid';
+  wrap.appendChild(tabs);wrap.appendChild(grid);
   sel.parentNode.insertBefore(wrap,sel.nextSibling);
   const panes=cityPanes();
   let cur=0;
   const paintCities=()=>{
-    colC.innerHTML='';
+    grid.innerHTML='';
     panes[cur].list.forEach(c=>{
-      const b=document.createElement('button');b.type='button';b.className='citybtn';
-      b.textContent=c;
+      const b=document.createElement('button');b.type='button';b.className='citycell';
+      b.textContent=c;b.title=c;
       if(sel.value===c)b.classList.add('on');
       b.onclick=()=>{sel.value=c;sel.dispatchEvent(new Event('change'));
-        [...colC.children].forEach(x=>x.classList.toggle('on',x.textContent===c));};
-      colC.appendChild(b);});};
+        [...grid.children].forEach(x=>x.classList.toggle('on',x.textContent===c));};
+      grid.appendChild(b);});};
   panes.forEach((pn,i)=>{
-    const b=document.createElement('button');b.type='button';b.className='cityreg';
+    const b=document.createElement('button');b.type='button';b.className='citytab';
     b.textContent=pn.label;
-    b.onclick=()=>{cur=i;[...colR.children].forEach((x,j)=>x.classList.toggle('on',j===i));
-      paintCities();colC.scrollTop=0;};
-    colR.appendChild(b);});
+    b.onclick=()=>{cur=i;[...tabs.children].forEach((x,j)=>x.classList.toggle('on',j===i));
+      paintCities();grid.scrollTop=0;};
+    tabs.appendChild(b);});
   const refresh=()=>{
     const v=sel.value;
     let idx=panes.findIndex(pn=>pn.list.indexOf(v)>=0);
     if(idx<0)idx=0;
     cur=idx;
-    [...colR.children].forEach((x,j)=>x.classList.toggle('on',j===cur));
-    paintCities();};
-  sel._picker={refresh};refresh();
+    [...tabs.children].forEach((x,j)=>x.classList.toggle('on',j===cur));
+    paintCities();
+    sel._fit=fitCityTabs(tabs);
+    /* 저장된 도시가 뒤쪽 권역이면 그 탭이 화면 밖이다 — 가로 스크롤로 끌어온다.
+       scrollIntoView는 시트까지 같이 움직여서 쓰지 않는다(가로만 손댄다). */
+    const on=tabs.children[cur];
+    if(on){const L=on.offsetLeft,R=L+on.offsetWidth;
+      if(R>tabs.scrollLeft+tabs.clientWidth)tabs.scrollLeft=R-tabs.clientWidth+12;
+      else if(L<tabs.scrollLeft)tabs.scrollLeft=Math.max(0,L-12);}};
+  sel._picker={refresh,tabs,grid};refresh();
   return sel._picker;}
 /* 표의 자동완성 목록(datalist)은 그룹을 못 쓰므로 **순서**로 같은 뜻을 낸다 */
 function cityDatalistHtml(){
@@ -6234,13 +6272,14 @@ let helpOpen=(()=>{
   try{const v=JSON.parse(localStorage.getItem(UI_KEY)||'{}').helpOpen;
     return (v&&typeof v==='object')?v:{};}catch{return {};}})();
 function helpIsOpen(k){return helpOpen[k]!==false;}
-/* [★ 임시, 2026-08-31] 핀치 감도. 1이 지금까지의 동작이고 값이 클수록 빨라진다.
-   실기기에서 네 후보를 비교해 고르기 위한 것이라, 확정되면 이 변수와 설정 항목을
-   함께 걷어내고 계수 하나만 남긴다. */
-const PINCH_GAINS=[1,1.5,2,3];
-let pinchGain=(()=>{
-  try{const v=JSON.parse(localStorage.getItem(UI_KEY)||'{}').pinchGain;
-    return PINCH_GAINS.indexOf(v)>=0?v:1;}catch{return 1;}})();
+/* ═══ 핀치 감도 [2026-08-30 확정] ═══
+   ~~설정의 임시 「핀치 감도」 선택지(1 / 1.5 / 2 / 3배)~~ → **2배로 확정.**
+   실기기에서 넷을 비교해 고른 값이다. 1배(=원래 동작)는 손가락을 다 벌려도 한 이벤트에
+   6%까지만 움직여 "따라오지 않는다"는 체감이 났고, 3배는 과했다.
+   임시 선택지·PINCH_GAINS·localStorage 저장 항목은 예고대로 이 회차에 걷어냈다.
+   [남은 저장값] 이전 배포에서 저장된 `groupsaju:ui.pinchGain`은 **아무도 읽지 않으므로
+   자동으로 무시된다.** 다음 saveUiPref()가 그 키 없이 다시 써서 조용히 사라진다. */
+const PINCH_GAIN=2;
 let treeCollapsed=(()=>{
   try{return JSON.parse(localStorage.getItem(UI_KEY)||'{}').treeCollapsed===true;}
   catch{return false;}})();
@@ -6267,7 +6306,7 @@ function saveUiPref(){
     o.treeCollapsed=treeCollapsed;
     o.panelW=panelW;
     o.helpOpen=helpOpen;
-    o.pinchGain=pinchGain;   /* [임시] 위 PINCH_GAINS 주석 참고 */
+    delete o.pinchGain;   /* [2026-08-30] 임시 항목이었다 — 위 PINCH_GAIN 주석 참고 */
     localStorage.setItem(UI_KEY,JSON.stringify(o));
   }catch{/* 저장이 막혀 있어도 이번 세션 동안은 접힌 채로 동작한다 */}}
 function renderTree(){
@@ -7877,17 +7916,17 @@ canvas.addEventListener('touchmove',e=>{if(e.touches.length===2){
   /* [수정 3] 손가락 간 거리 변화(d)→줌, 중심점 이동(cx,cy)→팬. 하나의 두 손가락 제스처에서
      서로 다른 성분을 동시에 뽑구성원B므로 "핀치냐 팬이냐"를 모드로 나눠 고를 필요가 없다 —
      가만히 좁히기만 하면 순수 줌, 가만히 옮기기만 하면 순수 팬, 둘 다 하면 둘 다 반영된다. */
-  /* ═══ [2026-08-31] 핀치 감도 ═══
-     [현재 계수] 이벤트마다 배율은 손가락 간격의 비(pinch/d)이고, **±6%로 잘라** 왔다
-     (Math.min(1.06,·) / Math.max(.94,·)). 느리다는 체감의 정체가 이 상한이다 —
+  /* ═══ 핀치 감도 [2026-08-30 확정] ═══
+     [원래 계수] 배율은 손가락 간격의 비(pinch/d)이고 **±6%로 잘라** 왔다
+     (Math.min(1.06,·) / Math.max(.94,·)). 느리다는 체감의 정체가 이 상한이었다 —
      손가락을 아무리 빨리 벌려도 한 이벤트에 6%까지만 움직인다.
-     [올리는 방법] 비에 지수를 씌우고 상한도 같은 지수로 함께 올린다.
-     gain=1이면 Math.pow(x,1)=x, 상한도 1.06/0.94 그대로라 **지금과 완전히 같다.**
-     [★ 임시] 설정의 "핀치 감도"는 실기기에서 고르기 위한 **임시 항목**이다.
-     확정되면 선택지를 걷고 값 하나만 남긴다(다음 회차).
-     [범위 불변] zoomBy가 cam.R_MIN/R_MAX로 자르는 것은 그대로다 — 빨라지는 건 속도지 범위가 아니다. */
+     [올린 방법] 비에 지수를 씌우고 상한도 같은 지수로 함께 올린다. PINCH_GAIN=2에서
+     한 이벤트 최대 1.06²=1.1236 / 최소 0.94²=0.8836이 된다.
+     [범위 불변] zoomBy가 cam.R_MIN(40)/R_MAX(1100)로 자르는 것은 그대로다 —
+     빨라지는 건 속도지 범위가 아니다.
+     [데스크톱 불변] 휠 줌은 이 분기(touchmove) 안에 없다. */
   if(pinch){
-    const g=pinchGain, r=pinch/d;
+    const g=PINCH_GAIN, r=pinch/d;
     const up=Math.pow(1.06,g), dn=Math.pow(.94,g), f=Math.pow(r,g);
     zoomBy(f>1?Math.min(up,f):Math.max(dn,f));}
   if(pinchCenter)panBy(cx-pinchCenter.x,cy-pinchCenter.y);
@@ -8729,18 +8768,6 @@ document.querySelectorAll('#createtabs .tab').forEach(b=>b.onclick=()=>{
      조용히 멤버가 되면 안 된다(아래 gsWantMember 주석 참고) */
   gsWantMember=false;
   setCreateTab(b.dataset.tab,false);});
-/* [★ 임시, 2026-08-31] 핀치 감도 선택지 배선 */
-(function(){
-  const host=document.getElementById('set-pinch'); if(!host)return;
-  const LABEL={1:'지금',1.5:'1.5배',2:'2배',3:'3배'};
-  PINCH_GAINS.forEach(g=>{
-    const b=document.createElement('button');b.type='button';
-    b.textContent=LABEL[g]||(g+'배');
-    b.onclick=()=>{pinchGain=g;saveUiPref();
-      [...host.children].forEach((x,i)=>x.classList.toggle('on',PINCH_GAINS[i]===g));};
-    host.appendChild(b);});
-  [...host.children].forEach((x,i)=>x.classList.toggle('on',PINCH_GAINS[i]===pinchGain));
-})();
 dim.onclick=closeSheets;
 /* [2026-08-31] 시트 넷의 ✕. 배경 탭(dim)은 그대로 두고 **보이는 손잡이**를 더한 것이다. */
 document.querySelectorAll('.sheetclose').forEach(b=>b.onclick=closeSheets);
@@ -8765,7 +8792,7 @@ const selY=document.getElementById('f-y'),selM=document.getElementById('f-m'),se
   selCity.innerHTML=cityOptionsHtml();
   selCity.value='서울';
   selCity.onchange=()=>{syncCityCustom();};
-  buildCityPicker(selCity);   /* [2026-08-31] 화면만 두 단으로. 값은 이 select가 그대로 갖는다 */
+  buildCityPicker(selCity);   /* [2026-08-30] 화면만 탭+격자로. 값은 이 select가 그대로 갖는다 */
   const cc=document.getElementById('f-city-custom');
   })();
 /* ═══ 성별 [2026-08-28] ═══
