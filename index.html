@@ -169,6 +169,29 @@
   .rel-listh{font-size:var(--fs-sm);color:var(--mut-2);line-height:1.6;
     margin:12px 0 5px;word-break:keep-all}
   .rel-listh b{color:var(--mut);font-weight:600}
+  /* ═══ 그룹 상성란 [2026-08-31] ═══ 항목마다 소제목을 달아 **어디까지가 한 이야기인지**
+     보이게 한다. 위 서술 문단들과 섞이면 세 기둥이라는 구조가 화면에서 사라진다. */
+  .gsecs{margin:14px 0 4px;border-top:1px solid var(--line);padding-top:12px}
+  .gsec{margin-bottom:14px}
+  .gsec:last-child{margin-bottom:4px}
+  .gsech{font-size:var(--fs-sm);font-weight:700;letter-spacing:.04em;color:var(--gold);
+    margin-bottom:5px}
+  .gsecp{font-size:var(--fs-base);line-height:1.65;color:var(--ink);
+    word-break:keep-all;margin:0}
+  .gsecgloss{font-size:var(--fs-sm);color:var(--mut-2);line-height:1.6;
+    margin-top:4px;word-break:keep-all}
+  .gchemrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:7px}
+  .gchemrow:last-child{margin-bottom:0}
+  .gchemk{font-size:var(--fs-sm);color:var(--mut);white-space:nowrap}
+  /* 쌍은 눌러서 그 관계로 넘어가는 손잡이다 — 누르는 판은 44px(어르신 기준) */
+  .gpair{position:relative;padding:3px 10px;border:1px solid rgba(160,162,178,.35);
+    border-radius:999px;background:transparent;color:var(--ink);font-family:inherit;
+    font-size:var(--fs-sm);font-weight:600;line-height:1.5;cursor:pointer;
+    white-space:nowrap;transition:background .15s,border-color .15s}
+  .gpair::before{content:'';position:absolute;left:0;right:0;top:50%;
+    transform:translateY(-50%);height:44px}
+  .gpair:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.3)}
+  .gpair:active{opacity:.8}
   /* ═══ 합·충 딱지 [L4, 2026-08-31] ═══
      [크기] 별명은 18px, 딱지는 15px(최소 토큰). 위계가 겹치지 않게 **보조 크기**로 둔다.
      색도 --mut이라 금색 별명 옆에서 튀지 않는다.
@@ -1718,9 +1741,9 @@ const HC_ORDER=['chung','ganhap','yukhap'];
    why는 예시("… 午(오)와 子(자)는 정면으로 부딪히는 짝입니다.")의 짜임을 따른다 —
    `어느 자리 + 한자(한글 음) + 한자(한글 음) + 무슨 짝인가`. */
 const HC_DEF={
-  chung: {tag:'· 자꾸 부딪히는 사이', 자리:'아랫글자', 끝:'정면으로 부딪히는 짝입니다.'},
-  ganhap:{tag:'· 서로 끌리는 사이',   자리:'윗글자',   끝:'서로 짝을 이루는 글자입니다.'},
-  yukhap:{tag:'· 죽이 잘 맞는 사이',  자리:'아랫글자', 끝:'서로 붙는 짝입니다.'}};
+  chung: {tag:'· 자꾸 부딪히는 사이', grp:'자꾸 부딪히는 짝', 자리:'아랫글자', 끝:'정면으로 부딪히는 짝입니다.'},
+  ganhap:{tag:'· 서로 끌리는 사이',   grp:'서로 끌리는 짝',   자리:'윗글자',   끝:'서로 짝을 이루는 글자입니다.'},
+  yukhap:{tag:'· 죽이 잘 맞는 사이',  grp:'죽이 잘 맞는 짝',  자리:'아랫글자', 끝:'서로 붙는 짝입니다.'}};
 
 function hcPairIn(table,x,y){return table.some(a=>(a[0]===x&&a[1]===y)||(a[0]===y&&a[1]===x));}
 /** 그 사람의 네 기둥. 없거나 계산이 안 되면 null */
@@ -6934,6 +6957,101 @@ function applyStageGoals(){
             "사람 하나 넣고 뺄 때 긴장형↔순환형이 바뀌는 걸 보는 것이 이 기능의 재미")
    용어도 가른다 — group만 "성계"다. relview/virtual은 궤도도 중심 표식도 없는 임시 묶음이라
    "조합"으로 부른다. */
+/* ═══════════════════════════════════════════════════════════════════════
+   그룹 상성란 [2026-08-31] — 케미 · 기운 분포 · 흐름
+
+   [구조] gSections()가 **섹션 배열**을 만들고 비어 있지 않은 것만 그린다.
+   나중에 연운(그룹 날씨도)·카드 이미지가 붙을 자리는 이 배열에 한 줄 더하면 된다.
+   **지금 자리표시자나 빈 섹션은 만들지 않는다** — 빈 칸은 화면에서 고장으로 읽힌다(사용자 지시).
+   [케미는 없으면 통째로 생략] 없는 게 기본이다. 빈자리를 채우는 문구를 두지 않는다. */
+const EL_TRAIT={mok:'뻗어 나가는 기운',hwa:'타올라 드러내는 기운',to:'받치고 아우르는 기운',
+  geum:'거두어 벼리는 기운',su:'스며들어 궁리하는 기운'};
+
+/** 그룹 안 모든 쌍의 합·충을 종류별로 모은다. 쌍별 규칙(hapChung)을 그대로 재사용한다 */
+function gChemPairs(ms){
+  const by={}; HC_ORDER.forEach(k=>{by[k]=[];});
+  for(let i=0;i<ms.length;i++)for(let j=i+1;j<ms.length;j++){
+    const hc=hapChung(ms[i],ms[j]); if(!hc)continue;
+    by[hc.kind].push([ms[i],ms[j]]);}
+  return by;}
+
+function gSecChem(ms){
+  const by=gChemPairs(ms);
+  /* HC_ORDER 순서 = 우선순위 순서(충 > 천간합 > 육합). 화면 나열도 같은 순서다 */
+  const rows=HC_ORDER.filter(k=>by[k].length).map(k=>
+    `<div class="gchemrow"><span class="gchemk">${HC_DEF[k].grp}</span>`
+    +by[k].map(pr=>`<button type="button" class="gpair" data-a="${pr[0].id}" data-b="${pr[1].id}">`
+      +`${bkEsc(pr[0].name)}·${bkEsc(pr[1].name)}</button>`).join('')
+    +`</div>`).join('');
+  return rows?{h:'케미',html:rows}:null;}
+
+function gSecEl(A){
+  const present=EL_ORDER.filter(e=>A.cnt[e]>0);
+  if(!present.length)return null;
+  const max=Math.max.apply(null,EL_ORDER.map(e=>A.cnt[e]));
+  const min=Math.min.apply(null,present.map(e=>A.cnt[e]));
+  const tops=EL_ORDER.filter(e=>A.cnt[e]===max);
+  const missing=EL_ORDER.filter(e=>A.cnt[e]===0);
+  const lows=missing.length?missing:EL_ORDER.filter(e=>A.cnt[e]===min);
+  const nm=a=>a.map(e=>EL_KO[e]).join('·');
+  let txt, glossOf;
+  /* [★ 주어진 문형이 안 되는 한 경우] 다섯이 모두 있고 개수까지 같으면
+     "가장 많은 것"도 "가장 적은 것"도 없다 — 그대로 넣으면 같은 다섯을 두 번 나열한다.
+     그 경우만 문장을 바꾸고, 아래 해석 층은 지시받은 "고루" 문장을 쓴다. */
+  if(!missing.length&&max===min){
+    txt=`이 그룹에는 다섯 기운이 고르게 있습니다.`;
+    glossOf=EL_ORDER.slice();
+  }else{
+    txt=`이 그룹에는 <b>${nm(tops)}</b> 기운이 가장 많고, <b>${nm(lows)}</b> 기운이 `
+      +(missing.length?'없습니다':'적습니다')+`.`;
+    glossOf=tops.concat(lows).filter((e,i,a)=>a.indexOf(e)===i);}
+  const gloss=glossOf.map(e=>`${EL_KO[e]} — ${EL_TRAIT[e]}`).join(' · ');
+  const take=missing.length
+    ?`${nm(missing)} 기운을 가진 사람이 들어오면 이 그룹의 판이 더 넉넉해집니다.`
+    :`다섯 기운이 고루 있어 어느 쪽으로도 기울지 않는 판입니다.`;
+  return {h:'기운 분포', html:`<p class="gsecp">${txt}</p><div class="gsecgloss">${gloss}</div>`
+    +`<div class="nicktake"><span class="nicktake-h">${NICK_TAKE_H}</span>`
+    +`<span class="nicktake-t">${take}</span></div>`};}
+
+function gSecFlow(A){
+  const ms=A.ms; if(ms.length<2)return null;
+  /* 상생 목→화→토→금→수→목. GEN[x]===y 면 x가 y를 생한다 */
+  const gives=ms.map(x=>ms.filter(y=>y!==x&&GEN[x.el]===y.el).length);
+  const gets =ms.map(x=>ms.filter(y=>y!==x&&GEN[y.el]===x.el).length);
+  const mg=Math.max.apply(null,gives), mt=Math.max.apply(null,gets);
+  let txt;
+  if(mg===0&&mt===0){
+    /* [★ 지시에 없던 경우] 전원이 같은 오행이면 아무도 대지도 받지도 않는다.
+       그때 "고리처럼 도는 판"은 **사실과 반대**라 쓸 수 없어 이 한 줄을 새로 두었다. */
+    txt=`이 그룹에는 서로 기운을 대고 받는 흐름이 없습니다.`;
+  }else{
+    const G=ms.filter((x,i)=>gives[i]===mg), T=ms.filter((x,i)=>gets[i]===mt);
+    if(G.length===ms.length&&T.length===ms.length){
+      txt=`기운이 고리처럼 도는 판입니다.`;
+    }else if(G.length===1&&T.length===1&&G[0]===T[0]){
+      /* 한 사람이 양쪽에 동시에 뽑힐 수 있다(예: 수→목→화에서 목).
+         같은 이름을 두 번 부르면 어색해 한 문장으로 합친다. */
+      txt=`이 그룹에서 기운을 가장 많이 대는 사람도, 기운이 가장 많이 모이는 사람도 <b>${bkEsc(G[0].name)}</b>입니다.`;
+    }else{
+      txt=`이 그룹에서 기운을 가장 많이 대는 사람은 <b>${G.map(x=>bkEsc(x.name)).join('·')}</b>, `
+        +`기운이 가장 많이 모이는 사람은 <b>${T.map(x=>bkEsc(x.name)).join('·')}</b>입니다.`;}}
+  /* 여기는 그룹 패널이라 전폭 글자 버튼(sjHelp)이 자연스럽다 — 관계 패널의 딱지와 다른 점이다 */
+  const help=sjHelp('gflow','흐름 읽는 법',
+    `<p>사주의 다섯 기운은 서로 낳아 주는 순서가 있습니다(나무가 불을 키우듯). 그 순서로 누가 누구를 북돋는지 센 것입니다.</p>`);
+  return {h:'흐름', html:`<p class="gsecp">${txt}</p>${help}`};}
+
+/** 상성란 전체. 확장은 이 배열에 한 줄 더하는 것으로 끝난다 */
+function gSections(A){
+  const secs=[gSecChem(A.ms), gSecEl(A), gSecFlow(A)].filter(function(x){return !!x;});
+  if(!secs.length)return '';
+  return `<div class="gsecs">`+secs.map(x=>
+    `<div class="gsec"><div class="gsech">${x.h}</div>${x.html}</div>`).join('')+`</div>`;}
+/** 케미 쌍 → 그 관계 패널. navStack이 쌓이므로 뒤로가 그룹으로 돌아온다 */
+function wireGSections(root){
+  (root||document).querySelectorAll('.gpair').forEach(b=>b.onclick=()=>{
+    const a=nodes.find(x=>x.id===b.dataset.a), c=nodes.find(x=>x.id===b.dataset.b);
+    if(a&&c)openPairPanel(a,c);});}
+/* ═════════════════════════════════════════════════════════════════════ */
 function analysisInsightBody(A,mode){
   const grp=mode!=='relview'&&mode!=='virtual';
   const W=grp?{here:'이 그룹',unit:'성계',in:'이 성계'}:{here:'이 조합',unit:'조합',in:'이 안'};
@@ -6987,7 +7105,9 @@ function analysisInsightBody(A,mode){
   if(A.geuk>0)body.push(grp
     ?`긴장을 가장 많이 받는 자리는 <b>${A.pressed.name}</b>(받는 쪽 ${A.geukRecv[A.pressed.id]||0}회) — 이 사람의 컨디션이 성계의 조기경보입니다.`
     :`긴장을 가장 많이 받는 자리는 <b>${A.pressed.name}</b> — 받는 쪽 ${A.geukRecv[A.pressed.id]||0}회로 ${W.in}에서 가장 많습니다.`);
-  if(A.missing.length)body.push(`${W.here}에 없는 기운: <b>${A.missing.map(e=>EL_INFO[e].name).join(', ')}</b>.`);
+  /* [2026-08-31] 그룹 패널에서는 뺀다 — 새 "기운 분포" 항목이 같은 사실을
+     성질 풀이와 해석까지 붙여 말한다. relview/virtual에는 그 항목이 없으므로 그대로 둔다. */
+  if(!grp&&A.missing.length)body.push(`${W.here}에 없는 기운: <b>${A.missing.map(e=>EL_INFO[e].name).join(', ')}</b>.`);
   /* [2026-08-30] 십신 한 문단을 맨 뒤에 덧붙인다. 위 문장들은 **사람들끼리(오행)**를 말하고
      이 문장은 **나와 그룹(십신)**을 말한다 — 축이 달라 섞이지 않는다.
      가상 성계·관계 보기에도 같이 붙인다. "나 없는 조합"이면 함수가 빈 문자열을 돌려준다. */
@@ -7029,6 +7149,7 @@ function showGroup(g){
     <h2>${g.name} — ${total}인 성계</h2>
     <div class="gbar">${barHtml}</div><div class="glegend">${legend}</div>
     ${body.map(p=>`<p>${p}</p>`).join('')}
+    ${gSections(A)}
     <div class="tip"><b>${g.type} · ${A.dyn} INSIGHT</b>${gtypeCloser(g.type,A.dyn)}</div>
     <div class="legendrow">
       <span><i class="lg-ring" style="border-color:var(--gold)"></i>금색 고리 = 생 발신</span>
@@ -7039,6 +7160,8 @@ function showGroup(g){
     ${total===2?`<div class="panelbtns"><button class="pbtn" id="gpair">두 사람의 관계 자세히 보기</button></div>`:''}
     <div class="panelbtns"><button class="pbtn" id="gedit">그룹 수정 · 삭제</button></div>`;
   navPrependBack('은하 전체',()=>selectGroup(null));
+  wireHelp(pbody);        /* [2026-08-31] 흐름의 "흐름 읽는 법" */
+  wireGSections(pbody);   /* [2026-08-31] 케미 쌍 → 관계 패널 */
   panel.classList.add('open');
   bindInsight(pbody);
   /* [4번 1단계] 2인 그룹은 쌍 서술을 생략하는 대신(관계 패널과 완전 중복) 직행 링크를 단다.
@@ -7540,6 +7663,56 @@ function sajuSelfTest(){
   T('hcNone: 해당 없으면 null', none===null, String(none));
   /* 9. 한 쌍에 딱지는 하나 */
   T('hcSingle: 결과는 하나뿐', !both||typeof both.tag==='string', both?both.tag:'null');
+
+  /* ═══ 그룹 상성란 [2026-08-31] ═══ */
+  const txtOf=x=>x?x.html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim():'';
+  /* 10. 케미 집계가 쌍별 딱지와 일치 — 모아 놓은 것과 하나씩 센 것이 같아야 한다 */
+  let listed=0, expect=0, bad=0, scanned=0;
+  groups.forEach(gg=>{const m=effectiveMembers(gg); if(m.length<2)return; scanned++;
+    const by=gChemPairs(m);
+    HC_ORDER.forEach(k=>by[k].forEach(pr=>{listed++;
+      const hc=hapChung(pr[0],pr[1]); if(!hc||hc.kind!==k)bad++;}));
+    for(let i=0;i<m.length;i++)for(let j=i+1;j<m.length;j++)if(hapChung(m[i],m[j]))expect++;});
+  T('gChemMatch: 케미 집계 = 쌍별 딱지 (전 그룹)', listed===expect&&bad===0,
+    '그룹 '+scanned+'개 · 모은 것 '+listed+' / 하나씩 센 것 '+expect+' / 종류 불일치 '+bad);
+  /* [★ 위 검사는 합충 쌍이 0이면 0===0으로 공허하게 통과한다.]
+     그래서 **합충이 실제로 있는 예시 인물**로 한 번 더 센다 — DEMO_SEED는 항상 있다. */
+  try{
+    const dp=DEMO_SEED.people.map(x=>{
+      const b=Object.assign({hour:null,min:null},x.birth,
+        {lon:x.birth.lon!==undefined?x.birth.lon
+          :(CITY_LON[x.birth.city]!==undefined?CITY_LON[x.birth.city]:null)});
+      return {id:'demo_'+x.key,name:x.name,birth:b};});
+    const dby=gChemPairs(dp); let dl=0,dbad=0,dex=0;
+    HC_ORDER.forEach(k=>dby[k].forEach(pr=>{dl++;
+      const hc=hapChung(pr[0],pr[1]); if(!hc||hc.kind!==k)dbad++;}));
+    for(let i=0;i<dp.length;i++)for(let j=i+1;j<dp.length;j++)if(hapChung(dp[i],dp[j]))dex++;
+    T('gChemMatchDemo: 예시 인물에서도 일치 (0건 아님)',
+      dl===dex&&dbad===0&&dl>0, '모은 것 '+dl+' / 센 것 '+dex+' / 불일치 '+dbad);
+  }catch(e){T('gChemMatchDemo: 예시 인물에서도 일치',false,String(e.message));}
+  /* 11. 케미 0건이면 **항목 자체가 없다** — 빈자리를 채우지 않는다 */
+  T('gChemNone: 케미 0건이면 항목 생략', gSecChem([])===null, String(gSecChem([])));
+  /* 12. 기운 분포 — 최다 동률이면 모두 나열 */
+  const tie=gSecEl({cnt:{mok:2,hwa:2,to:0,geum:0,su:0},ms:[]});
+  T('gElTie: 최다·최소 동률이면 모두 나열',
+    /목·화 기운이 가장 많고/.test(txtOf(tie))&&/토·금·수 기운이 없습니다/.test(txtOf(tie)), txtOf(tie).slice(0,54));
+  /* 13. 다섯이 다 있고 개수까지 같으면 "가장 많은 것"이 없다 — 전용 문장 */
+  const even=gSecEl({cnt:{mok:1,hwa:1,to:1,geum:1,su:1},ms:[]});
+  T('gElEven: 다섯이 고르면 전용 문장',
+    /다섯 기운이 고르게 있습니다/.test(txtOf(even))&&/고루 있어/.test(txtOf(even)), txtOf(even).slice(0,54));
+  /* 14~16. 흐름 — 고리 / 흐름 없음 / 한 사람이 양쪽 */
+  const mk=(nm,el)=>({name:nm,el:el});
+  const ring=gSecFlow({ms:[mk('가','mok'),mk('나','hwa'),mk('다','to'),mk('라','geum'),mk('마','su')]});
+  T('gFlowRing: 전원 동률이면 고리 문장', /고리처럼 도는 판입니다/.test(txtOf(ring)), txtOf(ring).slice(0,40));
+  const flat=gSecFlow({ms:[mk('가','mok'),mk('나','mok')]});
+  T('gFlowNone: 대고 받는 흐름이 없으면 그 사실을', /흐름이 없습니다/.test(txtOf(flat)), txtOf(flat).slice(0,44));
+  /* 수·수·목·화·화 → 목이 대는 쪽(2)도 모이는 쪽(2)도 단독 최다다 */
+  const dual=gSecFlow({ms:[mk('가','su'),mk('나','su'),mk('목','mok'),mk('다','hwa'),mk('라','hwa')]});
+  T('gFlowBoth: 한 사람이 양쪽이면 한 문장으로',
+    /대는 사람도, 기운이 가장 많이 모이는 사람도\s*목\s*입니다/.test(txtOf(dual)), txtOf(dual).slice(0,64));
+  /* 17. 섹션 조립 — 빈 섹션을 만들지 않는다 */
+  const secA=gSections({ms:[],cnt:{mok:0,hwa:0,to:0,geum:0,su:0},total:0});
+  T('gSecEmpty: 전부 비면 상성란 자체가 없다', secA==='', String(secA).slice(0,30));
   return out;}
 function deselect(){if(selected){if(!selected.isMe&&selectedMesh)selectedMesh.scale.setScalar(V2_TUNABLES.PLANET_SCALE);selected=null;selectedMesh=null;}}
 /* [§7.4] groupContext/targetMesh 둘 다 선택 인자 — 안 넘기면 지금까지와 100% 동일하게 동작한다
