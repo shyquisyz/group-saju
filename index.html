@@ -328,14 +328,15 @@
   .newgrp-row{display:flex;gap:6px;margin-top:8px}
   /* [★ 2026-08-31] iOS는 입력칸 글자가 16px 미만이면 **포커스 순간 화면을 강제로 확대한다.**
      확대된 화면은 사용자가 직접 되돌려야 해서 입력 흐름이 끊긴다.
-     아래 입력칸들이 15px이었다 — 전부 --fs-base(18px)로 올린다. */
-  .newgrp-row input,.newgrp-row select,.texact input,.pt-cell input,
-  #bk-paste,#bk-input{font-size:var(--fs-base)}
+     15px이던 입력칸을 전부 --fs-base(18px)로 올렸다.
+     [★ 실측으로 잡음] 처음엔 여기 묶음 규칙 하나로 덮으려 했는데 **안 먹었다** —
+     `.texact input` 같은 개별 규칙이 파일 뒤쪽에 있어 같은 특정성이면 뒤가 이긴다.
+     그래서 각 규칙 안에서 직접 고쳤다. 순서에 기대는 덮어쓰기를 두지 않는다. */
   .newgrp-row input{flex:1 1 auto;min-width:0;padding:10px;border:1px solid var(--line);
-    border-radius:6px;font-family:inherit;font-size:var(--fs-sm);
+    border-radius:6px;font-family:inherit;font-size:var(--fs-base);   /* [2026-08-31] iOS */
     background:rgba(255,255,255,.06);color:var(--ink)}
   .newgrp-row select{flex:0 0 96px;padding:10px 8px;border:1px solid var(--line);border-radius:6px;
-    font-family:inherit;font-size:var(--fs-sm);background:rgba(255,255,255,.06);
+    font-family:inherit;font-size:var(--fs-base);   /* [2026-08-31] iOS */background:rgba(255,255,255,.06);
     color:var(--ink);color-scheme:dark;appearance:none}
   .newgrp-row .pbtn{flex:0 0 auto;padding:10px 14px}
   /* [2026-08-27] 사람 추가 / 그룹 만들기를 **한 창에 탭으로**. 두 시트의 내부 마크업과 id는
@@ -376,7 +377,7 @@
   .texact.on{display:flex}
   .texact input{width:76px;padding:11px 10px;border:1px solid var(--line);border-radius:6px;
     background:rgba(255,255,255,.06);color:var(--ink);font-family:inherit;
-    font-size:var(--fs-sm);text-align:center}
+    font-size:var(--fs-base);text-align:center}   /* [2026-08-31] iOS 강제 확대 방지 */
   .texact input::-webkit-outer-spin-button,.texact input::-webkit-inner-spin-button{
     -webkit-appearance:none;margin:0}
   .tsep{color:var(--mut);font-weight:700}
@@ -429,7 +430,7 @@
   .pt-cell{position:relative;border-right:1px solid rgba(255,255,255,.06)}
   .pt-cell:last-child{border-right:0}
   .pt-cell input{width:100%;padding:9px 8px;border:0;background:transparent;
-    color:var(--ink);font-family:inherit;font-size:var(--fs-sm);outline:0}
+    color:var(--ink);font-family:inherit;font-size:var(--fs-base);outline:0}   /* [2026-08-31] iOS */
   .pt-cell input:focus{background:rgba(255,255,255,.07)}
   /* [2026-08-31] 시각 두 칸 — 가운데 ":"을 보여 준다(온보딩과 같은 모양) */
   .pt-timewrap{display:flex;align-items:center;gap:2px}
@@ -612,8 +613,8 @@
   .bk-note b{color:var(--ink);font-weight:600}
   .bk-or{font-size:var(--fs-sm);color:var(--mut);margin:11px 0 6px}
   #bk-paste{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;
-    background:rgba(255,255,255,.04);color:var(--ink);font-size:var(--fs-sm);
-    font-family:'Space Mono',monospace;resize:vertical;margin-bottom:8px}
+    background:rgba(255,255,255,.04);color:var(--ink);font-size:var(--fs-base);
+    font-family:'Space Mono',monospace;resize:vertical;margin-bottom:8px}   /* [2026-08-31] iOS */
   .bk-err{margin-top:10px;padding:10px 12px;border-radius:8px;
     border:1px solid rgba(255,138,106,.45);background:rgba(255,138,106,.09);
     font-size:var(--fs-sm);color:var(--ink);line-height:1.6}
