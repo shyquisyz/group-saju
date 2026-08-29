@@ -1023,6 +1023,21 @@
     0%{border-color:var(--gold);color:var(--ink);background:rgba(232,198,106,.12)}
     100%{border-color:var(--line);color:var(--mut);background:transparent}}
   .memrow.on .chk{background:var(--ink);border-color:var(--ink);color:#101018}
+  /* ═══ 관계 카드 [2026-08-30] ═══ 미리보기는 **작게**. 실제 카드는 1080×1350이고
+     여기서는 폭에 맞춰 줄인 것만 보여 준다 — 무엇을 보내는지 알아볼 정도면 된다. */
+  .cardprev{position:relative;width:100%;aspect-ratio:1080/1350;max-height:46vh;
+    margin:4px 0 10px;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    background:rgba(255,255,255,.03);display:flex;align-items:center;justify-content:center}
+  .cardprev canvas{max-width:100%;max-height:100%;display:block;border-radius:9px}
+  .cardwait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--mut);font-size:var(--fs-sm)}
+  .cardnote{color:var(--mut-2);font-size:var(--fs-sm);line-height:1.5;margin:0 0 10px;
+    word-break:keep-all}
+  .cardnote2{color:var(--mut);font-size:var(--fs-sm);line-height:1.5;margin-top:8px;
+    min-height:1.5em;word-break:keep-all}
+  /* 패널 버튼 아래의 같은 안내 — 버튼을 누르기 **전에** 읽혀야 하는 문장이다 */
+  .cardhint{color:var(--mut-2);font-size:var(--fs-sm);line-height:1.5;margin:-4px 0 10px;
+    word-break:keep-all}
   /* ═══ 도시 선택기 — 탭 + 격자 [2026-08-30] ═══
      ~~두 단(왼쪽 권역 / 오른쪽 도시)~~ → **위 탭 줄 + 아래 버튼 격자.**
      [왜 바꿨나] 두 단은 권역 칸이 한 번 고른 뒤에도 가로 112px을 상시 차지했다.
@@ -1660,6 +1675,19 @@
   <button class="primary" id="relbtn">관계 보기</button>
 </div>
 
+<!-- ═══ 관계 카드 [2026-08-30] ═══
+     [2단계인 이유] 버튼을 누르자마자 공유 시트가 뜨면 **무엇을 보내는지 보기 전에**
+     보낼지 말지를 정해야 한다. 이름과 별명이 박힌 이미지라 그건 안 된다(사용자 지시).
+     먼저 작게 보여 주고, 그 화면에서 한 번 더 눌러야 나간다. -->
+<div class="sheet" id="cardsheet">
+  <button type="button" class="sheetclose" aria-label="닫기" title="닫기">✕</button>
+  <h3 id="cardsheet-h">관계 카드</h3>
+  <div class="cardprev" id="card-prev"><div class="cardwait" id="card-wait">카드를 만드는 중…</div></div>
+  <div class="cardnote">카드는 내 기기에서 만들어집니다 — 이름도 생년월일도 어디로도 보내지 않습니다.</div>
+  <button class="primary" id="cardgo">공유하기</button>
+  <div class="cardnote2" id="card-msg"></div>
+</div>
+
 <!-- ═══ 내보내기 · 불러오기 [2026-08-28] ═══
      z-index가 다른 시트(8)보다 높은 13이다 — **첫 화면(12) 위에 떠야** 하기 때문이다.
      기기를 옮긴 사람은 첫 화면에서 곧바로 불러와야 하고, 거기서 온보딩을 다시 시키면
@@ -1814,6 +1842,171 @@ function cityOptionsHtml(){
       +g.list.map(([c])=>`<option value="${c}">${c}</option>`).join('')+`</optgroup>`).join('')
     +`<optgroup label="그 밖"><option value="${CITY_CUSTOM}">${CITY_CUSTOM}</option>`
     +`<option value="${CITY_UNKNOWN}">${CITY_UNKNOWN}</option></optgroup>`;}
+/* ═══════════ 관계 카드 [2026-08-30] ═══════════
+   [무엇] 관계 패널의 내용을 1080×1350 이미지로 그려 저장·공유한다.
+   [★ 전부 기기 안에서] 캔버스로 직접 그린다. 이름·생년월일이 서버로 가는 경로가 **없다** —
+   폰트와 배경 그림만 정적 파일로 받아 온다. 화면에도 그 사실을 적는다.
+   [★ 결정론] 같은 쌍이면 언제나 같은 카드다. 무작위 요소를 쓰지 않고, 별 배치도
+   좌표에서 유도한 정수 해시로 만든다(cardStarHash). 회귀 테스트가 이걸 검증한다.
+   [구조] 계산(cardPlan) 과 그리기(cardPaint)를 나눴다 — 계산은 캔버스 없이도 비교할 수 있는
+   **그리기 명령 목록**을 돌려주므로, 픽셀을 뜨지 않고도 결정론·줄바꿈·딱지 생략을 시험한다.
+   [배경 교체] assets/card-bg.jpg 한 파일만 바꾸면 카드 배경이 바뀐다. 파일이 없으면
+   앱의 우주 톤을 캔버스로 직접 그린다(cardPaintBg) — 그림이 없다고 기능이 멎지 않는다. */
+const CARD_W=1080, CARD_H=1350;
+const CARD_PAD=84;                    /* 안전 여백 — 모든 요소가 이 안에 들어간다 */
+const CARD_BG_SRC='assets/card-bg.jpg';
+const CARD_SITE='shyquisyz.github.io/group-saju';
+const CARD_FONT="'Pretendard',-apple-system,'Apple SD Gothic Neo',sans-serif";
+/* 카드 글자 크기 — 화면 토큰(15/18/22/26)에 카드폭/폰폭 비(1080/390≈2.77)를 곱해 반올림했다.
+   **위계 비율은 그대로 두고 크기만 키운다** — 확정된 폰트 체계를 카드에서 새로 만들지 않는다. */
+const CARD_FS={sm:42, base:50, lg:62, xl:72};
+const CARD_COL={ink:'#eceef2', mut:'#a0a2b2', mut2:'#8a8c9c', gold:'#e8c66a', line:'#2a2c3d'};
+
+let cardMeasure=null;
+function cardMeasureCtx(){
+  if(!cardMeasure){const c=document.createElement('canvas');c.width=c.height=8;
+    cardMeasure=c.getContext('2d');}
+  return cardMeasure;}
+function cardFont(px,w){return (w||400)+' '+px+'px '+CARD_FONT;}
+/** 한 줄이 maxW를 넘으면 쪼갠다. 한국어는 어절 단위로 끊고, 어절 하나가 그보다 길면
+    글자 단위로 끊는다(긴 이름·긴 별명이 여기 걸린다). */
+function cardWrap(text,px,weight,maxW){
+  const ctx=cardMeasureCtx(); ctx.font=cardFont(px,weight);
+  const words=String(text).split(' '); const lines=[]; let cur='';
+  const push=()=>{if(cur)lines.push(cur);cur='';};
+  for(const w of words){
+    const t=cur?cur+' '+w:w;
+    if(ctx.measureText(t).width<=maxW){cur=t;continue;}
+    push();
+    if(ctx.measureText(w).width<=maxW){cur=w;continue;}
+    let acc='';
+    for(const ch of w){
+      if(ctx.measureText(acc+ch).width>maxW&&acc){lines.push(acc);acc=ch;}
+      else acc+=ch;}
+    cur=acc;}
+  push();
+  return lines.length?lines:[''];}
+/** 카드에 들어갈 글을 만든다 — **순수**하다(DOM도 이미지도 안 본다). */
+function cardText(a,b){
+  const gAB=relGod(a,b), gBA=relGod(b,a);
+  const hc=hapChung(a,b);
+  return {title:a.name+' ↔ '+b.name,
+    dir1:a.name+'에게 '+b.name+particle(b.name,'은는')+' 「'+REL_NICK[gAB]+'」',
+    dir2:b.name+'에게 '+a.name+particle(a.name,'은는')+' 「'+REL_NICK[gBA]+'」',
+    chip:hc?hc.tag.replace(/^·\s*/,''):null,   /* 화면 딱지의 앞 '· '는 카드에서 뺀다 */
+    takeH:NICK_TAKE_H, take:REL_TAKE[gAB]};}
+/** 그리기 명령 목록. scale은 내용이 넘칠 때만 1보다 작아진다(아래 cardPlan 참고). */
+function cardPlanAt(t,scale){
+  const S=v=>Math.round(v*scale);
+  const maxW=CARD_W-CARD_PAD*2;
+  const ops=[]; let y=CARD_PAD+S(24);
+  const line=(text,px,weight,fill,lh)=>{
+    cardWrap(text,px,weight,maxW).forEach(ln=>{
+      ops.push({op:'text',x:CARD_PAD,y:y+px,text:ln,px,weight,fill});
+      y+=Math.round(px*(lh||1.32));});};
+  line(t.title,S(CARD_FS.xl),700,CARD_COL.ink,1.24);
+  y+=S(26);
+  ops.push({op:'rect',x:CARD_PAD,y:y,w:S(96),h:S(5),fill:CARD_COL.gold}); y+=S(5)+S(40);
+  line(t.dir1,S(CARD_FS.lg),700,CARD_COL.gold,1.38); y+=S(22);
+  line(t.dir2,S(CARD_FS.lg),700,CARD_COL.gold,1.38); y+=S(30);
+  if(t.chip){
+    const px=S(CARD_FS.sm), padX=S(26), h=Math.round(px*1.9);
+    const ctx=cardMeasureCtx(); ctx.font=cardFont(px,600);
+    const w=Math.round(ctx.measureText(t.chip).width)+padX*2;
+    ops.push({op:'pill',x:CARD_PAD,y:y,w,h,r:Math.round(h/2),
+      fill:'rgba(232,198,106,.14)',stroke:CARD_COL.gold,
+      text:t.chip,px,weight:600,textFill:CARD_COL.gold});
+    y+=h+S(34);}
+  line(t.takeH,S(CARD_FS.sm),700,CARD_COL.gold,1.5); y+=S(6);
+  line(t.take,S(CARD_FS.base),400,CARD_COL.ink,1.52);
+  const contentBottom=y;
+  /* 바닥 서명은 항상 카드 아래쪽에 붙는다 — 내용 길이와 무관하게 자리가 같아야 한다 */
+  const fpx=S(CARD_FS.lg), spx=S(CARD_FS.sm);
+  const footY=CARD_H-CARD_PAD-spx-Math.round(fpx*0.42);
+  ops.push({op:'text',x:CARD_PAD,y:footY,text:'사주은하',px:fpx,weight:700,fill:CARD_COL.gold});
+  ops.push({op:'text',x:CARD_PAD,y:footY+Math.round(spx*1.5),text:CARD_SITE,
+    px:spx,weight:400,fill:CARD_COL.mut2});
+  return {ops,contentBottom,footTop:footY-Math.round(fpx*0.9),scale};}
+/** 카드 한 장의 그리기 명령. 내용이 서명 자리를 침범하면 **한 번만** 줄여 다시 만든다.
+    줄이는 비율은 넘친 만큼에서 바로 계산하므로 무작위도, 반복도 없다(결정론). */
+function cardPlan(a,b){
+  const t=cardText(a,b);
+  let plan=cardPlanAt(t,1);
+  const avail=plan.footTop-(CARD_PAD+24);
+  const need=plan.contentBottom-(CARD_PAD+24);
+  if(need>avail&&need>0){
+    const k=Math.max(0.68,Math.floor(avail/need*1000)/1000);
+    plan=cardPlanAt(t,k);}
+  plan.text=t;
+  return plan;}
+/** 좌표에서 유도한 0~1 값 — Math.random을 쓰지 않으려고 둔 정수 해시다(결정론) */
+function cardStarHash(i){
+  let x=(i*2654435761)%4294967296; x^=x>>>13; x=(x*1274126177)%4294967296;
+  return ((x>>>0)%100000)/100000;}
+/** 배경 그림이 없을 때의 배경 — 앱의 우주 톤을 직접 그린다 */
+function cardPaintBg(ctx){
+  ctx.fillStyle='#07070e';ctx.fillRect(0,0,CARD_W,CARD_H);
+  const g=ctx.createRadialGradient(CARD_W*0.72,CARD_H*0.20,0,CARD_W*0.72,CARD_H*0.20,CARD_W*0.95);
+  g.addColorStop(0,'rgba(60,120,190,.34)');g.addColorStop(.42,'rgba(30,40,90,.20)');
+  g.addColorStop(1,'rgba(7,7,14,0)');
+  ctx.fillStyle=g;ctx.fillRect(0,0,CARD_W,CARD_H);
+  const g2=ctx.createRadialGradient(CARD_W*0.16,CARD_H*0.86,0,CARD_W*0.16,CARD_H*0.86,CARD_W*0.7);
+  g2.addColorStop(0,'rgba(150,90,180,.20)');g2.addColorStop(1,'rgba(7,7,14,0)');
+  ctx.fillStyle=g2;ctx.fillRect(0,0,CARD_W,CARD_H);
+  for(let i=0;i<260;i++){
+    const x=cardStarHash(i*3+1)*CARD_W, y=cardStarHash(i*3+2)*CARD_H;
+    const r=0.6+cardStarHash(i*3+3)*1.9;
+    ctx.globalAlpha=0.25+cardStarHash(i*7+5)*0.6;
+    ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+  ctx.globalAlpha=1;}
+/** 명령 목록을 실제로 그린다. img가 있으면 배경 그림, 없으면 cardPaintBg. */
+function cardPaint(ctx,plan,img){
+  ctx.clearRect(0,0,CARD_W,CARD_H);
+  if(img){
+    /* cover — 비율이 달라도 잘리기만 하고 늘어나지 않는다 */
+    const s=Math.max(CARD_W/img.width,CARD_H/img.height);
+    const w=img.width*s,h=img.height*s;
+    ctx.drawImage(img,(CARD_W-w)/2,(CARD_H-h)/2,w,h);
+  }else cardPaintBg(ctx);
+  /* 글자 깔개 — 배경이 어떤 그림이든 글이 읽히게. 위아래로 자연스럽게 사라진다 */
+  const v=ctx.createLinearGradient(0,0,0,CARD_H);
+  v.addColorStop(0,'rgba(7,7,14,.30)');v.addColorStop(.18,'rgba(7,7,14,.72)');
+  v.addColorStop(.86,'rgba(7,7,14,.76)');v.addColorStop(1,'rgba(7,7,14,.40)');
+  ctx.fillStyle=v;ctx.fillRect(0,0,CARD_W,CARD_H);
+  ctx.textBaseline='alphabetic';ctx.textAlign='left';
+  plan.ops.forEach(o=>{
+    if(o.op==='text'){ctx.font=cardFont(o.px,o.weight);ctx.fillStyle=o.fill;
+      ctx.fillText(o.text,o.x,o.y);return;}
+    if(o.op==='rect'){ctx.fillStyle=o.fill;ctx.fillRect(o.x,o.y,o.w,o.h);return;}
+    if(o.op==='pill'){
+      const {x,y,w,h,r}=o;
+      ctx.beginPath();
+      ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+      ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+      ctx.fillStyle=o.fill;ctx.fill();
+      ctx.lineWidth=Math.max(2,Math.round(o.px*0.06));ctx.strokeStyle=o.stroke;ctx.stroke();
+      ctx.font=cardFont(o.px,o.weight);ctx.fillStyle=o.textFill;
+      ctx.fillText(o.text,x+Math.round((w-ctx.measureText(o.text).width)/2),
+        y+Math.round(h/2+o.px*0.36));}});}
+let cardBgImg=null, cardBgTried=false;
+/** 배경 그림을 한 번만 받아 둔다. 없으면 null로 남고 카드는 그려진 배경을 쓴다. */
+function cardBg(){
+  if(cardBgTried)return Promise.resolve(cardBgImg);
+  cardBgTried=true;
+  return new Promise(res=>{
+    const im=new Image();
+    im.onload=()=>{cardBgImg=im;res(im);};
+    im.onerror=()=>{cardBgImg=null;res(null);};
+    im.src=CARD_BG_SRC;});}
+/** 카드 한 장을 캔버스에 그려 돌려준다. 폰트가 뜨기 전에 그리면 대체 글꼴로 그려지므로
+    document.fonts.ready를 기다린다 — 여기서 안 기다리면 첫 장만 모양이 다르다. */
+async function renderCard(a,b){
+  const cv=document.createElement('canvas');cv.width=CARD_W;cv.height=CARD_H;
+  const ctx=cv.getContext('2d');
+  try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;}catch(e){}
+  const img=await cardBg();
+  cardPaint(ctx,cardPlan(a,b),img);
+  return cv;}
 /* ═══════ 도시 선택기 — 탭 + 격자 [2026-08-30] ═══════
    [문제] ~~두 단(왼쪽 권역 · 오른쪽 도시)~~은 권역 칸이 한 번 고른 뒤에도 가로를 상시
    차지해 320px에서 도시 쪽에 106px밖에 안 남았다. 위쪽 탭 한 줄로 올리고 아래를 격자로 쓴다.
@@ -8201,6 +8394,39 @@ function sajuSelfTest(){
      /수·목 기운이 힘이 됩니다/.test(txt(w))&&/화·토·금 기운이 힘이 됩니다/.test(txt(st)),
      '신약→'+(txt(w).match(/편이라 ([^ ]+) 기운/)||[])[1]+' / 신강→'+(txt(st).match(/편이라 ([^ ]+) 기운/)||[])[1]);
   }
+  /* 25. 관계 카드 [2026-08-30] — 캔버스를 뜨지 않고 **그리기 명령 목록**으로 검증한다 */
+  {
+    const P=(x,y)=>JSON.stringify(cardPlan(x,y).ops);
+    /* ① 결정론 — 같은 쌍이면 5회 모두 같은 명령 목록 */
+    const five=[P(me,other),P(me,other),P(me,other),P(me,other),P(me,other)];
+    T('cardDeterministic: 같은 쌍 5회 동일', five.every(x=>x===five[0]),
+      '길이 '+five[0].length);
+    /* ② 딱지 없는 쌍이면 그 줄 자체가 없다 — pill 명령이 하나도 없어야 한다 */
+    const withHc=nodes.find(x=>x!==me&&hapChung(me,x));
+    const noHc=nodes.find(x=>x!==me&&!hapChung(me,x));
+    const hasPill=p=>cardPlan(me,p).ops.some(o=>o.op==='pill');
+    T('cardChipOmit: 딱지 없으면 줄 생략',
+      (!noHc||!hasPill(noHc))&&(!withHc||hasPill(withHc)),
+      '딱지 있는 쌍 '+(withHc?withHc.name:'없음')+' / 없는 쌍 '+(noHc?noHc.name:'없음'));
+    /* ③ 긴 이름 줄바꿈 — 합성 인물로 시험한다(데모에 긴 이름이 없다).
+          한 줄도 안전 여백(폭 1080 - 84*2 = 912)을 넘지 않아야 한다. */
+    const longName='가나다라마바사아자차카타파하가나다라마바사';
+    const fake={...other, name:longName};
+    const lp=cardPlan(me,fake);
+    const ctx=cardMeasureCtx();
+    const over=lp.ops.filter(o=>o.op==='text').filter(o=>{
+      ctx.font=cardFont(o.px,o.weight);
+      return o.x+ctx.measureText(o.text).width>CARD_W-CARD_PAD+1;});
+    T('cardWrapLong: 긴 이름도 안전 여백 안', over.length===0,
+      over.length?over[0].text:'넘친 줄 0');
+    /* ④ 모든 요소가 카드 안 — 위·아래·왼쪽까지 */
+    const outside=lp.ops.filter(o=>o.x<CARD_PAD-1||o.y<0||o.y>CARD_H);
+    T('cardInside: 모든 요소가 카드 안', outside.length===0, String(outside.length));
+    /* ⑤ 서명 두 줄은 항상 있다 */
+    const txts=cardPlan(me,other).ops.filter(o=>o.op==='text').map(o=>o.text);
+    T('cardFooter: 서명과 주소가 있다',
+      txts.indexOf('사주은하')>=0&&txts.indexOf(CARD_SITE)>=0, txts.slice(-2).join(' / '));
+  }
   /* 24. 패널 폭 — 화면을 못 재는 상태에서 저장값이 깎이면 안 된다 [2026-08-30] */
   T('panelWBg: innerWidth 0이면 저장 폭을 그대로 둔다',
     clampPanelW(720,0)===720&&clampPanelW(720,-1)===720&&clampPanelW(380,0)===380,
@@ -8585,10 +8811,17 @@ function showEdge(e){
     +(r?`<div class="pairsub">${r.title}</div>${r.body.map(p=>`<p>${p}</p>`).join('')}`
         +`<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')
     +relHtml;
+  /* [2026-08-30] 카드로 저장 — 관계 패널에서만 나온다. 두 사람이 정해져 있어야
+     카드를 만들 수 있기 때문이다. 안내 문구를 **버튼 아래**에 둔다: 누르기 전에 읽혀야 한다. */
+  pbody.insertAdjacentHTML('beforeend',
+    `<div class="panelbtns"><button class="pbtn" id="cardbtn">카드로 저장</button></div>`
+   +`<div class="cardhint">카드는 내 기기에서 만들어집니다 — 이름도 생년월일도 어디로도 보내지 않습니다.</div>`);
   /* [2026-08-31] 관계 패널에는 뒤로가 **아예 없었다** — 여기 들어오면 트리나 태그바를
      쓰지 않고는 나갈 수 없었다(실측). 이력이 비면 두 사람 중 앞사람으로 보낸다. */
   navPrependBack(e.a.name,()=>showNode(e.a));
   wireHapChung(pbody); /* [L4] 합·충 딱지 → 근거 */
+  const cb=document.getElementById('cardbtn');
+  if(cb)cb.onclick=()=>openCardSheet(e.a,e.b);
   panel.classList.add('open');}
 
 /** 두 사람 관계의 세 문단. 소제목 형식은 개인 해석과 같다 */
@@ -8736,6 +8969,73 @@ applyPanelW();
    두 시트를 한 창에 합치라는 지시. 내부 마크업·id는 그대로라 기존 핸들러가 전부 살아 있고,
    바뀐 것은 **껍데기와 여닫기 경로**뿐이다. */
 const createsheet=document.getElementById('createsheet'),relsheet=document.getElementById('relsheet'),dim=document.getElementById('dim');
+/* ═══════ 카드 저장·공유 [2026-08-30] ═══════
+   [2단계] 버튼 → 미리보기 시트 → "공유하기". 무엇을 보내는지 보기 전에 공유 시트가
+   뜨지 않는다(사용자 지시). 두 번째 누름에서만 바깥으로 나간다.
+   [경로] navigator.share가 **파일을 받을 수 있으면** 공유 시트, 아니면 이미지 다운로드.
+   canShare({files})까지 확인한다 — share는 있는데 파일은 못 받는 브라우저가 있다.
+   [취소] 사용자가 공유 시트를 닫으면 AbortError가 온다. 실패가 아니므로 조용히 돌아간다. */
+let cardPair=null, cardCanvas=null, cardBusy=false;
+function cardMsg(t){const el=document.getElementById('card-msg');if(el)el.textContent=t||'';}
+function openCardSheet(a,b){
+  cardPair={a,b};cardCanvas=null;
+  const sheet=document.getElementById('cardsheet');
+  const host=document.getElementById('card-prev');
+  const wait=document.getElementById('card-wait');
+  document.getElementById('cardsheet-h').textContent=a.name+' ↔ '+b.name+' 카드';
+  [...host.querySelectorAll('canvas')].forEach(c=>c.remove());
+  cardMsg('');
+  /* [1초 규칙] 바로 끝나면 "만드는 중"이 깜빡이기만 해서 오히려 산만하다.
+     1초를 넘길 때만 보인다(사용자 지시). */
+  wait.style.display='none';
+  const slow=setTimeout(()=>{wait.style.display='flex';},1000);
+  const go=document.getElementById('cardgo');
+  go.disabled=true;go.textContent='카드를 만드는 중…';
+  closeSheets();sheet.classList.add('open');dim.classList.add('on');
+  renderCard(a,b).then(cv=>{
+    clearTimeout(slow);wait.style.display='none';
+    cardCanvas=cv;host.appendChild(cv);
+    go.disabled=false;
+    go.textContent=cardCanShare()?'공유하기':'이미지 저장';
+  }).catch(err=>{
+    clearTimeout(slow);wait.style.display='none';
+    go.disabled=false;go.textContent='다시 시도';
+    cardMsg('카드를 만들지 못했습니다. 다시 눌러 주세요.');
+    console.error('[card]',err);});}
+/** 이 브라우저가 **파일을 담은** 공유를 받는가 */
+function cardCanShare(){
+  try{
+    if(!navigator.share||!navigator.canShare)return false;
+    const f=new File([new Blob([''],{type:'image/png'})],'t.png',{type:'image/png'});
+    return !!navigator.canShare({files:[f]});
+  }catch(e){return false;}}
+function cardFileName(a,b){
+  /* 파일 이름은 기기 안에만 남는다. 파일 시스템이 싫어하는 글자만 걷어낸다. */
+  const safe=t=>String(t).replace(/[\\/:*?"<>|]/g,'').trim()||'사람';
+  return '사주은하-'+safe(a.name)+'-'+safe(b.name)+'.png';}
+async function cardShareOrSave(){
+  if(!cardCanvas||!cardPair||cardBusy)return;
+  cardBusy=true;cardMsg('');
+  const go=document.getElementById('cardgo');const label=go.textContent;
+  go.disabled=true;
+  try{
+    const blob=await new Promise(res=>cardCanvas.toBlob(res,'image/png'));
+    if(!blob)throw new Error('toBlob null');
+    const name=cardFileName(cardPair.a,cardPair.b);
+    if(cardCanShare()){
+      const file=new File([blob],name,{type:'image/png'});
+      try{await navigator.share({files:[file],title:'사주은하'});cardMsg('공유했습니다.');}
+      catch(e){
+        if(e&&e.name==='AbortError'){cardMsg('');}
+        else{cardDownload(blob,name);cardMsg('공유가 안 되어 이미지로 저장했습니다.');}}
+    }else{cardDownload(blob,name);cardMsg('이미지로 저장했습니다.');}
+  }catch(err){cardMsg('저장하지 못했습니다.');console.error('[card]',err);}
+  go.disabled=false;go.textContent=label;cardBusy=false;}
+function cardDownload(blob,name){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);}
 function closeSheets(){createsheet.classList.remove('open');relsheet.classList.remove('open');
   /* [2026-08-28] 백업 시트도 같은 통로로 닫는다 — #dim 클릭·다른 시트 열기가 전부 여기를 지난다.
      빼먹으면 첫 화면 위에 뜬 시트가 닫히지 않고 남는다. */
@@ -8743,6 +9043,8 @@ function closeSheets(){createsheet.classList.remove('open');relsheet.classList.r
   if(bs)bs.classList.remove('open');
   const ss=document.getElementById('settingsheet');
   if(ss)ss.classList.remove('open');
+  const cs=document.getElementById('cardsheet');
+  if(cs)cs.classList.remove('open');   /* [2026-08-30] 카드 시트도 같은 통로로 닫는다 */
   dim.classList.remove('on');
   /* [2026-08-28] 창을 닫으면 세 탭 모두 "준비 안 됨"으로 되돌린다 — 다시 열 때 지난 입력이
      남아 있으면 "왜 옛날 표가 나오지?"가 된다. 입력 유지는 **창을 연 동안**의 약속이다. */
@@ -8791,6 +9093,8 @@ document.querySelectorAll('#createtabs .tab').forEach(b=>b.onclick=()=>{
      조용히 멤버가 되면 안 된다(아래 gsWantMember 주석 참고) */
   gsWantMember=false;
   setCreateTab(b.dataset.tab,false);});
+/* [2026-08-30] 카드 시트의 확정 버튼 — 여기서만 바깥으로 나간다 */
+(function(){const g=document.getElementById('cardgo');if(g)g.onclick=cardShareOrSave;})();
 dim.onclick=closeSheets;
 /* [2026-08-31] 시트 넷의 ✕. 배경 탭(dim)은 그대로 두고 **보이는 손잡이**를 더한 것이다. */
 document.querySelectorAll('.sheetclose').forEach(b=>b.onclick=closeSheets);
