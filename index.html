@@ -2,7 +2,14 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<!-- [2026-08-31 모바일 실측] ~~user-scalable=no~~ 제거.
+     [왜] 사용자가 화면을 키울 수 없게 막는 것은 어르신 기준에서 그대로 접근성 차단이다 —
+     이 프로젝트가 폰트를 15px 하한으로 올린 것과 같은 이유로 이것도 풀어야 한다.
+     [안전한 이유] 3D 캔버스(#scene)에 `touch-action:none`이 걸려 있어 **캔버스 위의
+     핀치·더블탭은 브라우저가 아니라 앱이 먹는다.** 확대가 열리는 곳은 패널·시트의 글이고,
+     거기서는 확대가 오히려 필요하다. (iOS Safari는 원래 user-scalable=no를 무시한다 —
+     막고 있다고 믿었던 것도 절반은 사실이 아니었다.) -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- ═══ 공유 미리보기 [2026-08-31] ═══ 카톡·문자로 링크를 보낼 때 뜨는 카드.
      [★ 이미지는 파일 하나만 갈아 끼우면 되게 뒀다] og-image.jpg 한 장만 교체하면 되고
      HTML은 손대지 않아도 된다 — 지금 것은 배포된 은하 화면을 그대로 갈무리한 것이라
@@ -160,7 +167,10 @@
     font-size:var(--fs-sm);line-height:1.55;color:#c3c5d1}
   .tip b{font-family:'Space Mono',monospace;font-size:var(--fs-sm);letter-spacing:.1em;color:var(--mut);display:block;margin-bottom:3px}
   .rel-list{margin-top:12px;display:flex;flex-direction:column;gap:6px}
-  .rel-item{display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);padding:9px 11px;
+  /* [2026-08-31] 실측 36px → 세로 여백을 키워 44px을 채운다.
+     목록 줄은 눌러서 관계 패널로 가는 손잡이라 ::before가 아니라 실제 높이를 키운다 —
+     줄이 촘촘하면 옆줄을 잘못 누른다(어르신 기준). */
+  .rel-item{display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);padding:13px 11px;
     background:rgba(255,255,255,.05);border-radius:3px;cursor:pointer}
   .rel-item .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;box-shadow:0 0 8px currentColor}
     /* 관계 목록의 십신 이름 — 이름 옆 부가가 아니라 **관계 그 자체**라 읽어야 한다 */
@@ -352,7 +362,8 @@
     background:rgba(255,255,255,.07)}
   /* 시각 3모드 — 정확히 / 대략 / 몰라요 */
   .tmode{display:flex;gap:6px;margin-bottom:9px}
-  .tmode button{flex:1;padding:9px 4px;border-radius:6px;border:1px solid var(--line);
+  /* [2026-08-31] 실측 38px — 시각을 아는지 모르는지 고르는 자리라 놓치면 안 된다 */
+  .tmode button{flex:1;min-height:44px;padding:9px 4px;border-radius:6px;border:1px solid var(--line);
     background:rgba(255,255,255,.05);color:var(--mut);font-size:var(--fs-sm);
     cursor:pointer;font-family:inherit}
   .tmode button.on{background:var(--ink);color:#101018;border-color:var(--ink);font-weight:700}
@@ -617,6 +628,10 @@
   .obalt{margin:-8px 0 18px;padding:9px 11px;border-radius:7px;
     border:1px dashed var(--line);background:rgba(255,255,255,.025);
     font-size:var(--fs-sm);color:var(--mut)}
+  /* [2026-08-31] "내보낸 파일 불러오기" 실측 22px → 누르는 판 44px */
+  .obalt button{position:relative}
+  .obalt button::before{content:'';position:absolute;left:-6px;right:-6px;top:50%;
+    transform:translateY(-50%);height:44px}
   .obalt button{background:none;border:0;padding:2px;color:var(--gold);cursor:pointer;
     font-size:var(--fs-sm);font-family:inherit;text-decoration:underline;text-underline-offset:3px}
 
@@ -644,6 +659,10 @@
     color:var(--mut);margin-left:auto;flex-shrink:0}
 
   /* [2026-08-28] 인물 패널 뒤로 가기. 카드 맨 위, 태그 줄보다 앞이다 */
+  /* [2026-08-31] 실측 30px → 누르는 판 44px */
+  .pback{position:relative}
+  .pback::before{content:'';position:absolute;left:0;right:0;top:50%;
+    transform:translateY(-50%);height:44px}
   .pback{display:inline-flex;align-items:center;margin:0 0 10px;padding:5px 10px 5px 8px;
     border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04);
     color:var(--mut);font-family:inherit;font-size:var(--fs-sm);font-weight:600;cursor:pointer;
@@ -994,6 +1013,10 @@
   /* ── v0.7: 패널 X 버튼 + 데스크톱 좌측 패널 + 그룹 트리 ── */
   /* ═══ 스크롤 막대 [2026-08-30] ═══ 기본 스크롤바가 우주 배경 위에서 밝은 회색 띠로 떠서
      UI가 하나 더 있는 것처럼 보였다. 얇고 어둡게, 손을 올렸을 때만 살짝 드러나게 한다. */
+  /* [2026-08-31 모바일 실측] overscroll-behavior가 auto라 **패널·시트를 끝까지 스크롤하면
+     그 힘이 페이지로 넘어간다** — 모바일 크롬에서 당겨서 새로고침이 걸리거나 배경이 튄다.
+     contain으로 막으면 스크롤이 그 상자 안에서 끝난다. */
+  #panel,.sheet,.obcard{overscroll-behavior:contain}
   #panel,.sheet,.obcard{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}
   #panel::-webkit-scrollbar,.sheet::-webkit-scrollbar,.obcard::-webkit-scrollbar{width:8px}
   #panel::-webkit-scrollbar-track,.sheet::-webkit-scrollbar-track,.obcard::-webkit-scrollbar-track{
@@ -1003,11 +1026,20 @@
     border:2px solid transparent;background-clip:content-box}
   #panel:hover::-webkit-scrollbar-thumb,.sheet:hover::-webkit-scrollbar-thumb,
   .obcard:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,.26);background-clip:content-box}
+  /* [2026-08-31] 실측 22px — 모바일에서 패널을 닫는 주 손잡이인데 기준 미달이었다.
+     보이는 크기는 그대로 두고 **누르는 판만** ::before로 44px을 채운다(딱지·케미 쌍과 같은 방식). */
+  #panelclose::before{content:'';position:absolute;left:50%;top:50%;
+    transform:translate(-50%,-50%);width:44px;height:44px}
   #panelclose{position:sticky;top:0;float:right;width:30px;height:30px;margin:-4px -6px 0 8px;
     border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.05);
     color:var(--mut);font-size:var(--fs-sm);cursor:pointer;z-index:3;font-family:inherit}
   #panelclose:active{opacity:.7}
   #panelresize{display:none}
+  /* [★ 2026-08-31 모바일 실측] 닫기 반원(#paneldock)이 **모바일에서 항상 떠 있었다** —
+     화면 왼쪽 중앙에 26×76 조각이 패널을 닫든 열든 보인다(390/360/320 세 폭 모두 확인).
+     원인: `#paneldock`의 display:none이 데스크톱 미디어 쿼리 안에만 있었다.
+     모바일 패널은 바텀시트라 여닫기를 드래그 핸들과 ✕가 맡는다 — 반원은 데스크톱 것이다. */
+  #paneldock{display:none}
   /* ═══ 여닫는 반원 [2026-08-30] ═══
      ~~좌하단 알약 버튼~~ → **화면 왼쪽 중앙에 붙은 반원.** 좌하단에서는 패널 안 "설정"과
      자리를 다퉜고(겹침 버그의 뿌리), 세로 중앙은 아무것도 없는 자리라 부딪힐 것이 없다.
@@ -1133,6 +1165,10 @@
   #tagbar .tb-galaxy::after{content:'';width:1px;height:1.05em;background:rgba(255,255,255,.18)}
   #tagbar .tb-group{font-weight:700;cursor:pointer;color:var(--ink)}
   #tagbar .tb-group.on{color:var(--gold)}
+  /* [2026-08-31] 태그바 이름 칩 실측 22px → 누르는 판 44px */
+  #tagbar .tb-name,#tagbar .tb-group{position:relative}
+  #tagbar .tb-name::before,#tagbar .tb-group::before{content:'';position:absolute;
+    left:-4px;right:-4px;top:50%;transform:translateY(-50%);height:44px}
   #tagbar .tb-name{font-weight:400;cursor:pointer;color:#c3c5d1}
   /* 깊이가 깊어지면 글자 무게·밝기도 같이 한 단계씩 내린다 — 배경만으로는 d2에서 신호가 끊긴다 */
   #tagbar .cap-d1>.tb-group,#tagbar .cap-d2>.tb-group{font-weight:600}
