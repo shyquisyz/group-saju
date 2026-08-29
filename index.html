@@ -1051,17 +1051,40 @@
      [터치] 탭·격자 칸 모두 44px. */
   .city-native{display:none}
   .citysel{display:block}
-  .citytabs{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;
+  /* [2026-08-30] 탭 줄을 화살표 둘이 감싼다. 스크롤러의 clientWidth가 화살표만큼
+     줄어들므로 fitCityTabs의 걸침 계산도 자동으로 그 폭을 쓴다. */
+  .citytabrow{display:flex;align-items:stretch;gap:2px;margin-bottom:8px}
+  .citytabs{display:flex;gap:6px;overflow-x:auto;overflow-y:hidden;flex:1 1 auto;min-width:0;
     overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
-    scrollbar-width:none;margin-bottom:8px}
+    scrollbar-width:none}
   .citytabs::-webkit-scrollbar{display:none}
-  .citytabs.more{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent);
+  /* [★ 이름 충돌] 처음엔 이 클래스를 `.more`로 뒀는데, 앱에 이미 **접이식 블록**의 `.more`가
+     있었다(border 1px + margin-bottom 14px). 그 규칙이 탭 스크롤러에 그대로 얹혀
+     탭 줄 높이가 44 → 60px으로 불었다(실측: row 60 = tabs 46 + 바깥 여백 14).
+     화면상 이유가 없는 16px이라 눈으로는 원인을 못 찾는다 — 그 요소에 걸린 규칙 목록을
+     떠서 찾았다. 한 파일에 CSS가 다 있는 구조라 짧은 클래스 이름은 이렇게 부딪힌다.
+     접두어를 붙인다. */
+  .citytabs.cts-more{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent);
     mask-image:linear-gradient(to right,#000 calc(100% - 22px),transparent)}
-  .citytab{flex:0 0 auto;min-height:44px;padding:8px 12px;border:1px solid var(--line);
-    border-radius:999px;background:rgba(255,255,255,.04);color:var(--mut-2);
+  /* ~~테두리 + 옅은 배경~~ → **납작한 글자 버튼.** 선택은 배경·글자색·굵기로만 구분한다.
+     테두리 여덟 줄이 우주 배경 위에서 격자처럼 보여 탭보다 테두리가 먼저 읽혔다(사용자 지시). */
+  .citytab{flex:0 0 auto;min-height:44px;padding:8px 12px;border:0;
+    border-radius:999px;background:transparent;color:var(--mut-2);
     font-family:inherit;font-size:var(--fs-sm);white-space:nowrap;cursor:pointer}
-  .citytab.on{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.28);
-    color:var(--ink);font-weight:700}
+  .citytab.on{background:rgba(255,255,255,.14);color:var(--ink);font-weight:700}
+  /* ═══ 좌우 화살표 [2026-08-30] ═══
+     [왜] 손가락은 밀면 되지만 마우스는 밀 데가 없다. 스크롤 막대도 감춰 뒀다.
+     [어디에 보이나] `hover:hover and pointer:fine` — **마우스가 있는 환경에서만.**
+     터치에서는 밀기가 이미 되므로 감춰서 그 폭(2×34px)을 탭에 돌려준다.
+     구분이 지저분해지지 않는다 — 미디어 쿼리 한 줄이고, 화살표가 없어도 스크롤은 그대로다.
+     [끝] 양 끝에 닿으면 그쪽만 흐려지고 눌리지 않는다(disabled). */
+  .citytabarr{display:none;flex:0 0 34px;width:34px;min-height:44px;padding:0;border:0;
+    border-radius:8px;background:transparent;color:var(--mut);
+    font-family:inherit;font-size:var(--fs-lg);line-height:1;cursor:pointer}
+  .citytabarr:hover:not(:disabled){background:rgba(255,255,255,.07);color:var(--ink)}
+  .citytabarr:disabled{opacity:.28;cursor:default}
+  @media (hover:hover) and (pointer:fine){
+    .citytabrow.scrollable .citytabarr{display:block}}
   .citygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;
     height:168px;overflow-y:auto;overscroll-behavior:contain;
     border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.03);
@@ -2022,20 +2045,21 @@ function cityPanes(){
     .concat([{label:'그 밖',list:[CITY_CUSTOM,CITY_UNKNOWN]}]);}
 /** 탭 줄의 오른쪽 끝에 **탭 하나가 일부만 걸치도록** 왼쪽 여백을 미세하게 민다.
     [왜 필요한가] 경계가 화면 끝에 딱 맞아떨어지면 뒤에 더 있다는 신호가 사라진다.
-    [어떻게] padding-left를 0..14px 훑으며 끝에 걸친 탭의 보이는 폭(peek)이
+    [어떻게] padding-left를 0..24px 훑으며 끝에 걸친 탭의 보이는 폭(peek)이
     12px 이상, (그 탭 폭 - 10)px 이하가 되는 첫 값을 쓴다 — 너무 조금 보이면 얼룩처럼
     보이고, 거의 다 보이면 딱 떨어진 것과 구별이 안 된다.
-    [한계] 그 범위를 못 찾으면 0으로 되돌리고 페이드(.more)에 맡긴다 — 여백을 더 밀면
+    [한계] 그 범위를 못 찾으면 0으로 되돌리고 페이드(.cts-more)에 맡긴다 — 여백을 더 밀면
     탭 줄이 왼쪽에서 어긋나 보인다. 못 찾았는지는 반환값의 fallback으로 확인한다. */
 function fitCityTabs(tabs){
   tabs.style.paddingLeft='0px';
   const W=tabs.clientWidth, kids=[...tabs.children];
   if(!kids.length)return {scroll:false,pad:0,peek:0};
   const last=kids[kids.length-1];
-  tabs.classList.toggle('more',last.offsetLeft+last.offsetWidth>W+1);
+  /* .cts-more(오른쪽 페이드)는 스크롤 위치에 따라 켜고 꺼야 해서 edge()가 맡는다 — 여기서는
+     걸침 계산만 한다. 둘 다 토글하면 스크롤 끝에서 페이드가 되살아난다. */
   if(last.offsetLeft+last.offsetWidth<=W+1)return {scroll:false,pad:0,peek:0};
   let best=null;
-  for(let pad=0;pad<=14;pad++){
+  for(let pad=0;pad<=24;pad++){
     tabs.style.paddingLeft=pad+'px';
     const b=kids.find(x=>x.offsetLeft+x.offsetWidth>W);
     if(!b)break;
@@ -2055,9 +2079,16 @@ function buildCityPicker(sel){
   if(sel._picker){sel._picker.refresh();return sel._picker;}
   sel.classList.add('city-native');
   const wrap=document.createElement('div');wrap.className='citysel';
+  /* [2026-08-30] 탭 줄 = 화살표 ‹ + 스크롤러 + 화살표 › */
+  const row=document.createElement('div');row.className='citytabrow';
+  const arrL=document.createElement('button');arrL.type='button';
+  arrL.className='citytabarr';arrL.textContent='‹';arrL.setAttribute('aria-label','권역 왼쪽으로');
+  const arrR=document.createElement('button');arrR.type='button';
+  arrR.className='citytabarr';arrR.textContent='›';arrR.setAttribute('aria-label','권역 오른쪽으로');
   const tabs=document.createElement('div');tabs.className='citytabs';
+  row.appendChild(arrL);row.appendChild(tabs);row.appendChild(arrR);
   const grid=document.createElement('div');grid.className='citygrid';
-  wrap.appendChild(tabs);wrap.appendChild(grid);
+  wrap.appendChild(row);wrap.appendChild(grid);
   sel.parentNode.insertBefore(wrap,sel.nextSibling);
   const panes=cityPanes();
   let cur=0;
@@ -2076,6 +2107,30 @@ function buildCityPicker(sel){
     b.onclick=()=>{cur=i;[...tabs.children].forEach((x,j)=>x.classList.toggle('on',j===i));
       paintCities();grid.scrollTop=0;};
     tabs.appendChild(b);});
+  /** 끝에 닿았는지에 따라 화살표를 흐리고, 오른쪽 페이드를 켜고 끈다.
+      [페이드] 오른쪽 끝까지 갔으면 뒤에 아무것도 없으므로 페이드를 끈다 —
+      끝인데도 흐려져 있으면 "아직 더 있나?"로 읽힌다. */
+  const edge=()=>{
+    const max=tabs.scrollWidth-tabs.clientWidth;
+    const on=max>1;
+    row.classList.toggle('scrollable',on);          /* 다 보이면 화살표 자체를 감춘다 */
+    arrL.disabled=!on||tabs.scrollLeft<=1;
+    arrR.disabled=!on||tabs.scrollLeft>=max-1;
+    tabs.classList.toggle('cts-more',on&&tabs.scrollLeft<max-1);};
+  const nudge=dir=>{
+    /* 한 번에 보이는 폭의 절반씩 — 한 화면을 통째로 넘기면 어디까지 봤는지 놓친다 */
+    const step=Math.max(60,Math.round(tabs.clientWidth/2));
+    tabs.scrollTo({left:tabs.scrollLeft+dir*step,behavior:'smooth'});};
+  arrL.onclick=()=>nudge(-1); arrR.onclick=()=>nudge(1);
+  tabs.addEventListener('scroll',edge,{passive:true});
+  /* 탭 줄 위의 휠은 **가로**로 — 마우스만 있는 사람이 화살표 없이도 움직일 수 있는 보조 경로.
+     세로 델타를 가로로 옮기고 기본 동작을 막는다(안 막으면 시트가 같이 스크롤된다).
+     스크롤할 게 없으면 막지 않는다 — 그러면 시트가 정상적으로 스크롤된다. */
+  tabs.addEventListener('wheel',e=>{
+    if(tabs.scrollWidth<=tabs.clientWidth+1)return;
+    const d=Math.abs(e.deltaY)>Math.abs(e.deltaX)?e.deltaY:e.deltaX;
+    if(!d)return;
+    tabs.scrollLeft+=d; e.preventDefault();},{passive:false});
   const refresh=()=>{
     const v=sel.value;
     let idx=panes.findIndex(pn=>pn.list.indexOf(v)>=0);
@@ -2089,8 +2144,9 @@ function buildCityPicker(sel){
     const on=tabs.children[cur];
     if(on){const L=on.offsetLeft,R=L+on.offsetWidth;
       if(R>tabs.scrollLeft+tabs.clientWidth)tabs.scrollLeft=R-tabs.clientWidth+12;
-      else if(L<tabs.scrollLeft)tabs.scrollLeft=Math.max(0,L-12);}};
-  sel._picker={refresh,tabs,grid};refresh();
+      else if(L<tabs.scrollLeft)tabs.scrollLeft=Math.max(0,L-12);}
+    edge();};
+  sel._picker={refresh,tabs,grid,arrL,arrR,row,edge};refresh();
   return sel._picker;}
 /* 표의 자동완성 목록(datalist)은 그룹을 못 쓰므로 **순서**로 같은 뜻을 낸다 */
 function cityDatalistHtml(){
