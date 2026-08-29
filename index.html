@@ -635,11 +635,16 @@
   .rdh{font-size:var(--fs-sm);font-weight:700;letter-spacing:.04em;color:var(--gold);
     margin-bottom:4px;opacity:.9}
   /* [★ 2026-08-30 접근성 개편 — 두 규칙이 충돌한 자리]
-     이 문단은 구 --fs-md(15px)였다. "구 md는 sm으로 통합"만 따르면 15px로 남는데,
-     **해석 본문은 이 앱에서 가장 오래 읽는 글**이라 "읽어야 하는 문장 전부 = --fs-base"가
-     우선한다. 15px에 머물면 개편의 목적(어르신 가독성)이 정작 본문에서 빠진다.
-     행간도 1.7 그대로 둔다(요구 하한 1.6). */
-  .reading p{margin:0;font-size:var(--fs-base);line-height:1.7;color:var(--ink)}
+     이 문단은 구 --fs-md(15px)로 **적혀** 있었다. "구 md는 sm으로 통합"만 따르면 15px로 남는데,
+     **해석 본문은 이 앱에서 가장 오래 읽는 글**이라 "읽어야 하는 문장 전부 = --fs-base"가 우선한다.
+
+     [★ 실측하고 알았다 — 이 줄의 font-size/line-height는 원래부터 죽은 값이었다]
+     `#panel p`(특정성 1,0,1)가 `.reading p`(0,1,1)를 이긴다. 그래서 여기 무엇을 적든
+     실제로는 `#panel p{font-size:var(--fs-base);line-height:1.6}`이 적용된다 —
+     배포본 실측 18px / 28.8px(=1.6배). 구 `--fs-md`도 화면에 반영된 적이 없었고,
+     이 줄의 `line-height:1.7`도 마찬가지다. **값을 --fs-base로 맞춘 것은 동작을 바꾸기
+     위해서가 아니라, 읽는 사람이 소스만 보고 15px이라고 오해하지 않게 하기 위해서다.** */
+  .reading p{margin:0;font-size:var(--fs-base);line-height:1.6;color:var(--ink)}
   .reading p b{font-weight:700}
   /* ═══ 별명 블록 [2026-08-30] ═══ 별명이 회자되는 부분이라 한 단계 크게 둔다.
      [줄바꿈] 가장 긴 별명이 20자(식신)다. 패널이 좁으면 두 줄이 되는데,
@@ -661,8 +666,9 @@
   .egonick{display:block;font-size:var(--fs-sm);font-weight:700;color:var(--gold);
     line-height:1.4;margin:2px 0 3px;word-break:keep-all}
   /* [2026-08-30] ~~opacity:.66~~ → --mut-2. 3.02:1로 여섯 항목 중 가장 낮았다 */
+  /* [2026-08-30] 행간 1.5 → 1.6. 읽는 문장이라 본문과 같은 하한을 지킨다 */
   .egonote{display:block;margin-top:5px;font-size:var(--fs-sm);color:var(--mut-2);
-    line-height:1.5;word-break:keep-all}
+    line-height:1.6;word-break:keep-all}
   /* [L3] 신강·신약. 판정이 주(主), 숫자는 근거로 작게(사용자 판단) */
   .sjgy{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
   .sjgyhead{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
