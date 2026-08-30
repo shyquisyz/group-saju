@@ -3745,6 +3745,31 @@ const V2_TUNABLES={
      임계 거리는 위 목표 px에서 역산한다(NODE_LABEL_TARGET_PX).
      (a)안(거리 보정으로 화면 크기 고정)을 안 쓴 이유는 라벨 충돌을 그대로 남기면서 밀도만
      악화시키기 때문. */
+  /* ═══ [★ 2026-08-30 결함 수정] 은하 조망 인물 이름표를 **행성 크기**로 켠다 ═══
+     [증상] 실기기에서 "행성 아래 이름표가 사라졌다". 재현하니 은하 조망에서 8개 전부 꺼져
+     있었고, **줌인해도 안 켜졌다** — 실측(캔버스 1016):
+       camR 200(기본) 행성 12.0px  라벨 0/8
+       camR 110        행성 20.9px  라벨 0/8
+       camR  75        행성 30.2px  라벨 0/8
+       camR  60        행성 38.3px  라벨 0/8   ← 행성이 이만한데 이름이 없다
+       camR  50        행성 46.2px  라벨 2/8   ← 여기서야 켜진다
+     [회귀가 아니다] 초기 커밋(1a5bf1d)부터 여섯 빌드를 실제로 돌려 확인했다 — 전부 0/8이다.
+     라벨 상수·카메라 상수도 초기 커밋 이후 한 번도 안 바뀌었다(git log -G). 처음부터 이랬다.
+     [진짜 원인] 임계가 **라벨 글자 크기**(NODE_LABEL_TARGET_PX 18px)에서 역산한 절대 거리다.
+     그런데 은하 조망은 성계가 반경 200 너머까지 퍼져 있고 카메라 하한이 R_MIN 40이라,
+     먼 성계의 사람은 **아무리 당겨도 그 거리 안에 못 들어온다.** 임계를 못 만나는 구조다.
+     [고침] 켜는 기준을 **그 행성이 화면에서 갖는 지름(px)**으로 바꾼다. 사람이 "저게 뭐지"
+     하고 이름을 궁금해하는 시점은 글자 크기가 아니라 **구슬이 커졌을 때**다.
+     라벨 크기는 그룹 장면과 같은 방식으로 거리 보정해 늘 읽히게 둔다.
+     [§5.4 노이즈 규칙은 지킨다] 기본 조망에서 행성은 12px이라 여전히 안 켜진다 —
+     한꺼번에 여덟이 켜지지 않는다. 항성(나)은 39px이라 켜진다: 은하의 유일한 항성이고
+     이름이 하나 뜨는 것은 노이즈가 아니라 기준점이다. */
+  NODE_LABEL_MIN_PLANET_PX: 26,   // 이 지름부터 이름표를 켠다. 기본 조망 행성 12px(꺼짐) /
+                                  // 항성 39px(켜짐) / camR 90에서 25.6px, 75에서 30.2px(켜짐).
+                                  // 26은 "살짝만 당겨도 이름이 나온다"와 "기본 화면은 조용하다"
+                                  // 사이에서 고른 값 — 위 실측 표의 110~90 구간 경계다.
+  NODE_LABEL_PLANET_FADE: 0.72,   // 지름 26×0.72 = 18.7px 부터 26px 까지 서서히 켜진다.
+                                  // 팝이 보이지 않게 하려는 것 — 구 NODE_LABEL_FADE_SPAN과 같은 뜻이다.
   NODE_LABEL_FADE_SPAN: 1.25,     // 임계 거리~×1.25 구간에서 페이드 — 8개가 한꺼번에 켜지면 팝이 보인다.
                                   // 완전 표시가 목표 px, 페이드 시작은 목표÷1.25(인물 18→14.4px)
   /* [§7-12에서 폐기] AVATAR_LOD_NEAR_RATIO: 0.15 — R_MAX 고정 비율이었다. 위 far가 뷰포트에
@@ -4809,16 +4834,33 @@ function placeLabel(label,pos,radius){
    그룹 장면 카메라가 109가 되어 인물 라벨 임계(37)를 훌쩍 넘겼다 — **선택해 들어갔는데
    이름이 하나도 안 보이는** 상태였다(실측). 방식은 성계 이름표(F-3)와 동일하다. */
 function placeNodeLabel(label,pos,radius,vis){
-  if(activeGroup){
-    const d=camera.position.distanceTo(pos);
-    const sc=Math.max(1,d/labelLodD.node);
-    label.scale.set(V2_TUNABLES.LABEL_SPRITE_W*sc,V2_TUNABLES.LABEL_SPRITE_H*sc,1);
-    placeLabel(label,pos,radius+V2_TUNABLES.LABEL_GAP*(sc-1));
-    label.material.opacity=vis;label.visible=vis>0.02;
-  }else{
-    label.scale.set(V2_TUNABLES.LABEL_SPRITE_W,V2_TUNABLES.LABEL_SPRITE_H,1);
-    placeLabel(label,pos,radius);
-    labelLOD(label,pos,vis);}}
+  /* [★ 2026-08-30] 은하 조망과 그룹 장면이 **같은 방식**을 쓴다 — 거리 보정으로 라벨을
+     늘 읽히는 크기로 두고, 켜고 끄는 판단만 다르게 한다.
+     그룹 장면: 그 성계 안 2~4명뿐이라 전부 켠다(구 F-2 근거 그대로).
+     은하 조망: 행성이 화면에서 커졌을 때만 켠다(NODE_LABEL_MIN_PLANET_PX).
+     전에는 은하 조망만 스프라이트를 월드 고정 크기로 뒀는데, 그러면 겨우 켜진 라벨이
+     5px짜리 얼룩으로 나온다 — 그게 §8이 LOD를 넣은 원래 이유였다. 크기를 고정하면
+     그 이유가 사라지므로 이제 두 장면을 가를 까닭이 없다. */
+  const d=camera.position.distanceTo(pos);
+  const sc=Math.max(1,d/labelLodD.node);
+  label.scale.set(V2_TUNABLES.LABEL_SPRITE_W*sc,V2_TUNABLES.LABEL_SPRITE_H*sc,1);
+  placeLabel(label,pos,radius+V2_TUNABLES.LABEL_GAP*(sc-1));
+  if(activeGroup){label.material.opacity=vis;label.visible=vis>0.02;return;}
+  labelLODByPlanet(label,pos,radius,vis);}
+/** 이 천체가 화면에서 갖는 **지름(px)**. 원근 공식 그대로 — 라벨 임계와 단위를 맞춘다. */
+function screenDiameterPx(pos,radius){
+  const h=canvas.clientHeight||innerHeight;
+  const d=Math.max(camera.position.distanceTo(pos),1e-6);
+  return 2*radius*h/(2*Math.tan(camera.fov/2*Math.PI/180)*d);}
+/** 은하 조망의 인물 이름표 — 행성 지름이 기준. mul은 장면 전환 페이드 배율(구 labelLOD와 같다) */
+function labelLODByPlanet(label,pos,radius,mul){
+  const on=V2_TUNABLES.NODE_LABEL_MIN_PLANET_PX;
+  const off=on*V2_TUNABLES.NODE_LABEL_PLANET_FADE;
+  const px=screenDiameterPx(pos,radius);
+  const m=(mul===undefined?1:mul);
+  const a=(px<=off?0:(px>=on?1:(px-off)/(on-off)))*m;
+  label.visible=a>0.02;label.material.opacity=a;}
+/* [구] 거리 기준 LOD — 가상 성계 멤버가 아직 쓴다(그쪽은 원점 근처 고정 배치라 거리로 충분하다) */
 function labelLOD(label,pos,mul){
   const on=labelLodD.node; /* [§7-12] 목표 px 역산값 */
   const fade=on*V2_TUNABLES.NODE_LABEL_FADE_SPAN;
@@ -8573,6 +8615,31 @@ function sajuSelfTest(){
   /* 8. 해당 없음 — 아무 짝도 아니면 null이라 딱지가 안 붙는다 */
   const none=hapChungOf(0,0,0,0);    /* 甲甲(합 아님) · 子子(충·육합 아님) */
   T('hcNone: 해당 없으면 null', none===null, String(none));
+  /* [★ 자리] 패널을 보는 검사가 전부 끝난 뒤에 둔다 — 아래 selectGroup 이
+     패널을 갈아 끼워서, 앞에 두면 nodeCardPair 가 #cardbtn 을 못 찾는다(실제로 밟았다). */
+  /* ═══ 인물 이름표 LOD [★ 2026-08-30] ═══
+     은하 조망에서 **줌인해도 이름표가 안 켜지던** 결함의 회귀 테스트.
+     [카메라를 되돌린다] 자가진단은 원래 화면을 바꾸는 확인용이지만, 카메라는 눈에 크게
+     띄므로 잰 뒤 반드시 제자리로 돌린다.
+     [값을 박지 않는다] "220에서 0개"처럼 절대 수를 박으면 사람이 적거나 성계가 촘촘한
+     데이터에서 헛되이 깨진다. **단조성**(가까울수록 더 많이 켜진다)만 본다 —
+     이게 LOD가 지켜야 하는 성질이고 데이터와 무관하다. */
+  const lblSave={r:cam.r,rt:cam.rTarget,ag:activeGroup};
+  selectGroup(null);
+  const zoomAt=r=>{cam.r=cam.rTarget=r;
+    for(let i=0;i<3;i++){t+=1/60;simulate();camTick();}
+    cam.r=r;camera.updateMatrixWorld(true);simulate();
+    return nodes.filter(n=>n.label&&n.label.visible);};
+  const zNear=zoomAt(Math.max(cam.R_MIN,75));
+  const nearOther=zNear.filter(n=>!n.isMe);
+  T('nodeLabelZoom: 줌인하면 인물 이름표가 켜진다',
+    nearOther.length>0,
+    'camR 75에서 '+zNear.length+'/'+nodes.length+' ('+zNear.map(n=>n.name).slice(0,4).join(',')+')');
+  const zFar=zoomAt(220);
+  T('nodeLabelLod: 멀수록 적게 켜진다(단조)',
+    zFar.length<=zNear.length,
+    'camR 220 '+zFar.length+'개 ≤ camR 75 '+zNear.length+'개');
+  cam.r=cam.rTarget=lblSave.r; selectGroup(lblSave.ag);
   /* 9. 한 쌍에 딱지는 하나 */
   T('hcSingle: 결과는 하나뿐', !both||typeof both.tag==='string', both?both.tag:'null');
 
