@@ -285,7 +285,7 @@
      자가진단 legendColorSync 가 두 곳을 실제로 대조한다(주석으로만 묶지 않는다).
      동일인 점선은 실제 선처럼 더 잘게 끊는다(3px/6px) — 3D 쪽 dashSize 0.26/0.30 과 같은 뜻. */
   .lgl-s.geuk{background:repeating-linear-gradient(to right,#ff8a6a 0 5px,transparent 5px 8px)}
-  .lgl-s.saeng{background:#54b894}
+  .lgl-s.saeng{background:#e8ecf2}
   .lgl-s.bi{background:#8a94b8}
   .lgl-s.same{background:repeating-linear-gradient(to right,#4a4f70 0 3px,transparent 3px 6px)}
   .panelbtns{display:flex;gap:8px;margin-top:14px}
@@ -3626,8 +3626,21 @@ const V2_TUNABLES={
      불투명도(.30→.26)와 더 잘게 끊은 점선(.4/.3 → .26/.30)으로 "가늘다"를 만든다.
      [★ 단일 출처] 범례 견본(.lgl-s)이 같은 값을 CSS로 다시 적는다. 어긋나면
      자가진단 legendColorSync 가 잡는다 — 주석으로만 묶어 두면 언젠가 갈라진다. */
-  EDGE_COLORS: {geuk:0xff8a6a, saeng:0x54b894, bi:0x8a94b8, same:0x4a4f70},
-  EDGE_OPACITY: {geuk:0.7, other:0.55},
+  /* [★ 2026-08-30 2차] 생을 **흰색 계열**로. 실기기에서 청록(#54b894)이 여전히 비화와
+     덜 갈렸다는 피드백. 순백(#ffffff)은 별·이름표와 섞이므로 아주 살짝 눌러
+     **#e8ecf2**(232,236,242) — 파랑 쪽으로 6만큼만 기운 차가운 흰색이다.
+     [불투명도를 따로 잡는다] 가산 합성이라 흰색을 .55로 두면 화면 기여분이 (128,130,133)이
+     되어 극(112)보다 밝아진다 — 관계선 중 가장 센 것이 생이 되어 위계가 뒤집힌다.
+     .42로 낮춰 극 다음 자리에 둔다. 그래서 EDGE_OPACITY 에 saeng 을 따로 뒀다.
+     [실측 — 화면 기여분 = 색 × 불투명도, 그리고 휘도]
+       극    (178.5, 96.6, 74.2)  휘도 112.5   주황 · 점선
+       생    ( 97.4, 99.1,101.6)  휘도  98.9   **무채색** · 실선   ← 새 값
+       비화  ( 75.9, 81.4,101.2)  휘도  81.6   파랑 기운 · 실선
+       동일인( 19.2, 20.6, 29.1)  휘도  20.9   아주 어두움 · 점선
+     생과 비화는 파랑 채널이 거의 같지만(101.6 vs 101.2) **빨강·초록이 21·18 만큼 차이 난다** —
+     생은 무채색, 비화는 파랑으로 읽힌다. 거기에 휘도 차 17이 더해진다. */
+  EDGE_COLORS: {geuk:0xff8a6a, saeng:0xe8ecf2, bi:0x8a94b8, same:0x4a4f70},
+  EDGE_OPACITY: {geuk:0.7, saeng:0.42, other:0.55},
   SAME_LINK_DASH: {size:0.26, gap:0.30},
   INSTANCE_LINK_OPACITY: 0.26,   // [§7.4, §2.9 밀도 영향] 동일인(형제 그룹 다중소속) 점선 연결 — 꼬리보다
                                  // 더 조심스럽게 잡음. 꼬리는 클론 근처의 짧은 선이지만 이건 두 그룹
@@ -5667,7 +5680,8 @@ function addEdge(a,b,rich,sys){
   const mat=rel.kind==='geuk'
     ?new THREE.LineDashedMaterial({color:EC.geuk,dashSize:.5,gapSize:.35,transparent:true,opacity:EO.geuk,
       blending:THREE.AdditiveBlending,depthWrite:false})
-    :new THREE.LineBasicMaterial({color:rel.kind==='bi'?EC.bi:EC.saeng,transparent:true,opacity:EO.other,
+    :new THREE.LineBasicMaterial({color:rel.kind==='bi'?EC.bi:EC.saeng,transparent:true,
+      opacity:rel.kind==='bi'?EO.other:EO.saeng,
       blending:THREE.AdditiveBlending,depthWrite:false});
   const line=new THREE.Line(geo,mat);line.computeLineDistances();scene.add(line);
   /* [F-2] 기본 불투명도를 기록해 둔다 — 장면 전환 페이드가 여기에 배율을 곱한다.
@@ -8103,9 +8117,9 @@ function showGroup(g){
     '<div class="lgl">'
     +'<div class="lgl-i"><i class="lgl-s geuk"></i><span><b>붉은 점선</b> — 누르는 배합(극). '
       +'긴장과 자극이 오가는 사이입니다. <b>나쁜 관계라는 뜻이 아닙니다.</b></span></div>'
-    +'<div class="lgl-i"><i class="lgl-s saeng"></i><span><b>푸른 실선</b> — 북돋는 배합(생). '
+    +'<div class="lgl-i"><i class="lgl-s saeng"></i><span><b>흰 실선</b> — 북돋는 배합(생). '
       +'한쪽이 다른 쪽에 힘을 대주는 방향입니다.</span></div>'
-    +'<div class="lgl-i"><i class="lgl-s bi"></i><span><b>밝은 실선</b> — 같은 기운(비화). '
+    +'<div class="lgl-i"><i class="lgl-s bi"></i><span><b>청회 실선</b> — 같은 기운(비화). '
       +'결이 비슷해 말이 잘 통하고, 그만큼 같은 데서 막힙니다.</span></div>'
     +'<div class="lgl-i"><i class="lgl-s same"></i><span><b>회청 점선</b> — 여러 그룹에 있는 '
       +'<b>같은 사람</b>을 이은 줄입니다. 관계가 아니라 같은 사람이라는 표시입니다.</span></div>'
