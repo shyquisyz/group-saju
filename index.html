@@ -2153,10 +2153,14 @@ function buildCityPicker(sel){
     arrL.disabled=!on||tabs.scrollLeft<=1;
     arrR.disabled=!on||tabs.scrollLeft>=max-1;
     tabs.classList.toggle('cts-more',on&&tabs.scrollLeft<max-1);};
+  /* [2026-08-30] ~~한 번에 보이는 폭의 절반씩~~ → **한 번에 끝까지.**
+     [왜 바꾸나] 권역 탭은 일곱 개뿐이라 절반씩 밀면 끝까지 가는 데 두·세 번을 눌러야 했다.
+     목록이 짧으므로 ‘어디까지 봤나’를 잊을 염려보다 닿는 횟수가 더 아깝다.
+     [smooth를 지키는 이유] 순간 이동이면 사이의 탭이 안 보여 무엇을 건넌느지를 모른다.
+     지나가는 탭이 보여야 중간에 뭐가 있는지 알 수 있다. */
   const nudge=dir=>{
-    /* 한 번에 보이는 폭의 절반씩 — 한 화면을 통째로 넘기면 어디까지 봤는지 놓친다 */
-    const step=Math.max(60,Math.round(tabs.clientWidth/2));
-    tabs.scrollTo({left:tabs.scrollLeft+dir*step,behavior:'smooth'});};
+    const max=Math.max(0,tabs.scrollWidth-tabs.clientWidth);
+    tabs.scrollTo({left:dir>0?max:0,behavior:'smooth'});};
   arrL.onclick=()=>nudge(-1); arrR.onclick=()=>nudge(1);
   tabs.addEventListener('scroll',edge,{passive:true});
   /* 탭 줄 위의 휠은 **가로**로 — 마우스만 있는 사람이 화살표 없이도 움직일 수 있는 보조 경로.
