@@ -1064,14 +1064,26 @@
   /* ═══ 접히는 해석 덩어리 [2026-08-30] ═══
      제목이 곧 손잡이다. 겉모습은 .rdh(해석 소제목)와 같게 맞춘다 — 도움말(sjHelp)의
      기본 모양을 그대로 쓰면 "이건 도움말"로 읽혀 본문이 부록처럼 보인다.
-     [44px은 지운다] .sjhelp-b 의 터치 기준 44px을 여기서는 빼고 padding 으로 다시 준다 —
-     일곱 개가 접힌 상태로 나란히 서므로 44px씩이면 그것만으로 308px이다.
-     대신 위아래 10px 패딩으로 실측 41px을 만들고, 목록이 아니라 **글 제목**이라
-     손가락보다 눈이 먼저 가는 자리라는 점을 근거로 둔다(캐럿이 상태를 알린다). */
+
+     [터치판 — 정정] ~~"44px은 지운다. 글 제목이라 손가락보다 눈이 먼저 가는 자리다"~~
+     → **보이는 높이 39px + 누르는 판 44px.** 앞의 근거는 틀렸다. 눈이 먼저 가든 아니든
+     **누르라고 만든 것은 누를 수 있어야 한다** — 캐럿까지 달아 놓고 판을 39px로 둔 것은
+     앞뒤가 안 맞았다. 크기를 줄인 진짜 이유는 아홉 개가 나란히 서기 때문이었는데,
+     그건 ::before 로 판만 넓히면 그대로 해결된다(알약 .mchip · 태그바 이름 칩
+     #tagbar .tb-name::before 이 이미 쓰는 방법).
+     [왜 min-height 가 아닌가] min-height:44px 로 하면 아홉 줄이 396px을 먹는다.
+     보이는 줄은 39px로 촘촘히, 손가락이 닿는 판만 44px로 넓힌다.
+     [겹치지 않는 근거] 44px 판은 39px 줄의 위아래로 2.5px씩만 나온다. 줄 사이 간격은
+     .rdfold 의 margin-bottom 9px 이라 5px 을 쓰고 4px 이 남는다 — 이웃과 안 겹친다.
+     좌우는 left:0/right:0 이라 패널 폭을 넘지 않는다. */
   .rdfold{margin-bottom:9px}
   .rdfold>.sjhelp{margin-top:0}
-  .rdfold .sjhelp-b{min-height:0;padding:10px 0;gap:5px;
+  .rdfold .sjhelp-b{position:relative;min-height:0;padding:10px 0;gap:5px;
     font-size:var(--fs-sm);font-weight:700;letter-spacing:.04em;color:var(--gold);opacity:.9}
+  /* [★ 절대 위치라 flex 항목이 아니다] .sjhelp-b 는 display:flex 인데, position:absolute
+     인 ::before 는 flex 항목에서 빠지므로 캐럿·글자 배치를 건드리지 않는다. */
+  .rdfold .sjhelp-b::before{content:'';position:absolute;left:0;right:0;top:50%;
+    transform:translateY(-50%);height:44px}
   .rdfold .sjhelp-b:hover{opacity:1;color:var(--gold)}
   .rdfold .sjhelp-body{margin:0 0 4px;padding-left:0;border-left:0}
   .egorel{font-size:var(--fs-sm);color:var(--mut);line-height:1.55;margin:10px 0;
@@ -8498,6 +8510,28 @@ function sajuSelfTest(){
   T('nodePair: 인물 패널에 나와의 관계 전문이 있다',
     !!nk && !!pbody.querySelector('#cardbtn') && secs[0]==='나와의 관계',
     (secs.join(' / ')||'구역 없음')+' · 별명 '+(nk?nk.textContent.trim().slice(0,14):'없음'));
+  /* 접힌 제목은 보이는 높이가 39px이라 누르는 판을 ::before 로 44px 채운다.
+     [★ 겉높이를 재면 안 된다] offsetHeight 는 39다 — 그걸로 검사하면 "39 맞음"으로
+     통과시키거나 "44 아님"으로 떨어뜨리거나 둘 다 틀린다. **판을 재야 한다.** */
+  const fb=[...pbody.querySelectorAll('.rdfold .sjhelp-b')];
+  /* [★ 문자열로 비교하면 안 된다] 화면 배율에 따라 43.9915px 처럼 나온다 —
+     첫 구현에서 `!=='44px'` 로 재 멀줦한 9건을 실패로 보고했다. 숫자로 재고 허용오차를 둔다. */
+  const fbH=b=>parseFloat(getComputedStyle(b,'::before').height)||0;
+  const fbBad=fb.filter(b=>Math.abs(fbH(b)-44)>0.5);
+  T('foldHit44: 접힌 제목의 누르는 판이 44px',
+    fb.length>0 && fbBad.length===0,
+    fb.length+'개 중 어긋남 '+fbBad.length+'건'
+    +(fb.length?' · 판 '+fbH(fb[0]).toFixed(2)+'px · 보이는 높이 '+fb[0].offsetHeight+'px':''));
+  /* 판을 넓혔으니 이웃과 겹치는지 함께 본다 — 겹치면 위 항목을 누를 때 아래가 눌린다 */
+  const fbHit=fb.map(b=>{const r=b.getBoundingClientRect(), c=(r.top+r.bottom)/2;
+    return {t:c-22,b:c+22,l:r.left,r:r.right};});
+  let fbOv=0;
+  for(let i=0;i<fbHit.length;i++)for(let j=i+1;j<fbHit.length;j++){
+    const a=fbHit[i],b=fbHit[j];
+    if(a.t<b.b&&b.t<a.b&&a.l<b.r&&b.l<a.r)fbOv++;}
+  T('foldHitNoOverlap: 누르는 판끼리 안 겹친다', fbOv===0,
+    '겹침 '+fbOv+'쌍 / 판 '+fbHit.length+'개'
+    +(fbHit.length>1?' · 줄 간격 '+Math.round(fbHit[1].t-fbHit[0].b+44)+'px':''));
   /* 카드는 **나 기준**이어야 한다 — 순서가 뒤집히면 첫 줄이 "X에게 나는…"으로 나온다.
      문자열이 아니라 버튼을 실제로 눌러 cardPair 를 본다(배선까지 검사). */
   const cbtn=pbody.querySelector('#cardbtn');
