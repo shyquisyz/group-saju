@@ -2026,6 +2026,9 @@ const CARD_W=1080, CARD_H=1350;
 const CARD_PAD=84;                    /* 안전 여백 — 모든 요소가 이 안에 들어간다 */
 const CARD_BG_SRC='assets/card-bg.jpg';
 const CARD_SITE='shyquisyz.github.io/group-saju';
+/* [2026-08-30] 공유 페이로드에 넣는 주소. 카드 그림 아래 주소 줄(CARD_SITE)과 같은 곳을
+   가리킨다 — 하나는 눈으로 읽는 글, 하나는 누를 수 있는 링크다. */
+const CARD_URL='https://'+CARD_SITE+'/';
 const CARD_FONT="'Pretendard',-apple-system,'Apple SD Gothic Neo',sans-serif";
 /* 카드 글자 크기 — 화면 토큰(15/18/22/26)에 카드폭/폰폭 비(1080/390≈2.77)를 곱해 반올림했다.
    **위계 비율은 그대로 두고 크기만 키운다** — 확정된 폰트 체계를 카드에서 새로 만들지 않는다. */
@@ -9635,7 +9638,11 @@ function cardFileName(a,b){
 async function cardBlob(){
   if(!cardCanvas)return null;
   return await new Promise(res=>cardCanvas.toBlob(res,'image/png'));}
-/* ═══ 공유하기 ═══ */
+/* ═══ 공유하기 [2026-08-30 url 포함] ═══
+   [왜 url 을 넣나] 이미지만 가면 받는 사람이 **누를 데가 없다.** 카드 그림 아래에도 주소를
+   적어 두었지만 그건 눈으로 읽고 손으로 쳐야 하는 글자다. 확산은 누를 수 있는 링크로 이어진다.
+   [canShare 를 페이로드째로 묻는다] 파일과 url 을 함께 못 받는 브라우저가 있다 —
+   그때는 url 을 빼고 파일만 보낸다(빈손으로 돌아가지 않는다). */
 async function cardShare(){
   if(cardBusy||!cardPair)return;
   cardBusy=true;cardMsg('');
@@ -9644,7 +9651,10 @@ async function cardShare(){
     const blob=await cardBlob(); if(!blob)throw new Error('toBlob null');
     const file=new File([blob],cardFileName(cardPair.a,cardPair.b),{type:'image/png'});
     const title=cardPair.a.name+' ↔ '+cardPair.b.name+' — 사주은하';
-    const payload={files:[file],title,text:title};
+    const full={files:[file],title,text:title,url:CARD_URL};
+    let payload=full;
+    if(!navigator.canShare||!navigator.canShare(full)){
+      payload={files:[file],title,text:title+'\n'+CARD_URL};}  /* url 을 못 받으면 글에 붙인다 */
     if(!cardCanShare()){cardMsg('이 브라우저는 공유를 지원하지 않습니다 — 「이미지로 저장」을 눌러 주세요.');}
     else{
       try{await navigator.share(payload);cardMsg('공유했습니다.');}
