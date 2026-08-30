@@ -757,6 +757,18 @@
     cursor:pointer;font-family:inherit;box-shadow:0 10px 30px rgba(0,0,0,.5)}
   @media (max-width:767px){
     #demoback{right:auto;left:50%;transform:translateX(-50%);bottom:14px}}
+  /* ═══ 첫 화면 겹침 두 건 [★ 2026-08-30] ═══
+     실기기 보고 — (1) 예시 배지가 상단 제목을 가린다 (2) 「펼치기」 알약이 하단 그룹 탭을 가린다.
+     실측(개편 전): 390×844에서 배지 14~46 vs eyebrow 14~36 · h1 38~69 → 둘 다 겹침.
+     펼치기 786~830 vs 태그바 792~844 → 겹침. **데스크톱(1280)에서도 펼치기가 겹쳤다.**
+     [왜 고정 px 로 안 하나] 헤더 높이가 폭에 따라 변한다 — 320px에서는 eyebrow가 두 줄로
+     접혀 헤더가 69 → 91px이 된다. 상수로 박으면 좁은 화면에서 다시 겹치거나 넓은 화면에서
+     쓸데없이 내려간다. 그래서 **실측값을 --hdr-h / --tagbar-h 로 받아** 그 아래·위에 둔다
+     (--vvh 와 같은 방식). 값을 못 받으면 폴백(70px / 52px)이 받는다. */
+  #demobadge{top:calc(var(--hdr-h, 70px) + 10px)}
+  #demoback{bottom:calc(var(--tagbar-h, 52px) + 12px)}
+  @media (max-width:767px){
+    #demoback{bottom:calc(var(--tagbar-h, 52px) + 12px)}}
 
   /* ── 접기 버튼 [2026-08-28, 사용자 지시] ──────────────────────────────────
      안내 문구 **안의 링크**("잠시 둘러보기")로는 안 보였다. 문장 속 밑줄 텍스트는
@@ -4196,6 +4208,23 @@ function resize(){
   if(composer)composer.setSize(w,h);
   updateLabelLodDistances();} /* [§7-12] 창 크기가 바뀌면 라벨 임계 거리도 따라가야 한다 */
 addEventListener('resize',resize);resize();
+/* ═══ 겹침 방지 치수 [★ 2026-08-30] ═══
+   예시 배지는 **헤더 아래**, 「펼치기」 알약은 **태그바 위**에 둔다. 둘 다 높이가 상황에 따라
+   변한다 — 헤더는 좁은 화면에서 eyebrow 가 두 줄로 접히고(320px에서 69→91), 태그바는 글자
+   크기·줄 수를 따른다. 상수로 박으면 어느 한쪽에서 다시 겹치므로 **잰 값을 CSS로 넘긴다.**
+   [갱신 시점] 창 크기·방향이 바뀌면 다시 잰다. 태그바는 내용이 바뀔 때도 높이가 변할 수
+   있어 renderTagbar 뒤에도 한 번 부른다(아래 호출부). */
+function syncChromeMetrics(){
+  const root=document.documentElement;
+  const h=document.querySelector('header');
+  if(h){const hh=Math.round(h.getBoundingClientRect().height);
+    if(hh>0)root.style.setProperty('--hdr-h',hh+'px');}
+  const tb=document.getElementById('tagbar');
+  if(tb){const th=Math.round(tb.getBoundingClientRect().height);
+    if(th>0)root.style.setProperty('--tagbar-h',th+'px');}}
+syncChromeMetrics();
+addEventListener('resize',syncChromeMetrics);
+addEventListener('orientationchange',syncChromeMetrics);
 /* ═══ 보이는 뷰포트 높이를 CSS로 넘긴다 [★ 2026-08-30] ═══
    인앱 브라우저(카톡·인스타 등)는 위아래 크롬이 화면을 겹쳐 먹어 **100vh가 실제로 보이는
    높이보다 크다.** 그래서 시트가 아래로 밀려 「공유하기」가 화면 밖에 있었다(실측: 102px).
@@ -7021,7 +7050,9 @@ function renderTagbar(){
   saveState();
   /* [2026-08-28] 백업 권유도 같은 통로에 둔다 — 사람이 느는 경로가 전부 여기를 지나므로
      "3명째"를 빠뜨릴 수 없다. 안에서 한 번만 뜨도록 스스로 막는다. */
-  maybeBackupHint();}
+  maybeBackupHint();
+  /* [2026-08-30] 태그바 높이가 바뀌면 「펼치기」 알약 자리도 따라가야 한다 */
+  syncChromeMetrics();}
 
 /* ═════════ 그룹 — [1단계, 2026-08-27] 시드로 옮겼다 ═════════
    ~~여기서 createGroup을 직접 불렀다~~ → `applySeed`가 `my-data.js`를 읽어 만든다.
