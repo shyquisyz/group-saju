@@ -277,10 +277,14 @@
   /* 견본 — 실제 선 색을 그대로 쓴다(makeEdge/createGroupInstance의 값). 점선은
      repeating-linear-gradient로 흉내낸다. 폭 26px은 점 셋이 보이는 최소치다. */
   .lgl-s{flex:0 0 26px;width:26px;height:2px;margin-top:.62em;border-radius:1px}
+  /* [★ 2026-08-30] 이 네 값은 V2_TUNABLES.EDGE_COLORS 와 **같아야 한다.**
+     CSS는 JS 상수를 못 읽으므로 손으로 옮겨 적는데, 그러면 언젠가 갈라진다 —
+     자가진단 legendColorSync 가 두 곳을 실제로 대조한다(주석으로만 묶지 않는다).
+     동일인 점선은 실제 선처럼 더 잘게 끊는다(3px/6px) — 3D 쪽 dashSize 0.26/0.30 과 같은 뜻. */
   .lgl-s.geuk{background:repeating-linear-gradient(to right,#ff8a6a 0 5px,transparent 5px 8px)}
-  .lgl-s.saeng{background:#6a7aa8}
+  .lgl-s.saeng{background:#54b894}
   .lgl-s.bi{background:#8a94b8}
-  .lgl-s.same{background:repeating-linear-gradient(to right,#5a6088 0 4px,transparent 4px 7px)}
+  .lgl-s.same{background:repeating-linear-gradient(to right,#4a4f70 0 3px,transparent 3px 6px)}
   .panelbtns{display:flex;gap:8px;margin-top:14px}
   /* [2026-08-30] min-height:44px — **모든 .pbtn 이 터치 기준을 지킨다.**
      ~~padding 11px + 15px 글자 = 42px~~이었다(실측). 직전 회차에는 #cardbtn 하나만
@@ -3539,7 +3543,32 @@ const V2_TUNABLES={
   COMET_TAIL_OPACITY: 0.35,     // [§5.5, §2.9 밀도 영향] 구 분신 불투명도(.35)와 같은 급으로 낮게 —
                                  // "글로우는 항성에만"([F-1] 구 "항성·분신에만")의 취지(아무 데나 빛나 보이면 위계가 흐려짐)를
                                  // 침해하지 않도록 은은하게. 적용 후 픽셀 히스토그램으로 밝음 구간 영향 실측할 것
-  INSTANCE_LINK_OPACITY: 0.3,   // [§7.4, §2.9 밀도 영향] 동일인(형제 그룹 다중소속) 점선 연결 — 꼬리보다
+  /* ═══ 관계선 네 종류의 색 [★ 2026-08-30 재설계] ═══
+     [피드백] "붉은 점선(극)만 구분되고 생·비화·동일인은 비슷하다."
+     당연한 결과였다 — 셋이 전부 회청 계열이었다:
+       생 #6a7aa8 · 비화 #8a94b8 · 동일인 #5a6088  (색상만 보면 224~232°로 한 덩어리)
+     [고침] **색상(hue)으로 가른다.** 명도만으로는 어두운 우주 배경 위에서 셋을 못 나눈다.
+       극    #ff8a6a  주황(14°)   점선  — 그대로. 유일하게 구분되던 것이라 안 건드린다
+       생    #54b894  청록(160°)  실선  — 북돋는 기운. 초록 계열이 "살린다"는 뜻과 붙는다
+       비화  #8a94b8  청회(228°)  실선  — 그대로. 중성 자리라 기준이 된다
+       동일인 #4a4f70 짙은 남보라  점선  — 색상은 비화와 가깝게 두되 **어둡게** 낮춘다.
+                                          관계가 아니므로 관계선들과 같은 급으로 보이면 안 된다
+     [왜 생만 색상을 옮겼나] 셋 중 하나만 옮기면 되고, 옮길 자리는 "북돋는다"에 뜻이 붙는
+     초록·청록이 맞다. 비화(중성)를 옮기면 기준이 사라지고, 동일인을 옮기면 관계가 아닌 것이
+     관계보다 튄다.
+     [가산 합성 실측] AdditiveBlending이라 화면 기여분 = 색 × 불투명도다:
+       생   (84,184,148)×.55 = (46,101,81)  ← 초록이 지배
+       비화 (138,148,184)×.55 = (76,81,101) ← 중성
+       동일인 (74,79,112)×.26 = (19,21,29)  ← 셋 중 압도적으로 어둡다
+     휘도 합은 생 87.8 / 비화 81.4로 비슷해 한쪽만 튀지 않는다 — 갈리는 것은 색상이다.
+     [동일인은 가늘게] 선 굵기(linewidth)는 대부분의 브라우저에서 무시되므로,
+     불투명도(.30→.26)와 더 잘게 끊은 점선(.4/.3 → .26/.30)으로 "가늘다"를 만든다.
+     [★ 단일 출처] 범례 견본(.lgl-s)이 같은 값을 CSS로 다시 적는다. 어긋나면
+     자가진단 legendColorSync 가 잡는다 — 주석으로만 묶어 두면 언젠가 갈라진다. */
+  EDGE_COLORS: {geuk:0xff8a6a, saeng:0x54b894, bi:0x8a94b8, same:0x4a4f70},
+  EDGE_OPACITY: {geuk:0.7, other:0.55},
+  SAME_LINK_DASH: {size:0.26, gap:0.30},
+  INSTANCE_LINK_OPACITY: 0.26,   // [§7.4, §2.9 밀도 영향] 동일인(형제 그룹 다중소속) 점선 연결 — 꼬리보다
                                  // 더 조심스럽게 잡음. 꼬리는 클론 근처의 짧은 선이지만 이건 두 그룹
                                  // 사이를 가로지르는 긴 선이라 화면을 대각선으로 자르는 시각적 노이즈가
                                  // 될 수 있어(사용자 지적) 0.3에서 시작 — 적용 후 픽셀 히스토그램 필수 확인,
@@ -5554,10 +5583,12 @@ function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updat
 function addEdge(a,b,rich,sys){
   const rel=relation(a.el,b.el);
   const geo=new THREE.BufferGeometry().setFromPoints([a.mesh.position,b.mesh.position]);
+  /* [2026-08-30] 색은 V2_TUNABLES.EDGE_COLORS 한 곳에서 온다 — 범례가 같은 값을 쓴다 */
+  const EC=V2_TUNABLES.EDGE_COLORS, EO=V2_TUNABLES.EDGE_OPACITY;
   const mat=rel.kind==='geuk'
-    ?new THREE.LineDashedMaterial({color:0xff8a6a,dashSize:.5,gapSize:.35,transparent:true,opacity:.7,
+    ?new THREE.LineDashedMaterial({color:EC.geuk,dashSize:.5,gapSize:.35,transparent:true,opacity:EO.geuk,
       blending:THREE.AdditiveBlending,depthWrite:false})
-    :new THREE.LineBasicMaterial({color:rel.kind==='bi'?0x8a94b8:0x6a7aa8,transparent:true,opacity:.55,
+    :new THREE.LineBasicMaterial({color:rel.kind==='bi'?EC.bi:EC.saeng,transparent:true,opacity:EO.other,
       blending:THREE.AdditiveBlending,depthWrite:false});
   const line=new THREE.Line(geo,mat);line.computeLineDistances();scene.add(line);
   /* [F-2] 기본 불투명도를 기록해 둔다 — 장면 전환 페이드가 여기에 배율을 곱한다.
@@ -5891,7 +5922,8 @@ function createGroupInstance(ref,group){
      색은 다르게 — 극의 붉은색을 쓰면 "이 둘이 서로 극한다"는 오행 신호로 오독된다. 궤도선과 같은
      중성색을 쓴다. 별 모양 토폴로지(추가 인스턴스마다 주 인스턴스 하나로만 선을 그음, ref.mesh가
      항상 주 인스턴스)라 인원이 늘어도 선이 N-1개로 끝난다. */
-  const linkMat=new THREE.LineDashedMaterial({color:0x5a6088,dashSize:.4,gapSize:.3,
+  const linkMat=new THREE.LineDashedMaterial({color:V2_TUNABLES.EDGE_COLORS.same,
+    dashSize:V2_TUNABLES.SAME_LINK_DASH.size,gapSize:V2_TUNABLES.SAME_LINK_DASH.gap,
     transparent:true,opacity:V2_TUNABLES.INSTANCE_LINK_OPACITY,blending:THREE.AdditiveBlending,depthWrite:false});
   const link=new THREE.Line(new THREE.BufferGeometry(),linkMat);
   scene.add(link);
@@ -8640,6 +8672,27 @@ function sajuSelfTest(){
     zFar.length<=zNear.length,
     'camR 220 '+zFar.length+'개 ≤ camR 75 '+zNear.length+'개');
   cam.r=cam.rTarget=lblSave.r; selectGroup(lblSave.ag);
+  /* ═══ 범례 색 = 실제 선 색 [★ 2026-08-30] ═══
+     CSS는 JS 상수를 못 읽어서 네 값을 손으로 옮겨 적는다. 주석으로만 묶으면 언젠가 갈라지므로
+     **두 곳을 실제로 대조한다.** 실선은 background-color, 점선은 background-image 안의
+     rgb(...) 를 꺼내 비교한다. 범례가 화면에 없으면(그룹 패널이 아니면) 건너뛴다. */
+  {const host=document.createElement('div');
+   host.style.cssText='position:absolute;left:-9999px;top:0';
+   host.innerHTML='<div class="lgl">'
+     +'<i class="lgl-s geuk"></i><i class="lgl-s saeng"></i><i class="lgl-s bi"></i><i class="lgl-s same"></i></div>';
+   document.body.appendChild(host);
+   const hex=n=>'#'+n.toString(16).padStart(6,'0');
+   const cssRgb=el=>{const cs=getComputedStyle(el);
+     const m=(cs.backgroundImage+' '+cs.backgroundColor).match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+     return m?'#'+[m[1],m[2],m[3]].map(v=>(+v).toString(16).padStart(2,'0')).join(''):null;};
+   const EC=V2_TUNABLES.EDGE_COLORS;
+   const pairs=[['geuk',EC.geuk],['saeng',EC.saeng],['bi',EC.bi],['same',EC.same]];
+   const bad=pairs.filter(([k,v])=>cssRgb(host.querySelector('.lgl-s.'+k))!==hex(v));
+   T('legendColorSync: 범례 견본 = 실제 선 색',
+     bad.length===0,
+     bad.length?bad.map(([k,v])=>k+' CSS '+cssRgb(host.querySelector('.lgl-s.'+k))+' vs JS '+hex(v)).join(' / ')
+               :pairs.map(([k,v])=>k+' '+hex(v)).join(' · '));
+   host.remove();}
   /* 9. 한 쌍에 딱지는 하나 */
   T('hcSingle: 결과는 하나뿐', !both||typeof both.tag==='string', both?both.tag:'null');
 
