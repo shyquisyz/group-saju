@@ -3547,7 +3547,25 @@ const V2_TUNABLES={
      여기서는 옳다. 상한 1.10 = 지름 +10%. 이슬은 도드라지되 천체를 키우면 안 된다. */
   DEW_R_MAX: 1.10,
   GEM_TINT: 0xe8eef4,           // 겉면 색 — 무채색에 아주 옅은 냉기. 금 오행이 무채색이라 맞다
-  GEM_OPACITY: 0.22,            // 甲(0.30)보다 맑게 — 안의 결정이 또렷해야 한다
+  /* [F-6, 2026-08-31] 0.22 → 0.10. 겉면(구슬 껍질)은 이제 **주인공이 아니다.**
+     깎은 보석 본체가 반경 .985에 따로 있으므로, 껍질이 진하면 그 위에 젖빛 막이 한 겹
+     덮여 패싯이 다시 뭉갠다. 0으로 지우지 않는 이유는 실루엣 가장자리의 얇은 유리 테가
+     보석의 "덩어리감"을 만들기 때문이다 — 없애 보니 종이로 오린 것처럼 납작해졌다. */
+  GEM_OPACITY: 0.10,
+  /* ═══ 辛 패싯 [F-6, 2026-08-31] — 원리는 crystalParts 주석 ═══ */
+  GEM_HUE: 0.58,                // 차가운 청백. 채도가 낮아 색이 아니라 "냉기"로만 읽힌다
+  GEM_SAT: 0.08,                // 0.16은 파란 돌덩어리로 보였다 — 다이아몬드는 거의 무색이다
+  /* 면 밝기 후보(setHSL의 lightness). **폭이 좁으면 flatShading이 있어도 매끈한 공으로 뭉친다.**
+     실측 순서: [1.00~.38] 8단 → 젖빛 구슬 / [.98~.18] 9단 → 보석에 가까움 /
+     **[.99~.12] 9단(채택)** → 어두운 면과 흰 면이 맞붙어 "불(fire)"이 선다. */
+  GEM_FACET_L: [.99,.84,.66,.48,.32,.20,.95,.58,.12],
+  GEM_SPARK: 0.16,              // 흰빛으로 튀는 면의 비율. 0.3 이상이면 그냥 흰 공이 된다
+  GEM_ROUGH: 0.045,             // 낮아야 면마다 좁고 밝은 반사가 선다. 0.2를 넘으면 면이 뭉친다
+  GEM_METAL: 0.28,              // 다이아몬드는 금속이 아니지만, 0이면 환경 반사가 거의 안 실린다.
+                                // 0.9까지 올리면 알베도가 죽어 새까매진다(F-5의 "辛이 검게" 그 증상)
+  GEM_ENV: 6.0,                 // 앞면(가까운 패싯) 환경 반사 세기
+  GEM_BACK_ENV: 4.4,            // 뒷면(먼 패싯)은 앞면 너머로 비치므로 한 단 낮춰 깊이를 만든다
+  GEM_FACE_OPACITY: 0.52,       // 앞면 불투명도 — 뒷면 패싯이 비치되 앞면이 사라지지 않는 지점
   LANTERN_TINT: 0x3a1c12,       // 등피 색 — 어둡고 따뜻한 갈적색
   LANTERN_OPACITY: 0.38,        // 등피 불투명도. 甲(0.30)보다 조금 진하다 — 어두워야 불꽃이 산다
   /* ═══ 블룸 [2026-08-27] ═══
@@ -5498,77 +5516,112 @@ function makeDew(){
   g.add(new THREE.Mesh(p.geo,p.mat));
   return g;}
 
-/* ═══ 辛 — 유리 안의 결정 다발 [F-5 금, 2026-08-27] ═══
-   [원칙 5가 여기 걸린다 — "형태가 맞물려야 하는 것은 난수로 배치하면 안 된다"]
-   결정의 인상은 **패싯이 정확히 맞물린다**는 것이다. 면 사이에 빈틈이 있으면 그건 보석이
-   아니라 부서진 유리다. 그래서 면을 난수로 그리지 않고 **육각 기둥 + 육각 뿔** 지오메트리를
-   쓴다 — 면의 맞물림을 지오메트리가 보장하므로 난수가 끼어들 자리가 없다.
-   난수는 **기둥의 위치·길이·기울기**에만 쓴다(그건 흩어진 것이라 맞다).
-   [flatShading] 부드러운 법선을 쓰면 육각 기둥이 원통으로 보인다. 패싯이 곧 정체성이므로
-   면마다 밝기가 뚜렷이 갈려야 한다 — 戊에서 4각뿔에 쓴 것과 같은 이유다.
-   [왜 표면 방식이 아닌가] 구 표면에 패싯을 그리면 **구의 윤곽선이 여전히 완벽한 원**이라
-   "각진 것"이라는 은유가 실루엣에서 죽는다(기존 case 7의 2차 수정 기록이 그 씨름이다). */
+/* ═══ 辛 — 깎은 보석 그 자체 [F-6, 2026-08-31] ═══
+   **방식을 바꿨다 — "유리 구슬 안의 결정 다발" → "구 자체가 깎인 보석".**
+
+   [왜 바꿨나] 구 구현(F-5)은 반투명 겉면 안에 육각 기둥 11개를 세운 것이었다(甲 테라리움과
+   같은 골격). 실측 갈무리로 보니 **젖빛 구슬 안의 석영 다발** — 정동(晶洞)이지 다이아몬드가
+   아니었다. 기준 이미지(3.png)는 **구 전체가 깎여 삼각 패싯이 면 단위로 갈리는 보석**이다.
+   甲(구슬 안 테라리움)·戊(구슬 안 알프스)와 같은 국면이라, 안쪽 결정을 열두 번 손보는 대신
+   방식을 갈았다(CLAUDE.md "은유를 그림으로 옮길 때 — 방식부터 맞춘다").
+
+   [구 주장의 정정] 옛 주석은 "구 표면에 패싯을 그리면 윤곽선이 완벽한 원이라 각진 은유가
+   실루엣에서 죽는다"고 적었다. **기준 이미지가 이 전제를 깬다** — 3.png의 실루엣도 원이다.
+   각져 보이는 것은 실루엣이 아니라 **면마다 갈리는 밝기**가 만든다.
+
+   [패싯이 갈리는 원리는 재질이 아니라 환경이다 — 이번 회차의 핵심]
+   flatShading이면 면마다 법선이 다르므로 재질은 **환경맵을 서로 다른 방향에서 샘플한다.**
+   즉 면이 갈리려면 환경에 **좁고 밝은 것**이 있어야 한다. 씬 공용 환경(buildEnvironment)은
+   배경 성운이라 저대비·완만해서 그것만으로는 모든 면이 비슷하게 어둡다 —
+   1차에서 "패싯을 알베도에 직접 그려라"로 갔던 이유가 이것이었다(그 텍스처 stemSurface
+   case 7은 지금도 있지만 applyShell이 map을 떼어내 **화면에 나온 적이 없다**).
+   그래서 **辛 전용 환경맵**을 따로 굽는다 — 검은 바탕 + 좁고 밝은 점광 여럿.
+   재질에 envMap을 직접 물리면 scene.environment보다 우선하므로 **다른 아홉 일간에는
+   구조적으로 영향이 0이다**(측정으로 확인하는 게 아니라 애초에 닿지 않는다).
+
+   [면 수] IcosahedronGeometry(detail 1) = 80면. 보이는 쪽이 40면 안팎으로 실제
+   브릴리언트 컷(57~58면)과 같은 자릿수다. detail 2(320면)는 다시 매끈한 공으로 수렴하고,
+   detail 0(20면)은 주사위가 된다.
+
+   [깊이는 "속에 뭘 넣는 것"이 아니라 "먼 쪽 패싯이 비치는 것"이다 — 되돌린 시도를 남긴다]
+   한 겹만이면 "각진 공"이지 보석의 깊이가 없다. 처음엔 **안에 작은 결정핵**을 따로 두었는데
+   (반경 .56 → .40, 면 수도 바꿔 봤다) 어느 크기에서도 **구슬 안의 또 다른 구슬**로 읽혔다 —
+   동심원 윤곽이 그대로 보여서, 굴절이 아니라 "속에 든 알맹이"가 됐다.
+   실제 보석의 속이 복잡해 보이는 것은 **뒤쪽 면이 앞쪽 면을 통해 비치기 때문**이므로,
+   같은 지오메트리를 **뒷면 패스 + 앞면 패스** 두 번 그리는 것으로 바꿨다. 동심원이 안 생기고
+   면끼리 겹치는 방식이 실제 보석과 같아진다.
+   블렌딩 순서는 甲 유리에서 검증된 것을 그대로 쓴다 — 뒷면은 불투명이라 먼저 깊이를 쓰고,
+   앞면은 FrontSide로만 그려 각 화소가 정확히 한 번만 블렌딩된다(DoubleSide 한 번에 그리면
+   삼각형 순서대로 알파가 겹쳐 줄무늬가 생긴다). */
+let _gemEnv=null;
+function buildGemEnv(){
+  if(_gemEnv)return _gemEnv;
+  const c=document.createElement('canvas');c.width=512;c.height=256;const x=c.getContext('2d');
+  x.fillStyle='#05070e';x.fillRect(0,0,512,256);
+  /* 점광 목록 — [u, v, 반경, 밝기, 색]. 난수를 안 쓴다: 모든 辛이 같은 그림이어야 한다(§5.1).
+     크기를 섞는 이유는 패싯 크기가 제각각이라, 점이 하나뿐이면 그 면만 타고 나머지가 다 죽는다. */
+  const PT=[[.18,.34,52,1.00,'255,255,255'],[.62,.28,30,.92,'214,232,255'],
+            [.86,.52,22,.80,'255,240,214'],[.40,.66,26,.72,'226,236,255'],
+            [.08,.74,16,.60,'255,255,255'],[.72,.80,14,.55,'200,220,255'],
+            [.50,.12,12,.68,'255,250,235'],[.30,.50,10,.50,'255,255,255'],
+            [.95,.20,9,.46,'210,226,255'],[.55,.46,8,.44,'255,255,255'],
+            [.24,.90,7,.38,'235,245,255'],[.78,.10,7,.40,'255,246,225']];
+  for(const [u,v,r,a,rgb] of PT){
+    const px=u*512,py=v*256;
+    const g=x.createRadialGradient(px,py,0,px,py,r);
+    g.addColorStop(0,'rgba('+rgb+','+a+')');
+    g.addColorStop(.22,'rgba('+rgb+','+(a*.55)+')');
+    g.addColorStop(1,'rgba('+rgb+',0)');
+    x.fillStyle=g;x.fillRect(px-r,py-r,r*2,r*2);}
+  /* 아래쪽에 아주 약한 바닥광 하나 — 전부 점광이면 아래를 향한 면이 새까맣게 죽는다 */
+  const gb=x.createLinearGradient(0,150,0,256);
+  gb.addColorStop(0,'rgba(40,52,78,0)');gb.addColorStop(1,'rgba(40,52,78,.55)');
+  x.fillStyle=gb;x.fillRect(0,150,512,106);
+  const t=new THREE.CanvasTexture(c);t.mapping=THREE.EquirectangularReflectionMapping;
+  const pm=new THREE.PMREMGenerator(renderer);pm.compileEquirectangularShader();
+  _gemEnv=pm.fromEquirectangular(t).texture;
+  pm.dispose();t.dispose();
+  return _gemEnv;}
+/* 면마다 다른 밝기를 정점색으로 굽는다. IcosahedronGeometry는 비인덱스 지오메트리라
+   정점 3개가 곧 한 면이다 — 그래서 면 단위 색을 그대로 넣을 수 있다.
+   밝기 후보를 넓게(0.30~1.00) 벌리는 이유: 인접 면의 차가 작으면 flatShading이 있어도
+   눈에는 매끈한 공으로 뭉친다. 실제 컷 보석도 옆면끼리 명도차가 크다. */
+function facetColors(geo,RN,hue,sat,pal,sparkP){
+  const pos=geo.attributes.position,nf=pos.count/3;
+  const col=new Float32Array(pos.count*3),c=new THREE.Color();
+  for(let f=0;f<nf;f++){
+    let L=pal[(RN()*pal.length)|0];
+    if(RN()<sparkP)L=1.0;                 // 브릴리언트 — 몇 면만 튄다. 전면이 튀면 그냥 흰 공이다
+    c.setHSL(hue,sat,L);                  // [F-6-1] L을 setHSL의 lightness로 **그대로** 쓴다.
+    /* 1차에는 L*.5를 넘겼는데, 그러면 가장 밝은 면도 lightness .5 — **온통 중간톤 파란 돌덩어리**가
+       된다. 보석은 면끼리 명도차가 크기도 하지만 무엇보다 **흰에 가까운 면이 있어야** 보석이다. */
+    for(let k=0;k<3;k++){const i=(f*3+k)*3;col[i]=c.r;col[i+1]=c.g;col[i+2]=c.b;}}
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  return geo;}
 let _cryst=null;
 function crystalParts(){
   if(_cryst)return _cryst;
-  const RN=sRng(31); // 결정적 난수 — 모든 辛이 같은 그림이어야 한다(§5.1)
-  const mat=(sx,sy,sz,px,py,pz,rz)=>{const m=new THREE.Matrix4();
-    m.compose(new THREE.Vector3(px,py,pz),
-      new THREE.Quaternion().setFromEuler(new THREE.Euler(0,0,rz||0)),
-      new THREE.Vector3(sx,sy,sz));return m;};
-  /* +Y로 선 기둥을 임의 방향으로 눕힌다. spin은 육각의 회전 — 인접 결정이 같은 각으로
-     서 있으면 하나의 큰 덩어리로 뭉쳐 보인다 */
-  const along=(r,len,center,dir,spin)=>{
-    const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize());
-    q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),spin));
-    const m=new THREE.Matrix4();m.compose(center,q,new THREE.Vector3(r,len,r));return m;};
-  /* ══ 좌표계 ══ 겉면 반경이 1. 정점 |r| 최댓값은 아래 SAFE 이하로 강제한다(원칙 4) */
-  const BOT=-0.50, SAFE=0.90;
-  const gPr=new THREE.CylinderGeometry(1,1,1,6,1,false);  // 육각 기둥
-  const gTip=new THREE.ConeGeometry(1,1,6,1,false);       // 육각 뿔(결정 끝)
-  const phi=Math.acos(BOT/0.985);
-  /* ── 모암 ── 결정이 뿌리내린 어두운 바닥. 갑의 흙과 같은 구실이다 —
-     이게 없으면 결정 다발이 허공에 뜬다 */
-  const rock=[[new THREE.SphereGeometry(.985,26,12,0,Math.PI*2,phi,Math.PI-phi),
-    mat(1,1,1,0,0,0,0),0x2b2f36]];
-  const gIco=new THREE.IcosahedronGeometry(1,0);
-  for(let i=0;i<11;i++){const a=RN()*Math.PI*2,rr=(.14+RN()*.52);
-    const r=.05+RN()*.055;
-    rock.push([gIco,mat(r,r*.7,r,Math.cos(a)*rr,BOT+.05+RN()*.05,Math.sin(a)*rr,RN()*3),
-      [0x3a3f47,0x4a505a,0x33373d][Math.floor(RN()*3)]]);}
-  /* ── 결정 11개 ── 모암에서 부챗살로 자란다. 무채색 네 단 + 끝은 밝게 */
-  const GEM=[0xdfe6ee,0xc9d3de,0xeef3f8,0xb9c3ce];
-  const TIPC=0xf7fbff;
-  const gems=[];
-  for(let i=0;i<11;i++){
-    const a=i/11*Math.PI*2+RN()*.5;
-    const tilt=.16+RN()*.62;                       // 0=수직, 클수록 옆으로 눕는다
-    const dir=new THREE.Vector3(Math.cos(a)*Math.sin(tilt),Math.cos(tilt),Math.sin(a)*Math.sin(tilt)).normalize();
-    const p0=new THREE.Vector3(Math.cos(a)*(.06+RN()*.20),BOT+.10,Math.sin(a)*(.06+RN()*.20));
-    /* 겉면을 안 뚫도록 길이를 잘라 낸다 — |p0 + L·dir| = SAFE 를 L에 대해 푼다.
-       (원칙 4: 3D를 넣을 때는 정점 최댓값을 반드시 잰다. 여기서는 아예 넘을 수가 없게 만든다) */
-    const b=p0.dot(dir), c=p0.lengthSq()-SAFE*SAFE;
-    const Lmax=-b+Math.sqrt(Math.max(0,b*b-c));
-    const L=Math.min(.40+RN()*.52,Lmax);
-    const r=.050+RN()*.050;
-    const tipL=L*.26, shaftL=L-tipL, spin=RN()*1.05;
-    const col=GEM[Math.floor(RN()*GEM.length)];
-    gems.push([gPr,along(r,shaftL,p0.clone().addScaledVector(dir,shaftL/2),dir,spin),col]);
-    gems.push([gTip,along(r,tipL,p0.clone().addScaledVector(dir,shaftL+tipL/2),dir,spin),TIPC]);}
-  _cryst={rock:mergeGeos(rock),gem:mergeGeos(gems),
-    mRock:new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,
-      roughness:.88,metalness:.06,flatShading:true}),
-    /* 금 계열 그대로 — 낮은 거칠기 + 센 환경 반사가 좁고 밝은 하이라이트를 만든다.
-       그 하이라이트가 패싯마다 따로 서야 "깎은 면"으로 읽힌다(§F-5-3 kind:'refl'). */
-    mGem:new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,
-      roughness:.09,metalness:.34,flatShading:true,
-      envMapIntensity:V2_TUNABLES.ENV_INTENSITY.refl})};
-  gPr.dispose();gTip.dispose();gIco.dispose();
+  const T=V2_TUNABLES,env=buildGemEnv();
+  /* 반경 .985 — 겉면(구슬 껍질) 바로 안쪽. 결정적 난수라 모든 辛이 같은 그림이다(§5.1) */
+  const geo=facetColors(new THREE.IcosahedronGeometry(.985,1),sRng(31),
+    T.GEM_HUE,T.GEM_SAT,T.GEM_FACET_L,T.GEM_SPARK);
+  const base={color:0xffffff,vertexColors:true,flatShading:true,
+    roughness:T.GEM_ROUGH,metalness:T.GEM_METAL,envMap:env};
+  _cryst={geo,
+    /* 뒷면 — **불투명하게** 둔다. 불투명 큐가 먼저 그려지며 먼 쪽 표면에 깊이를 써 두므로,
+       뒤이어 오는 반투명 앞면이 정확히 한 번만 그 위에 블렌딩된다(甲 유리에서 검증된 순서). */
+    mBack:new THREE.MeshStandardMaterial(Object.assign({},base,
+      {side:THREE.BackSide,envMapIntensity:T.GEM_BACK_ENV})),
+    mFront:new THREE.MeshStandardMaterial(Object.assign({},base,
+      {side:THREE.FrontSide,envMapIntensity:T.GEM_ENV,
+       transparent:true,opacity:T.GEM_FACE_OPACITY,depthWrite:false}))};
   return _cryst;}
 function makeCrystal(){
   const p=crystalParts(),g=new THREE.Group();
-  g.add(new THREE.Mesh(p.rock,p.mRock));
-  g.add(new THREE.Mesh(p.gem,p.mGem));
+  const back=new THREE.Mesh(p.geo,p.mBack), front=new THREE.Mesh(p.geo,p.mFront);
+  /* renderOrder를 명시한다 — 두 메시가 같은 좌표에 있어 거리 정렬로는 순서가 갈리지 않는다 */
+  back.renderOrder=1; front.renderOrder=2;
+  g.add(back); g.add(front);
   return g;}
 
 /* 겉면 안에 세울 것이 있으면 한 벌 만들어 돌려주고, 없으면 null.
@@ -5582,7 +5635,7 @@ function makeShapes(stemIdx){
   if(stemIdx===0)return makeTree();      // 甲 — 유리구슬 안 테라리움
   if(stemIdx===3)return makeCandle();    // 丁 — 등피 안 촛불
   if(stemIdx===4)return makeAlps();      // 戊 — 유리구슬 안의 알프스
-  if(stemIdx===7)return makeCrystal();   // 辛 — 유리 안의 결정 다발
+  if(stemIdx===7)return makeCrystal();   // 辛 — 깎은 보석(구 자체가 패싯)
   if(stemIdx===9)return makeDew();       // 癸 — 표면에 맺힌 이슬
   return null;}
 /* 겉면을 반투명하게 여는 일간인가. **makeShapes와 다르다** — 戊는 3D가 있지만 겉면은 불투명하다 */
