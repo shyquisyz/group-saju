@@ -1114,6 +1114,21 @@
     margin:4px 0 10px;border:1px solid var(--line);border-radius:10px;overflow:hidden;
     background:rgba(255,255,255,.03);display:flex;align-items:center;justify-content:center}
   .cardprev canvas{max-width:100%;max-height:100%;display:block;border-radius:9px}
+  /* ═══ 인앱 브라우저(카톡 등) 세로 대응 [★ 2026-08-30] ═══
+     [증상] 카톡 인앱에서 카드 시트 아래가 잘려 「공유하기」가 화면 밖에 있었다.
+     [원인] `vh`는 **레이아웃 뷰포트** 기준이다. 인앱 웹뷰는 위 제목줄·아래 툴바가
+     그 위에 겹쳐 있어 실제로 보이는 높이가 100vh보다 작다. 시트의 `top:50%`와
+     `max-height:86vh`가 둘 다 너무 큰 값으로 계산돼 아래로 밀려난다.
+     [재현 실측] 레이아웃 vh 760 · 보이는 높이 560 가정 →
+       시트 top 98 / bottom 662 → **102px이 보이는 영역 밖**
+       「공유하기」 top 563 (보이는 높이 560을 넘음) → 화면에 없다
+       카드 자체는 안 잘렸다(캔버스 비율 1.25 = 1350/1080 정확) — 잘린 것은 시트다
+     [고침] `--vvh`를 visualViewport.height 로 채우고 그것을 기준으로 삼는다.
+     dvh 대신 쓰는 이유 — dvh 미지원 웹뷰가 아직 있고, 이 값은 **실측치**라
+     계산이 아니라 브라우저가 알려 준 그대로다. 지원 안 되면 100vh로 폴백된다. */
+  .sheet{top:calc(var(--vvh, 100vh) * .5);
+    max-height:min(calc(var(--vvh, 100vh) * .86), 780px)}
+  .cardprev{max-height:calc(var(--vvh, 100vh) * .46)}
   .cardwait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     color:var(--mut);font-size:var(--fs-sm)}
   .cardnote{color:var(--mut-2);font-size:var(--fs-sm);line-height:1.5;margin:0 0 10px;
@@ -4114,6 +4129,24 @@ function resize(){
   if(composer)composer.setSize(w,h);
   updateLabelLodDistances();} /* [§7-12] 창 크기가 바뀌면 라벨 임계 거리도 따라가야 한다 */
 addEventListener('resize',resize);resize();
+/* ═══ 보이는 뷰포트 높이를 CSS로 넘긴다 [★ 2026-08-30] ═══
+   인앱 브라우저(카톡·인스타 등)는 위아래 크롬이 화면을 겹쳐 먹어 **100vh가 실제로 보이는
+   높이보다 크다.** 그래서 시트가 아래로 밀려 「공유하기」가 화면 밖에 있었다(실측: 102px).
+   visualViewport.height 는 그 겹침을 뺀 **실제 보이는 높이**다 — 계산하지 않고 받아 쓴다.
+   [갱신 시점] 툴바가 접히고 펴질 때마다 값이 바뀌므로 resize/scroll 둘 다 듣는다.
+   [폴백] visualViewport 가 없으면 innerHeight, CSS 쪽은 var(--vvh, 100vh) 로 한 번 더 받는다. */
+(function(){
+  const set=()=>{
+    const vv=window.visualViewport;
+    const h=(vv&&vv.height)||window.innerHeight||0;
+    if(h>0)document.documentElement.style.setProperty('--vvh',h+'px');};
+  set();
+  addEventListener('resize',set);
+  addEventListener('orientationchange',set);
+  if(window.visualViewport){
+    visualViewport.addEventListener('resize',set);
+    visualViewport.addEventListener('scroll',set);}
+})();
 
 /* ═════════ 카메라 ═════════ */
 /* v0.7: phi = Y축 기준 각도. 작을수록 위에서 내려다봄.
