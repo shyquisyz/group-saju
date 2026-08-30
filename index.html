@@ -1045,6 +1045,18 @@
   /* ═══ 인물 패널 두 구역 [2026-08-30] ═══
      「나와의 관계」와 「X 자신」을 가르는 줄. 제목 뒤로 선이 끝까지 흘러 구역의 시작임을
      알린다 — 태그(.tag)나 해석 소제목(.rdh)과 헷갈리지 않게 서체·색을 따로 준다. */
+  /* ═══ 관계 패널 제목의 이름 [2026-08-30] ═══
+     "A ↔ B"의 두 이름이 그 사람 카드로 가는 손잡이다. h2 안에 들어가므로 크기·굵기는
+     제목을 그대로 물려받고(font:inherit), **누를 수 있다는 신호만** 더한다.
+     [44px] 글자 자체를 키우면 제목 줄이 두꺼워지므로 ::before 로 누르는 판만 채운다 —
+     태그바 이름 칩(#tagbar .tb-name::before)과 같은 방법이다. */
+  .pairname{position:relative;font:inherit;color:inherit;background:none;border:0;padding:0;
+    cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);
+    text-underline-offset:4px;text-decoration-thickness:2px}
+  .pairname::before{content:'';position:absolute;left:-6px;right:-6px;top:50%;
+    transform:translateY(-50%);height:44px}
+  .pairname:hover{text-decoration-color:var(--gold)}
+  .pairname:active{opacity:.75}
   .psec{display:flex;align-items:center;gap:9px;margin:20px 0 10px;
     font-family:'Space Mono',monospace;font-size:var(--fs-sm);font-weight:700;
     letter-spacing:.08em;color:var(--mut);white-space:nowrap}
@@ -9039,9 +9051,14 @@ function showNode(n,groupContext,targetMesh){
   if(!isMe)wirePairCard(meNode,n,pbody);
   wireHapChung(pbody); /* [L4] 합·충 딱지 → 근거 */
   panel.classList.add('open');
+  /* [★ 2026-08-30] ~~openPairPanel(나, 상대)~~ → **그 사람 패널**로 보낸다.
+     인물 패널이 이제 나와의 관계 전문을 품으므로, 줄을 누르면 열리는 것이 곧
+     "나와 그 사람의 관계"다 — 화면이 하나 줄고 뒤로 동선도 node↔node 로 단순해진다.
+     [줄 표기는 그대로 나 기준] data-a 는 계속 나다. 목록의 뜻("나와 그 사람")은
+     안 바뀌었고, 그것을 보여 주는 화면만 바뀌었다. */
   pbody.querySelectorAll('.rel-item').forEach(el=>el.onclick=()=>{
-    const A=nodes.find(x=>x.id===el.dataset.a),B=nodes.find(x=>x.id===el.dataset.b);
-    if(A&&B)openPairPanel(A,B);});
+    const B=nodes.find(x=>x.id===el.dataset.b);
+    if(B){showNode(B);focusNode(B);}});
   const eb=pbody.querySelector('[data-edit]');
   if(eb)eb.onclick=()=>openAddSheet(n);
   const rb=pbody.querySelector('[data-rel]');
@@ -9096,7 +9113,13 @@ function showEdge(e){
      **누구와 누구의 관계인지가 화면 어디에도 크게 안 나왔다.** 관계를 잘못 열었을 때
      알아챌 유일한 단서가 제목인데 그 단서가 사라졌던 것이다.
      r.title은 부제로 내린다 — 버리지 않는다. 사람이 직접 쓴 글이라 계산보다 정확하다. */
-  const pairTitle=`<h2>${bkEsc(e.a.name)} ↔ ${bkEsc(e.b.name)}</h2>`;
+  /* [2026-08-30] 제목의 두 이름을 **누를 수 있게** 한다 — 관계 패널에서 그 사람 카드로
+     가는 길이 뒤로 하나뿐이었다(그마저 e.a 로만 갔다). 인물 패널이 관계 전문을 품게 되면서
+     "이 사람 쪽을 더 보고 싶다"가 자연스러운 다음 동작이 됐다.
+     [누를 수 있음을 보이게] 밑줄 + 손가락 커서. 판은 ::before 로 44px을 채운다 —
+     h2 글자를 44px로 키우면 제목 줄이 통째로 두꺼워진다(태그바 이름 칩과 같은 방법). */
+  const nameBtn=x=>`<button type="button" class="pairname" data-go="${x.id}">${bkEsc(x.name)}</button>`;
+  const pairTitle=`<h2>${nameBtn(e.a)} ↔ ${nameBtn(e.b)}</h2>`;
   pbody.innerHTML=`<span class="tag ${rel.kind==='geuk'?'warn':''}">${rel.label}</span>${pairTitle}`
     +(r?`<div class="pairsub">${r.title}</div>${r.body.map(p=>`<p>${p}</p>`).join('')}`
         +`<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')
@@ -9109,6 +9132,9 @@ function showEdge(e){
   navPrependBack(e.a.name,()=>showNode(e.a));
   wireHapChung(pbody); /* [L4] 합·충 딱지 → 근거 */
   wirePairCard(e.a,e.b,pbody);
+  pbody.querySelectorAll('.pairname').forEach(b=>b.onclick=()=>{
+    const t=nodes.find(x=>x.id===b.dataset.go);
+    if(t){showNode(t);focusNode(t);}});
   panel.classList.add('open');}
 
 /** 두 사람 관계의 세 문단. 소제목 형식은 개인 해석과 같다 */
