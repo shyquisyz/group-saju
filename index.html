@@ -1042,6 +1042,26 @@
      고리에서 사라지므로(우선순위 3>2>1), 그 정보를 문장이 반드시 진다. 아래 .rel-list는
      edges[]에 등록된 관계만 보여줘서 미분류 인물에겐 비어 있다 — 이 줄은 edges[]와 무관하게
      relation()을 직접 계산하므로 누구에게나 항상 나온다. */
+  /* ═══ 인물 패널 두 구역 [2026-08-30] ═══
+     「나와의 관계」와 「X 자신」을 가르는 줄. 제목 뒤로 선이 끝까지 흘러 구역의 시작임을
+     알린다 — 태그(.tag)나 해석 소제목(.rdh)과 헷갈리지 않게 서체·색을 따로 준다. */
+  .psec{display:flex;align-items:center;gap:9px;margin:20px 0 10px;
+    font-family:'Space Mono',monospace;font-size:var(--fs-sm);font-weight:700;
+    letter-spacing:.08em;color:var(--mut);white-space:nowrap}
+  .psec::after{content:'';flex:1 1 auto;height:1px;background:var(--line)}
+  /* ═══ 접히는 해석 덩어리 [2026-08-30] ═══
+     제목이 곧 손잡이다. 겉모습은 .rdh(해석 소제목)와 같게 맞춘다 — 도움말(sjHelp)의
+     기본 모양을 그대로 쓰면 "이건 도움말"로 읽혀 본문이 부록처럼 보인다.
+     [44px은 지운다] .sjhelp-b 의 터치 기준 44px을 여기서는 빼고 padding 으로 다시 준다 —
+     일곱 개가 접힌 상태로 나란히 서므로 44px씩이면 그것만으로 308px이다.
+     대신 위아래 10px 패딩으로 실측 41px을 만들고, 목록이 아니라 **글 제목**이라
+     손가락보다 눈이 먼저 가는 자리라는 점을 근거로 둔다(캐럿이 상태를 알린다). */
+  .rdfold{margin-bottom:9px}
+  .rdfold>.sjhelp{margin-top:0}
+  .rdfold .sjhelp-b{min-height:0;padding:10px 0;gap:5px;
+    font-size:var(--fs-sm);font-weight:700;letter-spacing:.04em;color:var(--gold);opacity:.9}
+  .rdfold .sjhelp-b:hover{opacity:1;color:var(--gold)}
+  .rdfold .sjhelp-body{margin:0 0 4px;padding-left:0;border-left:0}
   .egorel{font-size:var(--fs-sm);color:var(--mut);line-height:1.55;margin:10px 0;
     padding:9px 11px;border-left:2px solid var(--line);background:rgba(255,255,255,.03);border-radius:0 6px 6px 0}
   .egorel b{color:var(--ink);font-weight:600;margin-right:5px}
@@ -3104,6 +3124,9 @@ function personReading(n){
   out.push(cornerMoney(cnt10));
   out.push(cornerTie(d));
   out.push(cornerPower(sajuElements(r),d,gy.verdict));
+  /* [2026-08-30] key 는 제목 문자열 — 인물 패널이 일곱을 접을 때 쓴다.
+     순서가 아니라 이름으로 잡아야 코너를 더하거나 옷겨도 접힘 기억이 안 엉힌다. */
+  out.forEach(x=>{x.key='n:'+x.h;});
   return out;}
 
 /** 사주 한 벌의 십신·운성·지장간을 한 번에. 시주가 없으면 그 자리는 null */
@@ -6613,7 +6636,10 @@ const UI_KEY='groupsaju:ui';
 let helpOpen=(()=>{
   try{const v=JSON.parse(localStorage.getItem(UI_KEY)||'{}').helpOpen;
     return (v&&typeof v==='object')?v:{};}catch{return {};}})();
-function helpIsOpen(k){return helpOpen[k]!==false;}
+/** [2026-08-30] 기본값을 지정할 수 있는 버전. **접힘이 기본**인 손잡이가 생기면서 필요해졌다.
+    저장된 값이 있으면 그것이 이긴다 — 한 번 펼치면 다음에도 펼쳐진 채로 남는다. */
+function helpIsOpenD(k,def){return helpOpen[k]===undefined?!!def:helpOpen[k]!==false;}
+function helpIsOpen(k){return helpIsOpenD(k,true);}
 /* ═══ 핀치 감도 [2026-08-30 확정] ═══
    ~~설정의 임시 「핀치 감도」 선택지(1 / 1.5 / 2 / 3배)~~ → **2배로 확정.**
    실기기에서 넷을 비교해 고른 값이다. 1배(=원래 동작)는 손가락을 다 벌려도 한 이벤트에
@@ -8637,24 +8663,26 @@ function deselect(){if(selected){if(!selected.isMe&&selectedMesh)selectedMesh.sc
    구성원B를 누르면 그룹B 맥락"(HANDOFF §7.4)이 이렇게 구현된다. */
 /* [B] 고리가 말하지 않는 것을 문장이 말한다. 특히 고리 3개(소속이 넓다)인 사람은 나와의
    생·극 정보가 고리에서 가려지므로 여기서 반드시 읽혀야 한다. */
+/* ═══ 나와의 관계 — 머리 줄 [2026-08-30 슬림화] ═══
+   [무엇을 뺐나] ~~별명 + 합·충 딱지 + 비유 안내(NICK_NOTE)~~.
+   인물 패널이 관계 전문을 품게 되면서 바로 아래 「서로에게 무엇인가」가
+   **같은 별명·같은 딱지·같은 안내**를 더 크게 다시 그린다 — 두 번 읽힌다.
+   합치니 중복이 늘어난 게 아니라 없어졌다(실측 225px → 90px대).
+   [무엇을 남겼나] 별명 밑 근거(역할 · 십신 · 오행)와 **고리 안내**.
+   고리는 3D 화면의 표식을 설명하는 유일한 자리라 관계 해석 쪽에 없다. */
 function egoRelLine(node){
   const me=nodes.find(x=>x.isMe);
   if(!me||node===me)return'';
   const r=relation(node.el,me.el),sp=egoRingSpec(node);
   /* [2026-08-30] 십신을 주로, 오행을 근거로(사용자 결정). 나 기준으로 상대를 본다. */
   const g=relGod(me,node);
-  /* [2026-08-30 별명] 여기가 가장 자주 읽히는 관계 문장이라 별명을 먼저 낸다.
-     역할 이름(REL_ROLE)은 별명 밑 근거로 내려 십신·오행과 함께 둔다 —
-     전문용어를 쓰되 뜻을 반드시 함께 적는다는 규칙을 그대로 따른다. */
-  /* [L4, 2026-08-31] 같은 규칙의 딱지를 여기에도. 나와 이 사람의 두 글자를 본다 */
-  const txt=`<span class="egonick">${REL_NICK[g]}${hcChipHtml(me,node)}</span>`
-    +`<span class="k">${REL_ROLE[g]} · ${TEN_GODS[g]} · ${r.kind==='bi'?EL_KO[me.el]+'·'+EL_KO[node.el]:r.label}</span>`;
   const tc=topSystemCount(node);
   const ring=!sp?'고리 없음'
     :sp.why==='many'?`고리 3개 · 소속 항성계 ${tc}곳 — 관계 표식보다 우선 표시됩니다`
     :`고리 ${sp.count}개 · ${sp.why==='saeng'?'나를 생':'나를 극'}`;
-  return`<div class="egorel">나와의 관계 ${txt}<span class="k">${ring}</span>`
-    +`<span class="egonote">${NICK_NOTE}</span></div>`;}
+  return`<div class="egorel">`
+    +`<span class="k">${REL_ROLE[g]} · ${TEN_GODS[g]} · ${r.kind==='bi'?EL_KO[me.el]+'·'+EL_KO[node.el]:r.label}</span>`
+    +`<span class="k">${ring}</span></div>`;}
 /* ═══ 사주 표 [2026-08-29, L2 4단계] ═══
    여덟 글자를 계산해 놓고 일간 하나만 보여주고 있었다(사용자 지적). 네 기둥을 전부 낸다.
 
@@ -8673,8 +8701,23 @@ function egoRelLine(node){
    [모양] 글자 버튼 + 왼쪽 보조색 세로선. 세로선은 --mut 계열이다 — 금색은 이미
    "사주은하의 해석"(관계 패널)이 쓰고 있어서, 같은 색을 쓰면 도움말과 해석이 섞여 보인다.
    [문안] 안쪽 글은 한 글자도 바꾸지 않았다. 감싸는 껍데기만 바뀐 것이다. */
-function sjHelp(key,btnLabel,bodyHtml,title){
-  const open=helpIsOpen(key);
+/* ═══ 해석 덩어리 렌더러 [2026-08-30] ═══
+   관계 해석(pairReading)과 개인 해석(personReading)이 **같은 모양**을 쓴다.
+   전에는 둘 다 같은 줄을 각자 적었는데, 접힘이 붙으면서 두 벌로 갈라질 자리가 됐다.
+   [collapse] 접을 덩어리의 key 목록. 접힌 덩어리는 **제목이 곳 손잡이**가 된다 —
+   별도 버튼을 만들지 않는다(제목과 손잡이가 따로 있으면 무엇을 누를지 헷갈린다).
+   [기억] sjHelp 를 그대로 쓰므로 helpOpen 에 저장된다 — 한 번 펼치면 유지된다.
+   배선도 wireHelp 하나면 된다(새 자바스크립트 없음). */
+function readingHtml(blocks,collapse){
+  const set=new Set(collapse||[]);
+  return `<div class="reading">`+blocks.map(x=>{
+    const inner=x.raw?x.t:'<p>'+x.t+'</p>';
+    if(x.key&&set.has(x.key))
+      return `<div class="rdblk rdfold">${sjHelp('rd:'+x.key,x.h,inner,null,false)}</div>`;
+    return `<div class="rdblk"><div class="rdh">${x.h}</div>${inner}</div>`;}).join('')+`</div>`;}
+function sjHelp(key,btnLabel,bodyHtml,title,defOpen){
+  /* [2026-08-30] defOpen 을 안 넘기면 종전대로 펼침이 기본이다 — 기존 호출부 세 곳 무변경. */
+  const open=helpIsOpenD(key,defOpen===undefined?true:defOpen);
   return `<div class="sjhelp${open?' open':''}" data-help="${key}">`
     +`<button type="button" class="sjhelp-b" aria-expanded="${open?'true':'false'}">`
     +`<span class="sjhelp-car">${open?'▾':'▸'}</span>${btnLabel}</button>`
@@ -8934,9 +8977,36 @@ function showNode(n,groupContext,targetMesh){
   const rd=personReading(n);
   /* [2026-08-31] raw 문단은 <p>로 감싸지 않는다 — 코너 넷이 해석 층(div)을 품고 있어
      <p> 안에 넣으면 브라우저가 문단을 쪼개 레이아웃이 깨진다(관계 패널과 같은 처리). */
-  const rdHtml=rd?`<div class="reading">${rd.map(x=>
-    `<div class="rdblk"><div class="rdh">${x.h}</div>${x.raw?x.t:'<p>'+x.t+'</p>'}</div>`).join('')}</div>`:'';
+  /* ═══ 패널 조립 [★ 2026-08-30 개편] ═══
+     [무엇이 문제였나] 행성을 누르면 「나와의 관계」가 **한 줄 요약**만 나오고, 별명·해설·
+     사주은하의 해석·합충 딱지·카드로 저장은 관계 목록을 한 번 더 눌러야 나왔다.
+     **핵심이 두 탭 뒤에 있었다.**
+     [고침] 이 패널을 두 구역으로 나눈다 — 위는 **나와의 관계 전문**, 아래는 **이 사람 자체**.
+     관계 본문은 관계 패널과 같은 조립(pairBlock)을 쓴다 — 두 벌로 갈라지지 않는다.
+     [길이] 그대로 얹으면 320px에서 4,700px이 된다. 접힘으로 잡는다 —
+     관계 쪽은 뒤 두 덩어리를, 개인 해석은 「어떤 사람인가」만 남기고 일곱을 접는다.
+     한 번 펼치면 helpOpen 에 남아 다음에도 펼쳐진다.
+     [나 자신] 항성에는 관계가 없다(§2.1). 관계 구역 대신 안내 한 줄을 두고
+     **관계 목록을 위로 올린다** — 나 패널에서 가장 쓸모 있는 것이 그 목록이다.
+     [접을 목록을 함수 안에 두는 이유] TDZ다. 전역 const 로 올리면 초기 데이터 생성 코드가
+     이 줄보다 먼저 돌 때 조용히 멈춘다(CLAUDE.md "전역 선언 순서"). */
+  const isMe=!meNode||n===meNode;
+  const PAIR_FOLD=['p:기운의 방향','p:여덟 글자로 보면'];
+  const SELF_OPEN='n:어떤 사람인가';
+  const selfFold=rd?rd.map(x=>x.key).filter(k=>k!==SELF_OPEN):[];
+  const rdHtml=rd?readingHtml(rd,selfFold):'';
   const main=(r?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')+rdHtml;
+  const PB=isMe?null:pairBlock(meNode,n,PAIR_FOLD);
+  /* 관계 구역 — 근거·고리 → 서로에게 무엇인가(펼침) → 카드로 저장 → 접힌 둘 */
+  const relSec=isMe
+    ? `<div class="psec">나와 사람들</div>`
+      +`<div class="egorel"><span class="k">이 은하의 항성입니다 — 아래 관계는 모두 당신을 기준으로 계산됩니다.</span></div>`
+      +relHead+`<div class="rel-list">${rels}</div>`
+    : `<div class="psec">나와의 관계</div>${egoRelLine(n)}${PB.reading}${PB.card}`;
+  /* 이 사람 자체 — 나 패널은 관계 목록을 위로 올렸으므로 여기서 뺀다 */
+  const selfSec=`<div class="psec">${isMe?'나 자신':bkEsc(n.name)+' 자신'}</div>`
+    +sajuTableHtml(n)+main
+    +(isMe?'':relHead+`<div class="rel-list">${rels}</div>`);
   /* ═══ 뒤로 가기 [★ 2026-08-28] ═══
      그룹을 보다 그 안의 사람을 누르면 인물 카드로 넘어가는데, 그룹 정보로 돌아가려면
      그룹을 다시 눌러야 했다(사용자 지적).
@@ -8957,13 +9027,16 @@ function showNode(n,groupContext,targetMesh){
 
   pbody.innerHTML=`${backHtml}${roleTag}<span class="tag">${EL_INFO[n.el].name}</span>
     <h2>${r?r.title:`${n.name} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
-    ${birthLine}${sajuTableHtml(n)}${egoRelLine(n)}${main}${relHead}<div class="rel-list">${rels}</div>
+    ${birthLine}${relSec}${selfSec}
     <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">${bkEsc(n.name)}와 다른 사람의 관계 보기</button></div>
     <div class="panelbtns"><button class="pbtn" id="vstoggle">${virtualMembers.some(c=>c.ref===n)?'가상 성계에서 빼기':'가상 성계에 담기'}</button></div>`;
   /* 뒤로 가기 — 그룹이면 그 그룹으로, 아니면 은하 전체로. selectGroup이 카메라·패널·트리
      강조를 한꺼번에 맞춰 주므로 showGroup을 직접 부르지 않는다(트리 강조가 어긋난다). */
   navWireBack(()=>{selectGroup(backTo);});
-  wireHelp(pbody); /* [2026-08-31] 도움말 세 곳의 접기 손잡이 */
+  wireHelp(pbody); /* 도움말 손잡이 + 접힌 해석 덩어리(.rdfold) — 같은 배선을 쓴다 */
+  /* 카드로 저장 — 관계 패널과 **같은 함수**로 연결한다. 순서(me,n)가 카드 제목을 정한다:
+     "나 ↔ X"가 되고 첫 줄이 "나에게 X는 …"으로 시작한다. */
+  if(!isMe)wirePairCard(meNode,n,pbody);
   wireHapChung(pbody); /* [L4] 합·충 딱지 → 근거 */
   panel.classList.add('open');
   pbody.querySelectorAll('.rel-item').forEach(el=>el.onclick=()=>{
@@ -9068,9 +9141,11 @@ function pairReading(a,b,giver,receiver,rel,collapse){
         +(gAB!==gBA?' 한 사이인데 서로 다르게 보이는 것은 각자의 태어난 날을 기준으로 보기 때문입니다.'
                    :' 서로를 같은 자리로 봅니다.')
         +`</div>`;
-  out.push({h:'서로에게 무엇인가',t:t1,raw:true});
+  /* [2026-08-30] key 는 **제목 문자열**로 만든다 — 순서가 바뀌어도
+     사용자가 접어 둔 상태(helpOpen)가 다른 덩어리로 옳겨가지 않는다. */
+  out.push({key:'p:서로에게 무엇인가',h:'서로에게 무엇인가',t:t1,raw:true});
   /* ② 기운의 방향 — 기존 오행 카피를 그대로 */
-  out.push({h:'기운의 방향',t:pairPhrase(giver,receiver,rel.kind,'long')});
+  out.push({key:'p:기운의 방향',h:'기운의 방향',t:pairPhrase(giver,receiver,rel.kind,'long')});
   /* ③ 여덟 글자로 보면 — 관계를 일간 하나로만 보던 것을 푸는 자리 */
   const sp=relSpread(a,b);
   if(sp&&sp.max>=2){
@@ -9079,10 +9154,9 @@ function pairReading(a,b,giver,receiver,rel,collapse){
     const num=NUM_KO[Math.min(sp.max,8)]+(sp.tops.length>1?'씩':'');
     let t3=`${b.name}의 ${NUM_KO[sp.letters]} 글자를 ${a.name} 기준으로 세면 ${nm}${particle(GROUP_POWER[sp.tops[sp.tops.length-1]],'이가')} ${num}${ro(num)} 가장 많습니다 — ${toward}입니다.`;
     if(!sp.hasTime)t3+=` ${b.name}의 시각을 몰라 ${NUM_KO[sp.letters]} 글자만 본 결과라, 시각을 넣으면 달라질 수 있습니다.`;
-    out.push({h:'여덟 글자로 보면',t:t3});
+    out.push({key:'p:여덟 글자로 보면',h:'여덟 글자로 보면',t:t3});
   }
-  return `<div class="reading">${out.map(x=>
-    `<div class="rdblk"><div class="rdh">${x.h}</div>${x.raw?x.t:'<p>'+x.t+'</p>'}</div>`).join('')}</div>`;}
+  return readingHtml(out,collapse);}
 /* [4번 1단계] 두 사람의 관계 패널을 여는 단일 진입점. edges[]에 저장된 쌍이면 그 객체를 그대로
    써서 수기 해설(RICH_E)이 나오게 하고, 없으면 즉석 계산 객체를 넘긴다(§5.4와 같은 패턴). */
 function openPairPanel(a,b){
