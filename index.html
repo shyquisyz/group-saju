@@ -8470,11 +8470,47 @@ function sajuSelfTest(){
     T('relListLabel: 줄 표기가 나 기준', shown.trim()===expect, shown.trim()+' vs '+expect);
     row.click();
     const h2b=(pbody.querySelector('h2')||{}).textContent||'';
-    T('relListOpen: 누르면 나↔상대', h2b===me.name+' ↔ '+o.name||h2b===o.name+' ↔ '+me.name, h2b);
+    /* [★ 2026-08-30 교체] ~~"누르면 나↔상대 관계 패널"~~ → **그 사람 패널**.
+       인물 패널이 나와의 관계 전문을 품게 되면서, 줄을 누르면 열리는 것이 곧
+       "나와 그 사람의 관계"다. 검사도 그 뜻으로 바꾼다 — 제목이 그 사람이고,
+       그 안에 별명과 카드 버튼이 함께 있어야 한다. */
+    T('relListOpen: 누르면 그 사람 패널 + 나와의 관계가 함께',
+      h2b.indexOf(o.name)===0 && !!pbody.querySelector('.nickname') && !!pbody.querySelector('#cardbtn'),
+      h2b+' / 별명 '+((pbody.querySelector('.nickname')||{}).textContent||'없음').trim().slice(0,14));
   }
-  /* 4. 관계 패널 제목은 항상 "A ↔ B" */
+  /* 4. 관계 패널(A↔B 명시 진입)의 제목은 항상 "A ↔ B"
+     [★ 2026-08-30] 위 3번이 더 이상 관계 패널을 열지 않으므로 **여기서 직접 연다.**
+     앞 화면에 기대던 검사라, 안 고치면 인물 패널 제목을 보고 통과/실패를 판정하게 된다. */
+  openPairPanel(me,other);
   const h2c=(pbody.querySelector('h2')||{}).textContent||'';
   T('pairTitle: 관계 패널 제목에 ↔', h2c.indexOf('↔')>0, h2c);
+  /* 제목의 두 이름은 그 사람 카드로 가는 손잡이다 */
+  T('pairNameGo: 관계 패널 제목 이름이 눌린다',
+    pbody.querySelectorAll('.pairname').length===2,
+    pbody.querySelectorAll('.pairname').length+'개');
+
+  /* ═══ 인물 패널 병합 [★ 2026-08-30] ═══ 행성 탭 한 번에 관계가 펼쳐지는가 */
+  showNode(other);
+  const nk=pbody.querySelector('.nickname');
+  const secs=[...pbody.querySelectorAll('.psec')].map(x=>x.textContent);
+  T('nodePair: 인물 패널에 나와의 관계 전문이 있다',
+    !!nk && !!pbody.querySelector('#cardbtn') && secs[0]==='나와의 관계',
+    (secs.join(' / ')||'구역 없음')+' · 별명 '+(nk?nk.textContent.trim().slice(0,14):'없음'));
+  /* 카드는 **나 기준**이어야 한다 — 순서가 뒤집히면 첫 줄이 "X에게 나는…"으로 나온다.
+     문자열이 아니라 버튼을 실제로 눌러 cardPair 를 본다(배선까지 검사). */
+  const cbtn=pbody.querySelector('#cardbtn');
+  if(cbtn)cbtn.click();
+  T('nodeCardPair: 인물 패널의 카드가 나 ↔ 그 사람',
+    !!cardPair && cardPair.a===me && cardPair.b===other,
+    cardPair?cardPair.a.name+' ↔ '+cardPair.b.name:'없음');
+  closeSheets();
+  /* 나(항성)에게는 관계가 없다(§2.1) — 전문도 카드도 없고, 대신 관계 목록이 위로 온다 */
+  showNode(me);
+  const meSecs=[...pbody.querySelectorAll('.psec')].map(x=>x.textContent);
+  T('nodePairMe: 나 패널에는 관계 전문도 카드도 없다',
+    !pbody.querySelector('.nickname') && !pbody.querySelector('#cardbtn')
+    && pbody.querySelectorAll('.rel-item').length>0,
+    meSecs.join(' / ')+' · 목록 '+pbody.querySelectorAll('.rel-item').length+'줄');
 
   /* ═══ 합·충 [L4, 2026-08-31] ═══ */
   /* 5. 짝 목록 정합 — 개수와 내용을 **사양에 적힌 짝 이름**과 대조한다.
