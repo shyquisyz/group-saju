@@ -3798,6 +3798,9 @@ const V2_TUNABLES={
   PULL_EASE_POW: 3,             // 감속 곡선 지수. 들어갈 때 1-(1-p)^3, 나올 때 p^3 —
                                 // **양방향 모두 "빠르게 출발해 천천히 도착"**이 되게 방향별로 식을 가른다.
                                 // 한 식(1-(1-p)^3)만 쓰면 나올 때는 그 곡선을 거꾸로 타서 가속으로 보인다
+  /* ═══ 줌 하한 [F-7, 2026-08-31] — 근거는 zoomFloor 주석 ═══ */
+  ZOOM_FILL_MAX: 0.60,          // 포커스한 천체가 화면 세로에서 차지할 수 있는 최대 비율
+  ZOOM_NEAR_SAFE: 1.6,          // 카메라가 중심에서 최소 이만큼(반경 배수) 떨어진다 — 癸 이슬 1.10 바깥
   ZOOM_WHEEL_STEP: 0.14,        // [F-3] 휠 한 칸의 로그 배율(deltaY 100 기준). 구현은 exp(±step·|deltaY|/100).
                                 // 구 방식은 고정 배율 1.07이라 전 구간(8→200, 25배)에 **47.6칸**이 필요했다
                                 // (ln25/ln1.07). 0.14면 ln(27.5)/0.14 = 23.7칸 ≈ 8회 제스처.
@@ -4447,7 +4450,35 @@ function focusNode(n,targetMesh){
   const nodeRadius=n.isMe?V2_TUNABLES.STAR_SCALE:V2_TUNABLES.PLANET_SCALE;
   const radius=nodeRadius+V2_TUNABLES.LABEL_GAP+1.0;
   cam.rTarget=Math.min(cam.R_MAX,Math.max(cam.R_MIN,distanceForRadius(radius)));}
-function zoomBy(f){cam.rTarget=Math.min(cam.R_MAX,Math.max(cam.R_MIN,cam.rTarget*f));}
+/* ═══ 줌 하한을 포커스 대상 기준으로 [F-7, 2026-08-31] ═══
+   [증상] 「나」는 가까이 볼 수 있는데 다른 행성은 눌러도 자세히 안 보인다.
+   [원인 — 하한이 대상과 무관한 절대값이다] cam.R_MIN=40은 월드 단위 고정값이라
+   **무엇을 보고 있든 같다.** 그런데 항성(STAR_SCALE 3.6)과 행성(PLANET_SCALE 0.90)은
+   반경이 4배 차이다. 그래서 같은 거리 40에서:
+     · 「나」   지름 196.3px = 화면 세로의 19.3%
+     · 행성    지름  49.1px = 화면 세로의  4.8%   (실측, fov 50°, 뷰포트 높이 1017)
+   4.0배 차이는 정확히 STAR_SCALE:PLANET_SCALE 비다 — 즉 버그가 아니라 **설계의 결과**이고,
+   행성만 못 보는 게 아니라 애초에 "대상에 맞춰 다가간다"는 개념이 없었다.
+   [두 번째 원인 — focusNode의 의도가 하한에 먹힌다] focusNode는 이미 대상 반경으로 거리를
+   역산한다(행성 10.2 / 「나」 19.1). 그런데 마지막 줄이 Math.max(cam.R_MIN, …)로 자르므로
+   **둘 다 40으로 덮인다.** 계산해 놓고 버리고 있었다.
+   [고침 범위] 포커스 전환의 기본 프레이밍은 **그대로 둔다**(회귀 조건). 손으로 당기는
+   핀치·휠(zoomBy)만 대상 기준 하한을 쓴다 — "탭하면 지금처럼, 더 보고 싶으면 당겨서".
+   [하한을 0으로 두지 않는 이유] 세 겹으로 막는다:
+     · 화면 채움 상한 ZOOM_FILL_MAX(0.60) — 이 이상은 천체가 화면을 넘어 방향을 잃는다
+     · 반경 배수 ZOOM_NEAR_SAFE(1.6) — 표면을 뚫고 들어가지 않게. 癸(이슬)가 반경 1.10까지
+       솟으므로 1.6이면 그 바깥이다
+     · camera.near(1.0)의 2.2배 — 앞면이 근평면에 잘리지 않게
+   셋 중 가장 먼 것을 쓰고, 그 결과가 R_MIN(40)보다 크면 R_MIN을 쓴다(하한은 넓어지기만 한다). */
+function zoomFloor(){
+  if(!focusedNode)return cam.R_MIN;
+  const R=focusedNode.isMe?V2_TUNABLES.STAR_SCALE:V2_TUNABLES.PLANET_SCALE;
+  /* 화면 세로 대비 지름 비 = 2R / (2·d·tan(fov/2)) 이므로 픽셀 높이가 약분된다 —
+     뷰포트 크기와 무관한 값이다(패널 개폐로 캔버스 폭이 변해도 흔들리지 않는다) */
+  const byFill=R/(V2_TUNABLES.ZOOM_FILL_MAX*Math.tan(camera.fov*Math.PI/360));
+  return Math.min(cam.R_MIN,
+    Math.max(byFill,R*V2_TUNABLES.ZOOM_NEAR_SAFE,camera.near*2.2));}
+function zoomBy(f){cam.rTarget=Math.min(cam.R_MAX,Math.max(zoomFloor(),cam.rTarget*f));}
 /* [UI재검토 6] zoomBy(.78)/zoomBy(1.28) 두 핸들러 → 은하 복귀 버튼 하나. zoomBy 자체는 남는다 —
    휠(canvas 'wheel')과 핀치(touchmove 2점)가 계속 쓴다. 버튼에서만 뗀 것이다. */
 document.getElementById('z-fit').onclick=()=>fitGalaxy();
