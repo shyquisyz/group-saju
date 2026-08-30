@@ -1166,7 +1166,10 @@
   .cardnote2{color:var(--mut);font-size:var(--fs-sm);line-height:1.5;margin-top:8px;
     min-height:1.5em;word-break:keep-all}
   /* 패널 버튼 아래의 같은 안내 — 버튼을 누르기 **전에** 읽혀야 하는 문장이다 */
-  .cardhint{color:var(--mut-2);font-size:var(--fs-sm);line-height:1.5;margin:-4px 0 10px;
+  /* [2026-08-30] ~~margin:-4px 0 10px~~ — 위 여백이 **음수**라 「카드로 저장」 버튼에
+     거의 붙어 있었다(실측 간격 −4px). 카드 시트에 세운 규칙(블록 사이 14 / 딸린 설명 6)을
+     여기에도 쓴다 — 이건 버튼에 딸린 설명이므로 위 6, 아래는 다음 블록과의 14. */
+  .cardhint{color:var(--mut-2);font-size:var(--fs-sm);line-height:1.5;margin:6px 0 14px;
     word-break:keep-all}
   /* [2026-08-30] ~~#cardbtn{min-height:44px}~~ — .pbtn 기본 규칙으로 올리면서 지웠다.
      직전 회차에는 이 한 개만 44px로 올렸는데, 그러면 같은 생김새의 버튼이
