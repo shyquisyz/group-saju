@@ -86,7 +86,7 @@
 
 작은 미리보기에서 가장 잘 읽히지만 톤이 앱보다 밝고 청록 쪽이다(평균 `#142028`).
 
-## og-c.jpg — 가로 2:1 · **현재 `../og-image.jpg`로 적용**
+## og-c.jpg — 가로 2:1 · **탈락(2026-08-30 실제 화면 캡처로 교체)**
 
 > Wide horizontal minimal astronomical illustration on a near-black deep navy field (#11121d).
 > A single luminous pale-gold star sits left of center with a clean soft bloom. Faint thin
@@ -97,5 +97,5 @@
 > photographic. No text, no letters, no numbers, no watermark, no logo, no signature, no people.
 
 **고른 이유.** 톤이 목표에 가장 가깝고(평균 `#0a0f1b`), **앱이 실제로 그리는 화면과 같은
-어휘**를 쓴다 — 항성 하나에 얇은 궤도 고리와 그 위의 행성들. 직전 `og-image.jpg`는 앱
+어휘**를 쓴다 — 항성 하나에 얇은 궤도 고리와 그 위의 행성들. 직전 공유 그림은 앱
 화면을 그대로 갈무리한 것이었는데 같은 구도를 더 또렷하게 그린 셈이다.
