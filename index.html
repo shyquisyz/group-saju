@@ -10,13 +10,18 @@
      거기서는 확대가 오히려 필요하다. (iOS Safari는 원래 user-scalable=no를 무시한다 —
      막고 있다고 믿었던 것도 절반은 사실이 아니었다.) -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- ═══ 공유 미리보기 [2026-08-31 · 2026-08-30 그림 교체] ═══ 카톡·문자로 링크를 보낼 때 뜨는 카드.
+<!-- ═══ 공유 미리보기 [2026-08-31 · 2026-08-30 실제 화면 캡처로 교체] ═══
+     카톡·문자로 링크를 보낼 때 뜨는 카드.
      [★ 이미지는 파일 하나만 갈아 끼우면 되게 뒀다] og-image.jpg 한 장만 교체하면 되고
      HTML은 손대지 않아도 된다. **단 아래 og:image:alt 는 예외다** — 그건 그림을 설명하는
-     글이라 그림이 바뀌면 같이 틀려진다. 2026-08-30에 실제로 밟았다: ~~앱 화면 갈무리~~를
-     그린 우주로 바꾸면서 alt 는 "사람들이 행성으로 떠 있는 은하 화면"으로 남아 있었다.
-     [지금 그림] 생성 아트(항성 하나 + 얇은 궤도 고리 + 행성들). 글자는 얹지 않았다 —
-     문구가 들어간 디자인은 나중 과제다. 후보와 프롬프트는 assets/candidates/ 에 있다.
+     글이라 그림이 바뀌면 같이 틀려진다. 두 번 연속 밟은 자리라 여기 못 박아 둔다.
+     [지금 그림] **앱의 은하 조망 화면을 그대로 캡처**한 것이다. 항성 하나(나)를 그룹 성계
+     넷이 둘러싸고, 그룹 이름표와 관계선·궤도가 함께 보인다. 글자는 얹지 않았다.
+     [★ 데모 데이터로만 찍는다] 캡처는 `my-data.js`가 없는 사본 + 앱 내장 데모 시드에서
+     한다. 이 파일은 공개 저장소에 커밋되므로 **실명이 한 글자라도 들어가면 되돌릴 수 없다.**
+     지금 그림 안의 글자는 전부 여덟 개다 — 회사/2인, 가족/4인, 미분류/1인, 친구들/3인.
+     ("미분류"는 앱이 그룹 없는 사람을 묶어 부르는 말이고 사용자가 지은 이름이 아니다.)
+     [생성 아트는 남겨 뒀다] 직전 회차의 그림은 assets/candidates/og-c.jpg 에 그대로 있다.
      [절대 경로인 이유] OG는 상대 경로를 못 읽는 수집기가 많다. 배포 주소를 그대로 박는다.
      [og:url] 저장소 이름(group-saju)은 바뀌지 않으므로 서비스명과 무관하게 유효하다.
      [★ 캐시] 주소가 그대로라 이미 뿌려진 카톡 대화방은 옛 그림을 계속 보여준다.
@@ -30,7 +35,7 @@
 <meta property="og:image" content="https://shyquisyz.github.io/group-saju/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="어두운 우주에 항성 하나와 그 둘레를 도는 행성들이 그려진 그림">
+<meta property="og:image:alt" content="사주은하 화면 — 가운데 항성 하나를 둘러싸고 그룹 성계들이 궤도를 도는 어두운 은하">
 <meta property="og:locale" content="ko_KR">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="사주은하">
