@@ -1140,6 +1140,22 @@
   .cardlong{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
   .cardlong img{display:block;width:100%;max-width:300px;margin:10px auto 0;border-radius:10px;
     border:1px solid var(--line)}
+  /* ═══ 카드 시트 여백 리듬 [★ 2026-08-30] ═══
+     [피드백] "버튼 아래와 시트 안 여백이 미완성처럼 보인다."
+     실측하니 값이 제각각이었다 — h3 14 / 미리보기 4·10 / 안내 0·10 / 버튼 6 / 결과 8.
+     여섯 자리에 여섯 값이라 리듬이 없다.
+     [규칙] **블록 사이 14, 딸린 설명 6.** 두 값만 쓴다.
+     [미리보기가 좌우로 남던 것] .cardprev 가 width:100% 라 카드(가로:세로 = 4:5)보다
+     넓어 회색 여백이 양옆에 남았다. 높이를 먼저 정하고 폭은 비율이 정하게 바꾼다 —
+     상자가 카드에 딱 붙는다. 좁은 화면에서는 width 가 한계라 max-width 로 막는다. */
+  #cardsheet h3{margin-bottom:14px}
+  #cardsheet .cardprev{width:auto;max-width:100%;height:calc(var(--vvh, 100vh) * .46);
+    max-height:none;margin:0 auto 14px}
+  #cardsheet .cardnote{margin:0 0 14px}
+  #cardsheet .cardbtns{margin:0}
+  #cardsheet .cardnote2{margin-top:6px}
+  #cardsheet .cardlong{margin-top:14px;padding-top:14px}
+  #cardsheet .cardlong .cardnote{margin:0}
   .cardwait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     color:var(--mut);font-size:var(--fs-sm)}
   .cardnote{color:var(--mut-2);font-size:var(--fs-sm);line-height:1.5;margin:0 0 10px;
