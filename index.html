@@ -8977,6 +8977,32 @@ function showNode(n,groupContext,targetMesh){
     if(virtualMembers.some(c=>c.ref===n))removeFromVirtualSlot(n);else addToVirtualSlot(n);
     showNode(n);};
   renderNextStep();} /* 담기/빼기 직후 패널을 다시 그려 버튼 문구가 바로 바뀌게 */
+/* ═══ 두 사람 관계 본문 — 한 벌로 조립한다 [2026-08-30] ═══
+   [왜 뽑았나] 인물 패널(showNode)이 같은 내용을 위에 얹게 되면서, 조립이 두 곳으로
+   갈릴 자리가 생겼다. 이 저장소는 그 사고를 이미 겪었다 — 도시 목록이 두 벌로 갈라져
+   온보딩에만 항목이 빠졌던 일(eb32477). **화면이 둘이어도 조립은 하나로 둔다.**
+   [무엇을 돌려주나] rel(태그 문구·극 여부에 쓴다) / reading(해석 본문) / card(저장 버튼 + 안내).
+   태그와 제목은 화면마다 다르므로 여기서 만들지 않는다 — 관계 패널은 "A ↔ B"를 h2로 쓰고,
+   인물 패널은 그 사람 이름을 h2로 쓴다.
+   [collapse] 접을 덩어리의 key 목록. 관계 패널은 전용 화면이라 아무것도 안 접고,
+   인물 패널만 뒤 두 덩어리를 접는다(§5.11). */
+function pairBlock(a,b,collapse){
+  const rel=relation(a.el,b.el);
+  /* 비화는 방향이 없어 rel.from이 undefined다 — 그대로 두면 giver가 항상 b가 돼 문장 순서가
+     제목("A ↔ B")과 뒤집힌다. 비화일 때는 a,b 순서를 그대로 쓴다. */
+  const giver=rel.kind==='bi'?a:(a.el===rel.from?a:b);
+  const receiver=giver===a?b:a;
+  return {rel, giver, receiver,
+    reading:pairReading(a,b,giver,receiver,rel,collapse),
+    card:pairCardHtml()};}
+/** 카드 저장 버튼 + 안내. 안내는 **버튼 아래**다 — 누르기 전에 읽혀야 한다. */
+function pairCardHtml(){
+  return `<div class="panelbtns"><button class="pbtn" id="cardbtn">카드로 저장</button></div>`
+    +`<div class="cardhint">카드는 내 기기에서 만들어집니다 — 이름도 생년월일도 어디로도 보내지 않습니다.</div>`;}
+/** #cardbtn 배선. 두 화면이 같은 함수를 쓴다 — 순서(a,b)가 카드 제목 "a ↔ b"를 정한다. */
+function wirePairCard(a,b,root){
+  const cb=(root||document).querySelector('#cardbtn');
+  if(cb)cb.onclick=()=>openCardSheet(a,b);}
 function showEdge(e){
   activeVirtual=false; /* [§5.5] 다른 패널로 넘어감 */
   navMark({t:'edge',a:e.a,b:e.b});
@@ -8985,14 +9011,13 @@ function showEdge(e){
      저장하지만 즉석 조립 경로(§5.4 synth 등)는 필드가 빠질 수 있어, 호출부마다 기억해야 하는
      구조 자체를 없앴다. 구 폴백은 문장이 생/비화/극 3개뿐이라 "한쪽이 다른 쪽을"이라고만 하고
      누가 주는지조차 밝히지 않았다 — relation()이 from을 돌려주는데도 쓰지 않고 있었다. */
-  const rel=relation(e.a.el,e.b.el);
-  /* 비화는 방향이 없어 rel.from이 undefined다 — 그대로 두면 giver가 항상 e.b가 돼 문장 순서가
-     제목("A ↔ B")과 뒤집힌다. 비화일 때는 a,b 순서를 그대로 쓴다. */
-  const giver=rel.kind==='bi'?e.a:(e.a.el===rel.from?e.a:e.b);
-  const receiver=giver===e.a?e.b:e.a;
+  /* [2026-08-30] 조립은 pairBlock 한 곳에서 — 인물 패널이 같은 것을 쓴다(두 벌 방지).
+     관계 패널은 전용 화면이라 아무것도 접지 않는다 — collapse 인자를 안 넘긴다. */
+  const PB=pairBlock(e.a,e.b);
+  const rel=PB.rel;
   /* [2026-08-30] 십신 세 문단을 얹는다. 오행 문구(pairPhrase)는 ②에 그대로 남는다 —
      기존 카피 15개는 "성질까지 간다"는 원칙으로 쓴 자산이라 버리지 않는다. */
-  const relHtml=pairReading(e.a,e.b,giver,receiver,rel);
+  const relHtml=PB.reading;
   /* [★ 2026-08-31] rich 제목이 있어도 **"A ↔ B"를 h2로 먼저** 놓는다.
      구 코드는 rich가 있으면 h2를 r.title("서로를 비추는 두 사람" 같은 별칭)으로 덮어써서
      **누구와 누구의 관계인지가 화면 어디에도 크게 안 나왔다.** 관계를 잘못 열었을 때
@@ -9005,19 +9030,16 @@ function showEdge(e){
     +relHtml;
   /* [2026-08-30] 카드로 저장 — 관계 패널에서만 나온다. 두 사람이 정해져 있어야
      카드를 만들 수 있기 때문이다. 안내 문구를 **버튼 아래**에 둔다: 누르기 전에 읽혀야 한다. */
-  pbody.insertAdjacentHTML('beforeend',
-    `<div class="panelbtns"><button class="pbtn" id="cardbtn">카드로 저장</button></div>`
-   +`<div class="cardhint">카드는 내 기기에서 만들어집니다 — 이름도 생년월일도 어디로도 보내지 않습니다.</div>`);
+  pbody.insertAdjacentHTML('beforeend',PB.card);
   /* [2026-08-31] 관계 패널에는 뒤로가 **아예 없었다** — 여기 들어오면 트리나 태그바를
      쓰지 않고는 나갈 수 없었다(실측). 이력이 비면 두 사람 중 앞사람으로 보낸다. */
   navPrependBack(e.a.name,()=>showNode(e.a));
   wireHapChung(pbody); /* [L4] 합·충 딱지 → 근거 */
-  const cb=document.getElementById('cardbtn');
-  if(cb)cb.onclick=()=>openCardSheet(e.a,e.b);
+  wirePairCard(e.a,e.b,pbody);
   panel.classList.add('open');}
 
 /** 두 사람 관계의 세 문단. 소제목 형식은 개인 해석과 같다 */
-function pairReading(a,b,giver,receiver,rel){
+function pairReading(a,b,giver,receiver,rel,collapse){
   const gAB=relGod(a,b), gBA=relGod(b,a);
   const out=[];
   /* ① 서로에게 무엇인가 — 양방향. 비대칭이 이 화면의 핵심이다 */
