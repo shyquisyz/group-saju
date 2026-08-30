@@ -253,7 +253,15 @@
   .legendrow span{display:flex;align-items:center;gap:5px}
   .lg-ring{width:14px;height:6px;border:1.5px solid;border-radius:50%}
   .panelbtns{display:flex;gap:8px;margin-top:14px}
-  .pbtn{flex:1;padding:11px;border-radius:4px;border:1px solid var(--line);background:rgba(255,255,255,.05);
+  /* [2026-08-30] min-height:44px — **모든 .pbtn 이 터치 기준을 지킨다.**
+     ~~padding 11px + 15px 글자 = 42px~~이었다(실측). 직전 회차에는 #cardbtn 하나만
+     올렸고 나머지는 "인물 패널 세 줄의 자리가 움직인다"는 이유로 두었다 —
+     그 움직임은 서로 닿지 않는 가로 칸이 2px씩 높아지는 것뿐이라 검증으로 확인했다.
+     [왜 min-height 인가] height 로 박으면 두 줄짜리 버튼("…와 다른 사람의 관계 보기")가
+     잘린다. min-height 는 짧은 버튼만 44로 밀어 올리고 긴 버튼은 그대로 자란다.
+     [세로 가운데] <button> 은 내용을 세로 가운데에 두므로 flex 를 따로 걸 필요가 없다. */
+  .pbtn{flex:1;min-height:44px;padding:11px;border-radius:4px;border:1px solid var(--line);
+    background:rgba(255,255,255,.05);
     color:var(--ink);font-size:var(--fs-sm);font-weight:600;cursor:pointer;font-family:inherit}
   .pbtn.danger{border-color:#7a3a30;color:#ff9a86}
   .pbtn:active{opacity:.8}
@@ -1038,10 +1046,9 @@
   /* 패널 버튼 아래의 같은 안내 — 버튼을 누르기 **전에** 읽혀야 하는 문장이다 */
   .cardhint{color:var(--mut-2);font-size:var(--fs-sm);line-height:1.5;margin:-4px 0 10px;
     word-break:keep-all}
-  /* [320px] .pbtn 은 padding 11px + 15px 글자라 높이가 **42px**이다(실측).
-     이 버튼은 확산 동선의 시작점이라 44px 기준을 지킨다. 나머지 .pbtn 은 그대로 뒀다 —
-     같이 올리면 인물 패널 세 줄의 자리가 함께 움직여서, 이번 지시 범위 밖이다. */
-  #cardbtn{min-height:44px}
+  /* [2026-08-30] ~~#cardbtn{min-height:44px}~~ — .pbtn 기본 규칙으로 올리면서 지웠다.
+     직전 회차에는 이 한 개만 44px로 올렸는데, 그러면 같은 생김새의 버튼이
+     같은 패널 안에서 42/44로 갈라 줄이 어긋난다. 위 .pbtn 규칙 참고. */
   /* ═══ 도시 선택기 — 탭 + 격자 [2026-08-30] ═══
      ~~두 단(왼쪽 권역 / 오른쪽 도시)~~ → **위 탭 줄 + 아래 버튼 격자.**
      [왜 바꿨나] 두 단은 권역 칸이 한 번 고른 뒤에도 가로 112px을 상시 차지했다.
