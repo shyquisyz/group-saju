@@ -257,6 +257,25 @@
   .legendrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:var(--fs-sm);color:var(--mut)}
   .legendrow span{display:flex;align-items:center;gap:5px}
   .lg-ring{width:14px;height:6px;border:1.5px solid;border-radius:50%}
+  /* ═══ 관계선 범례 [2026-08-30] ═══
+     [왜] 은하에 선이 네 종류나 그려지는데 어디에도 뜻이 안 적혀 있었다. 특히 붉은 점선(극)은
+     아무 설명 없이 보면 "나쁜 관계"로 읽힌다 — 이 앱의 해석 원칙과 정반대다.
+     [자리·패턴] 고리 색 범례(.legendrow) 바로 아래, 도움말 신분(sjHelp)으로 접어 둔다.
+     그룹 패널에는 이미 「흐름 읽는 법」이 같은 패턴으로 있다.
+     [.lgl 이 .legendrow 와 다른 점] 고리 범례는 짧은 낱말 셋이라 가로로 흘려도 되지만,
+     이쪽은 각 줄이 문장이다. 320px에서 가로로 흘리면 견본과 글이 갈라지므로 **한 줄에 하나**.
+     견본을 위쪽에 붙여(align-items:flex-start) 글이 두 줄이 돼도 어긋나지 않는다. */
+  .lgl{display:flex;flex-direction:column;gap:8px;margin:2px 0 0}
+  .lgl-i{display:flex;align-items:flex-start;gap:8px;
+    font-size:var(--fs-sm);color:var(--mut);line-height:1.6;word-break:keep-all}
+  .lgl-i b{color:var(--ink);font-weight:600}
+  /* 견본 — 실제 선 색을 그대로 쓴다(makeEdge/createGroupInstance의 값). 점선은
+     repeating-linear-gradient로 흉내낸다. 폭 26px은 점 셋이 보이는 최소치다. */
+  .lgl-s{flex:0 0 26px;width:26px;height:2px;margin-top:.62em;border-radius:1px}
+  .lgl-s.geuk{background:repeating-linear-gradient(to right,#ff8a6a 0 5px,transparent 5px 8px)}
+  .lgl-s.saeng{background:#6a7aa8}
+  .lgl-s.bi{background:#8a94b8}
+  .lgl-s.same{background:repeating-linear-gradient(to right,#5a6088 0 4px,transparent 4px 7px)}
   .panelbtns{display:flex;gap:8px;margin-top:14px}
   /* [2026-08-30] min-height:44px — **모든 .pbtn 이 터치 기준을 지킨다.**
      ~~padding 11px + 15px 글자 = 42px~~이었다(실측). 직전 회차에는 #cardbtn 하나만
@@ -7865,6 +7884,24 @@ function showGroup(g){
   const mchips=A.ms.map(n=>`<span class="mchip${n===A.sun?' sunchip':''}" data-id="${n.id}">
     <span class="dot" style="background:${EL_INFO[n.el].css}"></span>${n===A.sun?'☀ ':''}${n.name}</span>`).join('');
   const body=analysisInsightBody(A);
+  /* [2026-08-30] 관계선 범례 — 고리 색 범례 바로 아래, 같은 도움말 신분(sjHelp)으로.
+     [왜 필요했나] 은하에 선이 네 종류 그려지는데 뜻이 어디에도 안 적혀 있었다.
+     특히 붉은 점선(극)은 설명 없이 보면 "나쁜 관계"로 읽힌다 — 이 앱의 해석 원칙과 반대다.
+     [동일인 줄을 같이 넣는 이유] 그것만 관계가 아니다. 나머지 셋과 같은 화면에 섞여 있어서
+     같은 자리에서 가르지 않으면 구분할 길이 없다.
+     [견본 색] 실제 선 재질의 값을 그대로 쓴다 — 극 #ff8a6a · 생 #6a7aa8 · 비화 #8a94b8 ·
+     동일인 #5a6088. 코드가 바뀌면 여기도 같이 고쳐야 한다(두 곳뿐이라 주석으로 묶어 둔다). */
+  const lineLegend=sjHelp('glines','관계선 읽는 법',
+    '<div class="lgl">'
+    +'<div class="lgl-i"><i class="lgl-s geuk"></i><span><b>붉은 점선</b> — 누르는 배합(극). '
+      +'긴장과 자극이 오가는 사이입니다. <b>나쁜 관계라는 뜻이 아닙니다.</b></span></div>'
+    +'<div class="lgl-i"><i class="lgl-s saeng"></i><span><b>푸른 실선</b> — 북돋는 배합(생). '
+      +'한쪽이 다른 쪽에 힘을 대주는 방향입니다.</span></div>'
+    +'<div class="lgl-i"><i class="lgl-s bi"></i><span><b>밝은 실선</b> — 같은 기운(비화). '
+      +'결이 비슷해 말이 잘 통하고, 그만큼 같은 데서 막힙니다.</span></div>'
+    +'<div class="lgl-i"><i class="lgl-s same"></i><span><b>회청 점선</b> — 여러 그룹에 있는 '
+      +'<b>같은 사람</b>을 이은 줄입니다. 관계가 아니라 같은 사람이라는 표시입니다.</span></div>'
+    +'</div>','은하에 그어진 선 네 종류');
   pbody.innerHTML=`
     <span class="tag">${g.type}</span><span class="tag ${A.dyn==='긴장형'?'warn':''}">${A.dyn}</span><span class="tag sun">☀ ${A.sun.name}</span>
     <h2>${g.name} — ${total}인 성계</h2>
@@ -7877,6 +7914,7 @@ function showGroup(g){
       <span><i class="lg-ring" style="border-color:#ff7a5a"></i>붉은 고리 = 극 발신</span>
       <span>궤도: 항성과 생=안쪽 · 극=바깥</span>
     </div>
+    ${lineLegend}
     <div class="members">${mchips}</div>
     ${total===2?`<div class="panelbtns"><button class="pbtn" id="gpair">두 사람의 관계 자세히 보기</button></div>`:''}
     <div class="panelbtns"><button class="pbtn" id="gedit">그룹 수정 · 삭제</button></div>`;
