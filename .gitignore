@@ -63,6 +63,9 @@ group-saju-backup-*.json
 # 사람 정보는 없다 — DEMO_SEED 예시 인물만 나온다(그 시드는 이미 index.html에 있다).
 !docs/mobile-panel-redesign/
 !docs/mobile-panel-redesign/*.png
+# [2026-09-04] 회차 보고의 실측 갈무리도 같은 성격이다(우리 화면·예시 인물만·보고가 경로로 가리킨다).
+!docs/reports/
+!docs/reports/**/*.png
 *.fig
 
 # ── OS · 편집기 ──
