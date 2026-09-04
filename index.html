@@ -4028,7 +4028,35 @@ Object.assign(V2_TUNABLES,{
 
 /* ═════════ Three.js ═════════ */
 const canvas=document.getElementById('scene');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+/* ═══ [2026-09-04 안정성] 그릴 수 없는 기기·막힌 CDN에서 **빈 화면 대신 안내** ═══
+   실측(고치기 전): three.min.js가 404이면 `THREE is not defined`로, WebGL이 꺼져 있으면
+   WebGLRenderer 생성자가 던진 예외로 이 스크립트가 여기서 죽는다 — 콘솔에만 찍히고
+   화면은 검은 배경에 헤더만 남는다. 첫 화면(등록)도 안 뜬다.
+   [왜 throw인가] 이 아래는 전부 renderer·scene 위에 서 있어 계속 갈 수 없다. 안내를 띄운 뒤
+   같은 예외를 다시 던져 스크립트를 **명시적으로** 멈춘다(조용히 죽는 것과 다르다). */
+function fatalScreen(title,body){
+  const d=document.createElement('div');d.id='fatal';
+  d.style.cssText='position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:24px;'
+    +'background:#07070e;color:#e8e9f0;font-family:inherit;text-align:center;line-height:1.6';
+  const box=document.createElement('div');box.style.maxWidth='420px';
+  const h=document.createElement('div');h.textContent=title;
+  h.style.cssText='font-size:20px;font-weight:700;margin-bottom:10px';
+  const pEl=document.createElement('div');pEl.textContent=body;pEl.style.cssText='font-size:16px;color:#c3c5d1';
+  const b=document.createElement('button');b.type='button';b.textContent='다시 시도';
+  b.style.cssText='margin-top:18px;padding:10px 22px;border-radius:99px;border:1px solid #565d78;'
+    +'background:#3c4258;color:#fff;font-size:16px;cursor:pointer';
+  b.onclick=()=>location.reload();
+  box.appendChild(h);box.appendChild(pEl);box.appendChild(b);d.appendChild(box);document.body.appendChild(d);}
+if(typeof THREE==='undefined'){
+  fatalScreen('화면을 그리는 도구를 내려받지 못했습니다',
+    '인터넷 연결이 끊겼거나 외부 자료(CDN)가 막힌 환경입니다. 연결을 확인한 뒤 다시 시도해 주세요.');
+  throw new Error('[부팅] THREE 없음 — CDN 로딩 실패');}
+let renderer;
+try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});}
+catch(e){
+  fatalScreen('이 기기에서는 3D 화면을 그릴 수 없습니다',
+    '브라우저의 하드웨어 가속(WebGL)이 꺼져 있거나 지원되지 않습니다. 다른 브라우저로 열거나 설정에서 하드웨어 가속을 켜 주세요.');
+  throw e;}
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 const scene=new THREE.Scene();
 scene.fog=new THREE.Fog(0x07070e,40,100);
