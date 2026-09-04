@@ -4206,6 +4206,23 @@ function syncPanelBodyClass(){
   const on=!!(panelEl&&panelEl.classList.contains('open'));
   if(document.body.classList.contains('panel-open')!==on)
     document.body.classList.toggle('panel-open',on);}
+/* ═══ 패널 높이를 CSS 변수로 올린다 [2026-09-04, 모바일 패널 개편 1/4] ═══
+   docs/mobile-panel-redesign.md §2.1. 패널 바깥에 뜨는 것들(닫기·확대 버튼, 태그바)이
+   **전부 이 한 값을 본다.** 상수(52vh/82vh)로 박으면 tall·확대·인앱 뷰포트(--vvh)·내용이
+   짧아 max-height에 못 미치는 패널에서 각각 어긋난다 — 그래서 계산이 아니라 **실측**이다
+   (getBoundingClientRect). --hdr-h/--tagbar-h(syncChromeMetrics)와 같은 방식이고, 그 둘은
+   건드리지 않는다. 매 프레임 부르지만 값이 같으면 DOM을 안 건드린다(위 두 함수와 같은 규칙).
+   데스크톱(≥768)은 패널이 세로 전체라 의미가 없어 변수를 지운다. */
+let panelHLast=-1;
+function syncPanelH(){
+  if(!panelEl)panelEl=document.getElementById('panel');
+  const root=document.documentElement;
+  if(innerWidth>=768||!panelEl||!panelEl.classList.contains('open')){
+    if(panelHLast!==-1){panelHLast=-1;root.style.removeProperty('--panel-h');}
+    return;}
+  const h=Math.round(panelEl.getBoundingClientRect().height);
+  if(h===panelHLast)return;
+  panelHLast=h;root.style.setProperty('--panel-h',h+'px');}
 function applyCanvasBox(){
   panelInset=panelInsetNow();
   canvas.style.left=panelInset+'px';
@@ -4330,6 +4347,7 @@ function mobileFocusBias(){
   return V2_TUNABLES.MOBILE_FOCUS_BIAS_Y;}
 function camTick(){
   syncPanelBodyClass();
+  syncPanelH();
   syncPanelHead();
   if(panelInsetNow()!==panelInset)resize();
   /* [버그 5 안전망] 포커스 대상이 이번 장면에 없으면 즉시 포기하고 원래 프레이밍으로 되돌린다.
