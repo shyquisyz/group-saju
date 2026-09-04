@@ -6632,12 +6632,12 @@ function showVirtualSlot(){
     .map(e=>`<i style="width:${A.cnt[e]/total*100}%;background:${EL_INFO[e].css}"></i>`).join('');
   const legend=EL_ORDER.filter(e=>A.cnt[e]>0).map(e=>`${EL_KO[e]} ${A.cnt[e]}`).join(' · ');
   const mchips=A.ms.map(n=>`<span class="mchip${n===A.sun?' sunchip':''}" data-id="${n.id}">
-    <span class="dot" style="background:${EL_INFO[n.el].css}"></span>${n===A.sun?'☀ ':''}${n.name}
+    <span class="dot" style="background:${EL_INFO[n.el].css}"></span>${n===A.sun?'☀ ':''}${bkEsc(n.name)}
     <span class="vmremove" data-id="${n.id}">✕</span></span>`).join('');
   const body=analysisInsightBody(A,'virtual');
   body.unshift(virtualDeltaLine(A)); /* [4번 3단계] 변화가 이 화면의 핵심이라 맨 앞에 둔다 */
   pbody.innerHTML=`
-    <span class="tag">가상 성계</span><span class="tag ${A.dyn==='긴장형'?'warn':''}">${A.dyn}</span><span class="tag sun">☀ ${A.sun.name}</span>
+    <span class="tag">가상 성계</span><span class="tag ${A.dyn==='긴장형'?'warn':''}">${A.dyn}</span><span class="tag sun">☀ ${bkEsc(A.sun.name)}</span>
     <h2>가상 성계 — ${total}인 조합</h2>
     <div class="gbar">${barHtml}</div><div class="glegend">${legend}</div>
     ${body.map(p=>`<p>${p}</p>`).join('')}
@@ -6869,7 +6869,9 @@ function particle(w,pair){
   const jong=(ch>=0xAC00&&ch<=0xD7A3)?((ch-0xAC00)%28)!==0:false;
   return jong?pair[0]:pair[1];}
 /* 이름을 <b>로 감싸는 자리에서는 조사만 따로 붙여야 하므로 particle()을 분리해 둔다 */
-function josa(w,pair){return w+particle(w,pair);}
+/* [2026-09-04 보안] 조사를 붙인 결과는 전부 innerHTML 문장에 들어간다 — 이름 쪽을 여기서 이스케이프한다.
+   조사 판정은 원문의 마지막 글자로 하므로 결과가 바뀌지 않는다. */
+function josa(w,pair){return bkEsc(w)+particle(w,pair);}
 /* ═════════ [4번 2단계] 오행 쌍 카피 ═════════
    실제 조합은 25가 아니라 **15**다 — 생 5방향 + 극 5방향 + 비화 5. 오행 상생·상극이 각각
    5원 순환이라 두 오행 사이의 관계는 정확히 하나로 정해지고 방향도 고정된다(수생목은 있어도
@@ -6910,7 +6912,7 @@ function fillPair(tpl,aName,bName){
   return tpl.replace(/\{([AB])(?:\/([이은을과]))?\}/g,(m,who,par)=>{
     const nm=who==='A'?aName:bName;
     if(par==='이')return subjKo(nm);
-    return par?josa(nm,JOSA_MAP[par]):nm;});}
+    return par?josa(nm,JOSA_MAP[par]):bkEsc(nm);});}   /* [보안] 조사 없는 자리도 이름은 이스케이프 */
 function pairPhrase(giver,receiver,kind,form){
   const gEl=EL_KO[giver.el],rEl=EL_KO[receiver.el];
   if(form!=='long')
@@ -7139,7 +7141,7 @@ function renderTree(){
   h+=`<div class="trow${activeGroup===null?' on':''}" data-root="1"><span class="tw">◦</span>은하 전체<span class="cnt">${nodes.length}</span></div>`;
   const walk=(pid,depth)=>{groups.filter(g=>(g.parentId||null)===pid).forEach(g=>{
     const kids=groups.some(c=>c.parentId===g.id);
-    h+=`<div class="trow${activeGroup===g?' on':''}" data-g="${g.id}" style="padding-left:${8+depth*16}px"><span class="tw"${kids?` data-t="${g.id}"`:''}>${kids?(collapsedG.has(g.id)?'▸':'▾'):'·'}</span>${g.name}<span class="cnt">${effectiveMembers(g).length}</span></div>`;
+    h+=`<div class="trow${activeGroup===g?' on':''}" data-g="${g.id}" style="padding-left:${8+depth*16}px"><span class="tw"${kids?` data-t="${g.id}"`:''}>${kids?(collapsedG.has(g.id)?'▸':'▾'):'·'}</span>${bkEsc(g.name)}<span class="cnt">${effectiveMembers(g).length}</span></div>`;
     if(kids&&!collapsedG.has(g.id)&&depth<MAX_GROUP_DEPTH)walk(g.id,depth+1);});};
   walk(null,0);
   h+=`<div class="trow newg" id="treenewg">+ 새 그룹</div></div>`;
@@ -7180,14 +7182,14 @@ function renderTree(){
    맞추기로 읽어야 했다. 캡슐은 그 정보를 배경 경계로 직접 보여주므로 깊이가 늘어도 읽는
    법이 달라지지 않는다 — 문자열 해석이 아니라 포함 관계를 눈으로 본다. */
 function tbGroupSpan(g){
-  return `<span class="tb-group${activeGroup===g?' on':''}" data-g="${g.id}">${g.name}</span>`;}
+  return `<span class="tb-group${activeGroup===g?' on':''}" data-g="${g.id}">${bkEsc(g.name)}</span>`;}
 /* [§7.4] topGroup — 이 이름이 어느 "최상위" 항성계 줄에 속해 있는지. groupInstances는 최상위
    그룹 기준으로만 키가 잡히므로(하위 그룹엔 별도 궤도·인스턴스가 없음), 하위 그룹(예: 하위그룹A)
    안에서 나열된 이름도 실제 인스턴스를 찾으려면 그 최상위 조상(그룹A)을 알아야 한다. 다중소속
    인물은 같은 이름이 [가족] 줄과 [그룹B] 줄에 각각 등장하는데, 이 태그가 있어야 각 줄의 이름이
    그 줄에 해당하는 인스턴스로 정확히 갈 수 있다. */
 function tbNameSpan(n,topGroup){
-  return `<span class="tb-name" data-n="${n.id}" data-g="${topGroup.id}">${n.name}</span>`;}
+  return `<span class="tb-name" data-n="${n.id}" data-g="${topGroup.id}">${bkEsc(n.name)}</span>`;}
 /* [2026-08-24] 캡슐 마크업. 대괄호 판(isTop 분기로 `[...]`/`이름<...>`을 따로 찍던 것)과 달리
    최상위·하위가 완전히 같은 모양이고, 깊이는 배경색(cap-d0/d1 교대)으로만 구분된다 —
    덕분에 분기가 사라지고 재귀가 한 줄로 줄었다. depth는 스타일 전용이라 라우팅(top)과 무관. */
@@ -7557,7 +7559,7 @@ function parseBackup(text){
     return bkBad('사주은하 백업 파일이 아닙니다.');
   if(d.app!==BACKUP_APP)
     return bkBad('사주은하 백업 파일이 아닙니다'+(typeof d.app==='string'&&d.app
-      ?' — 다른 앱의 파일입니다('+d.app.slice(0,30)+').':' — 표시(app)가 없습니다.'));
+      ?' — 다른 앱의 파일입니다('+bkEsc(d.app.slice(0,30))+').':' — 표시(app)가 없습니다.'));
   /* **저장본과 같은 변환 체인을 탄다** — 반년 전 백업이 오늘 앱에서 열려야 한다. */
   const m=migrate(d);
   if(!m.ok){
@@ -7579,14 +7581,14 @@ function parseBackup(text){
     const p=s.people[i],at='사람 '+(i+1)+'번';
     if(!p||typeof p!=='object')return bkBad(at+'의 자료가 비어 있습니다.');
     if(typeof p.key!=='string'||!p.key)return bkBad(at+'의 구분자(key)가 없습니다.');
-    if(keys.has(p.key))return bkBad('사람 구분자가 겹칩니다 — '+p.key);
+    if(keys.has(p.key))return bkBad('사람 구분자가 겹칩니다 — '+bkEsc(p.key));
     keys.add(p.key);
     const name=typeof p.name==='string'?p.name.trim():'';
     if(!name)return bkBad(at+'의 이름이 비어 있습니다.');
     const b=p.birth;
-    if(!b||typeof b!=='object')return bkBad('"'+name+'"의 생년월일이 없습니다.');
+    if(!b||typeof b!=='object')return bkBad('"'+bkEsc(name)+'"의 생년월일이 없습니다.');
     if(!validYMD(b.y,b.m,b.d))
-      return bkBad('"'+name+'"의 생년월일이 실제 날짜가 아닙니다 ('+b.y+'-'+b.m+'-'+b.d+').');
+      return bkBad('"'+bkEsc(name)+'"의 생년월일이 실제 날짜가 아닙니다 ('+bkEsc(b.y+'-'+b.m+'-'+b.d)+').');
     const city=typeof b.city==='string'&&b.city?b.city:CITY_UNKNOWN;
     people.push({key:p.key,name,isMe:!!p.isMe,
       createdAt:typeof p.createdAt==='string'?p.createdAt:null,
@@ -7626,18 +7628,18 @@ function parseBackup(text){
     const g=rawG[i],at='그룹 '+(i+1)+'번';
     if(!g||typeof g!=='object')return bkBad(at+'의 자료가 비어 있습니다.');
     if(typeof g.key!=='string'||!g.key)return bkBad(at+'의 구분자(key)가 없습니다.');
-    if(gkeys.has(g.key))return bkBad('그룹 구분자가 겹칩니다 — '+g.key);
+    if(gkeys.has(g.key))return bkBad('그룹 구분자가 겹칩니다 — '+bkEsc(g.key));
     gkeys.add(g.key);
     const gname=typeof g.name==='string'?g.name.trim():'';
     if(!gname)return bkBad(at+'의 이름이 비어 있습니다.');
     /* 유형은 고쳐서 넘기지 않고 **거부한다.** 우리가 만든 형식이므로 목록 밖 값이 들어 있다는
        것은 손댄 파일이라는 뜻이고, 조용히 '기타'로 바꾸면 사용자는 바뀐 줄 모른다. */
     if(GTYPES.indexOf(g.type)<0)
-      return bkBad('"'+gname+'"의 유형이 목록에 없습니다('+String(g.type).slice(0,20)+'). '
+      return bkBad('"'+bkEsc(gname)+'"의 유형이 목록에 없습니다('+bkEsc(String(g.type).slice(0,20))+'). '
         +'가능한 값: '+GTYPES.join('·'));
-    if(!Array.isArray(g.members))return bkBad('"'+gname+'"의 멤버 목록이 없습니다.');
+    if(!Array.isArray(g.members))return bkBad('"'+bkEsc(gname)+'"의 멤버 목록이 없습니다.');
     for(const mk of g.members)
-      if(!keys.has(mk))return bkBad('"'+gname+'"이 없는 사람을 가리킵니다 — '+mk);
+      if(!keys.has(mk))return bkBad('"'+bkEsc(gname)+'"이 없는 사람을 가리킵니다 — '+bkEsc(mk));
     groups.push({key:g.key,name:gname,type:g.type,
       parent:(typeof g.parent==='string'&&g.parent)?g.parent:null,
       members:g.members.slice(),
@@ -7646,13 +7648,13 @@ function parseBackup(text){
   const gmap=new Map(groups.map(g=>[g.key,g]));
   for(const g of groups){
     if(g.parent&&!gmap.has(g.parent))
-      return bkBad('"'+g.name+'"의 상위 그룹을 찾을 수 없습니다.');
+      return bkBad('"'+bkEsc(g.name)+'"의 상위 그룹을 찾을 수 없습니다.');
     const seen=new Set([g.key]);let cur=g,d2=0;
     while(cur.parent){
       const par=gmap.get(cur.parent);
       if(!par)break;
       if(seen.has(par.key)||++d2>MAX_GROUP_DEPTH)
-        return bkBad('그룹 상위 관계가 고리를 이룹니다 — "'+g.name+'" 근처');
+        return bkBad('그룹 상위 관계가 고리를 이룹니다 — "'+bkEsc(g.name)+'" 근처');
       seen.add(par.key);cur=par;}}
 
   return {ok:true,exportedAt:typeof d.exportedAt==='string'?d.exportedAt:null,
@@ -7780,7 +7782,12 @@ function hasUndo(){try{return !!localStorage.getItem(SAVE_KEY_PREV);}catch(e){re
    검증을 통과한 결과를 여기 담아 두고 확인 단계에서 쓴다. **통과 전에는 null이므로**
    확인 화면이 뜬다는 것 자체가 "파일이 온전하다"는 뜻이다. */
 let bkPending=null;
-function bkEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+/* [2026-09-04 보안] HTML로 해석되는 자리(innerHTML·템플릿)에 **사용자가 적은 글**(이름·그룹명·
+   출생지·백업 파일의 값)을 넣을 때는 반드시 이 함수를 거친다. 따옴표까지 바꾸는 이유:
+   data-nm="…" 같은 속성 자리에도 들어가기 때문이다. 백업 붙여넣기는 남이 준 텍스트가 들어오는
+   유일한 통로라, 이름에 <img onerror=…>를 넣은 파일이 오면 이 함수가 없는 자리에서 실행된다. */
+function bkEsc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function bkFmtDate(iso){
   if(!iso)return '알 수 없음';
   const d=new Date(iso);
@@ -8259,7 +8266,7 @@ function analysisInsightBody(A,mode){
      실제 발신 횟수(saengGive/geukGive)로 근거를 바꾼다. 뒤에 붙던 "항성은 언제나 나이고…"
      설명은 매 그룹마다 토씨 하나 안 틀리고 반복되던 문장이라 여기서 뺀다(3단계에서 도움말로). */
   const sg=A.saengGive[A.sun.id]||0, gg=A.geukGive[A.sun.id]||0;
-  body.push(`${W.here}의 중심축은 <b>${A.sun.name}</b> — ${
+  body.push(`${W.here}의 중심축은 <b>${bkEsc(A.sun.name)}</b> — ${
     sg||gg?`살리는 쪽 ${sg}회, 누르는 쪽 ${gg}회로 ${W.in}에서 가장 많이 발신합니다.`
           :`발신이 없어 기본값으로 잡힌 자리입니다.`}`);
   body.push(A.domRatio>=.5
@@ -8295,14 +8302,14 @@ function analysisInsightBody(A,mode){
         ||(x.iGive?1:0)-(y.iGive?1:0)||idx.get(x.o.id)-idx.get(y.o.id));
       if(mine.length){const m=mine[0];
         body.push(m.iGive
-          ?`나(${me.name})는 ${josa(m.o.name,'을를')} ${m.r.kind==='geuk'?'누르는':'살리는'} 자리입니다 (${EL_KO[me.el]} → ${EL_KO[m.o.el]}).`
-          :`나(${me.name})는 ${m.o.name}에게 ${m.r.kind==='geuk'?'눌리는':'받는'} 자리입니다 (${EL_KO[m.o.el]} → ${EL_KO[me.el]}).`);}}
+          ?`나(${bkEsc(me.name)})는 ${josa(m.o.name,'을를')} ${m.r.kind==='geuk'?'누르는':'살리는'} 자리입니다 (${EL_KO[me.el]} → ${EL_KO[m.o.el]}).`
+          :`나(${bkEsc(me.name)})는 ${bkEsc(m.o.name)}에게 ${m.r.kind==='geuk'?'눌리는':'받는'} 자리입니다 (${EL_KO[m.o.el]} → ${EL_KO[me.el]}).`);}}
     if(!gk&&!sa)
       body.push(`서로 밀거나 당기는 축이 없습니다 — 전원이 같은 결이라 편하지만, 판을 흔들 힘도 그만큼 적습니다.`);}
   /* 조언 절("조기경보입니다")은 group에서만. relview/virtual은 같은 사실을 관찰로만 적는다 */
   if(A.geuk>0)body.push(grp
-    ?`긴장을 가장 많이 받는 자리는 <b>${A.pressed.name}</b>(받는 쪽 ${A.geukRecv[A.pressed.id]||0}회) — 이 사람의 컨디션이 성계의 조기경보입니다.`
-    :`긴장을 가장 많이 받는 자리는 <b>${A.pressed.name}</b> — 받는 쪽 ${A.geukRecv[A.pressed.id]||0}회로 ${W.in}에서 가장 많습니다.`);
+    ?`긴장을 가장 많이 받는 자리는 <b>${bkEsc(A.pressed.name)}</b>(받는 쪽 ${A.geukRecv[A.pressed.id]||0}회) — 이 사람의 컨디션이 성계의 조기경보입니다.`
+    :`긴장을 가장 많이 받는 자리는 <b>${bkEsc(A.pressed.name)}</b> — 받는 쪽 ${A.geukRecv[A.pressed.id]||0}회로 ${W.in}에서 가장 많습니다.`);
   /* [2026-08-31] 그룹 패널에서는 뺀다 — 새 "기운 분포" 항목이 같은 사실을
      성질 풀이와 해석까지 붙여 말한다. relview/virtual에는 그 항목이 없으므로 그대로 둔다. */
   if(!grp&&A.missing.length)body.push(`${W.here}에 없는 기운: <b>${A.missing.map(e=>EL_INFO[e].name).join(', ')}</b>.`);
@@ -8327,7 +8334,7 @@ function showGroup(g){
      type 필드가 없어 생기던 것)도 자연히 함께 해결된다. */
   if(g===UNCLASSIFIED_GROUP){
     const memberRows=A.ms.map(n=>`<span class="mchip" data-id="${n.id}">
-      <span class="dot" style="background:${EL_INFO[n.el].css}"></span>${n.name} · ${STEMS[n.stemIdx]}${EL_KO[n.el]}</span>`).join('');
+      <span class="dot" style="background:${EL_INFO[n.el].css}"></span>${bkEsc(n.name)} · ${STEMS[n.stemIdx]}${EL_KO[n.el]}</span>`).join('');
     pbody.innerHTML=`
       <span class="tag">미분류</span>
       <h2>미분류 — ${total}인</h2>
@@ -8340,7 +8347,7 @@ function showGroup(g){
       const n=nodes.find(x=>x.id===el.dataset.id);if(n){showNode(n);focusNode(n);}});
     return;}
   const mchips=A.ms.map(n=>`<span class="mchip${n===A.sun?' sunchip':''}" data-id="${n.id}">
-    <span class="dot" style="background:${EL_INFO[n.el].css}"></span>${n===A.sun?'☀ ':''}${n.name}</span>`).join('');
+    <span class="dot" style="background:${EL_INFO[n.el].css}"></span>${n===A.sun?'☀ ':''}${bkEsc(n.name)}</span>`).join('');
   const body=analysisInsightBody(A);
   /* [2026-08-30] 관계선 범례 — 고리 색 범례 바로 아래, 같은 도움말 신분(sjHelp)으로.
      [왜 필요했나] 은하에 선이 네 종류 그려지는데 뜻이 어디에도 안 적혀 있었다.
@@ -8361,8 +8368,8 @@ function showGroup(g){
       +'<b>같은 사람</b>을 이은 줄입니다. 관계가 아니라 같은 사람이라는 표시입니다.</span></div>'
     +'</div>','은하에 그어진 선 네 종류');
   pbody.innerHTML=`
-    <span class="tag">${g.type}</span><span class="tag ${A.dyn==='긴장형'?'warn':''}">${A.dyn}</span><span class="tag sun">☀ ${A.sun.name}</span>
-    <h2>${g.name} — ${total}인 성계</h2>
+    <span class="tag">${g.type}</span><span class="tag ${A.dyn==='긴장형'?'warn':''}">${A.dyn}</span><span class="tag sun">☀ ${bkEsc(A.sun.name)}</span>
+    <h2>${bkEsc(g.name)} — ${total}인 성계</h2>
     <div class="gbar">${barHtml}</div><div class="glegend">${legend}</div>
     ${body.map(p=>`<p>${p}</p>`).join('')}
     ${gSections(A)}
@@ -8411,11 +8418,11 @@ function showRelationView(members){
     .map(e=>`<i style="width:${A.cnt[e]/total*100}%;background:${EL_INFO[e].css}"></i>`).join('');
   const legend=EL_ORDER.filter(e=>A.cnt[e]>0).map(e=>`${EL_KO[e]} ${A.cnt[e]}`).join(' · ');
   const mchips=A.ms.map(n=>`<span class="mchip${n===A.sun?' sunchip':''}" data-id="${n.id}">
-    <span class="dot" style="background:${EL_INFO[n.el].css}"></span>${n===A.sun?'☀ ':''}${n.name}</span>`).join('');
+    <span class="dot" style="background:${EL_INFO[n.el].css}"></span>${n===A.sun?'☀ ':''}${bkEsc(n.name)}</span>`).join('');
   const body=analysisInsightBody(A,'relview');
-  const names=A.ms.map(n=>n.name).join(' · ');
+  const names=A.ms.map(n=>bkEsc(n.name)).join(' · ');
   pbody.innerHTML=`
-    <span class="tag ${A.dyn==='긴장형'?'warn':''}">${A.dyn}</span><span class="tag sun">☀ ${A.sun.name}</span>
+    <span class="tag ${A.dyn==='긴장형'?'warn':''}">${A.dyn}</span><span class="tag sun">☀ ${bkEsc(A.sun.name)}</span>
     <h2>${names} — ${total}인 관계</h2>
     <div class="gbar">${barHtml}</div><div class="glegend">${legend}</div>
     ${body.map(p=>`<p>${p}</p>`).join('')}
@@ -8445,7 +8452,7 @@ function openRelSheet(n){
    if(h)h.textContent=n.name+'와 볼 사람을 골라 주세요';}
   const mg=document.getElementById('rel-members');
   mg.innerHTML=nodes.filter(x=>x!==n).map(x=>`<div class="memrow" data-id="${x.id}">
-    <span class="dot" style="background:${EL_INFO[x.el].css};color:${EL_INFO[x.el].css}"></span>${x.name}
+    <span class="dot" style="background:${EL_INFO[x.el].css};color:${EL_INFO[x.el].css}"></span>${bkEsc(x.name)}
     <span class="st">${STEMS[x.stemIdx]} ${EL_KO[x.el]}</span><span class="chk"></span></div>`).join('');
   mg.querySelectorAll('.memrow').forEach(row=>row.onclick=()=>{
     const id=row.dataset.id;
@@ -9471,7 +9478,7 @@ function showNode(n,groupContext,targetMesh){
   const sjText=(n.birth&&Number.isInteger(n.birth.hour))
     ? `${String(n.birth.hour).padStart(2,'0')}:${String(n.birth.min||0).padStart(2,'0')} (${sj?sj[0]:''}시)`
     : '시간 모름';
-  const birthLine=n.birth?`<p style="font-size:var(--fs-sm);color:var(--mut)">${n.birth.y}.${n.birth.m}.${n.birth.d} · ${sjText} · ${n.birth.city}</p>`:'';
+  const birthLine=n.birth?`<p style="font-size:var(--fs-sm);color:var(--mut)">${n.birth.y}.${n.birth.m}.${n.birth.d} · ${sjText} · ${bkEsc(n.birth.city)}</p>`:'';
   /* [2026-08-28] 성계마다 선이 생기므로 같은 상대가 여러 번 나올 수 있다 — 한 번만 보인다 */
   const relSeen=new Set();
   /* ═══ [★ 2026-08-31] 관계 목록을 **나 기준**으로 바꿨다 ═══
@@ -9497,7 +9504,7 @@ function showNode(n,groupContext,targetMesh){
        [2026-08-31] 기준이 ~~보고 있는 사람(n)~~ → **나(meNode)**로 바뀌었다. */
     const g=relGod(meNode,o);
     return`<div class="rel-item" data-a="${meNode.id}" data-b="${o.id}">
-      <span class="dot" style="background:${EL_INFO[o.el].css};color:${EL_INFO[o.el].css}"></span>${o.name}
+      <span class="dot" style="background:${EL_INFO[o.el].css};color:${EL_INFO[o.el].css}"></span>${bkEsc(o.name)}
       <span class="k">${REL_ROLE_SHORT[g]} · ${TEN_GODS[g]}</span></div>`;}).join('');
   /* 나 기준임을 화면에 밝힌다 — 목록이 A의 패널 안에 있어서 A 기준으로 읽히기 쉽다 */
   const relHead=rels?`<div class="rel-listh">아래는 모두 <b>나</b> 기준입니다 — 누르면 <b>나와 그 사람</b>의 관계가 열립니다.</div>`:'';
@@ -9559,7 +9566,7 @@ function showNode(n,groupContext,targetMesh){
   const backHtml=navBackHtml(backTo?backTo.name:'은하 전체');
 
   pbody.innerHTML=`${backHtml}${roleTag}<span class="tag">${EL_INFO[n.el].name}</span>
-    <h2>${r?r.title:`${n.name} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
+    <h2>${r?r.title:`${bkEsc(n.name)} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
     ${birthLine}${relSec}${selfSec}
     <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">${bkEsc(n.name)}와 다른 사람의 관계 보기</button></div>
     <div class="panelbtns"><button class="pbtn" id="vstoggle">${virtualMembers.some(c=>c.ref===n)?'가상 성계에서 빼기':'가상 성계에 담기'}</button></div>`;
@@ -9682,8 +9689,8 @@ function pairReading(a,b,giver,receiver,rel,collapse){
       /* 해설(REL_DESC) 아래, 비유 안내 위. 방향별로 하나씩 붙는다 */
       +`<div class="nicktake"><span class="nicktake-h">${NICK_TAKE_H}</span>`
       +`<span class="nicktake-t">${REL_TAKE[g]}</span></div></div>`;};
-  let t1=blk(`${a.name}에게 <b>${b.name}</b>${particle(b.name,'은는')}`,gAB,b,hcA)
-        +blk(`<b>${b.name}</b> 입장에서는`,gBA,a,hcB)
+  let t1=blk(`${bkEsc(a.name)}에게 <b>${bkEsc(b.name)}</b>${particle(b.name,'은는')}`,gAB,b,hcA)
+        +blk(`<b>${bkEsc(b.name)}</b> 입장에서는`,gBA,a,hcB)
         +`<div class="nicknote">${NICK_NOTE}`
         +(gAB!==gBA?' 한 사이인데 서로 다르게 보이는 것은 각자의 태어난 날을 기준으로 보기 때문입니다.'
                    :' 서로를 같은 자리로 봅니다.')
@@ -9699,8 +9706,8 @@ function pairReading(a,b,giver,receiver,rel,collapse){
     const nm=sp.tops.map(k=>GROUP_POWER[k]+'('+k+')').join(sp.tops.length===2?'과 ':', ');
     const toward=sp.tops.map(k=>GROUP_TOWARD[k]).join(sp.tops.length===2?', ':', ');
     const num=NUM_KO[Math.min(sp.max,8)]+(sp.tops.length>1?'씩':'');
-    let t3=`${b.name}의 ${NUM_KO[sp.letters]} 글자를 ${a.name} 기준으로 세면 ${nm}${particle(GROUP_POWER[sp.tops[sp.tops.length-1]],'이가')} ${num}${ro(num)} 가장 많습니다 — ${toward}입니다.`;
-    if(!sp.hasTime)t3+=` ${b.name}의 시각을 몰라 ${NUM_KO[sp.letters]} 글자만 본 결과라, 시각을 넣으면 달라질 수 있습니다.`;
+    let t3=`${bkEsc(b.name)}의 ${NUM_KO[sp.letters]} 글자를 ${bkEsc(a.name)} 기준으로 세면 ${nm}${particle(GROUP_POWER[sp.tops[sp.tops.length-1]],'이가')} ${num}${ro(num)} 가장 많습니다 — ${toward}입니다.`;
+    if(!sp.hasTime)t3+=` ${bkEsc(b.name)}의 시각을 몰라 ${NUM_KO[sp.letters]} 글자만 본 결과라, 시각을 넣으면 달라질 수 있습니다.`;
     out.push({key:'p:여덟 글자로 보면',h:'여덟 글자로 보면',t:t3});
   }
   return readingHtml(out,collapse);}
@@ -10228,9 +10235,9 @@ function renderFGroups(){
      새 그룹은 저장 버튼을 누르기 전까지 groups[]에 넣지 않는다 — 이름만 적고 시트를 닫으면
      아무 일도 안 일어나야 하기 때문이다(취소 가능성 보존). */
   const chips=groups.map(g=>{const lk=meEdit&&g.members.includes(editTarget);
-    return `<button type="button" class="selchip${fGroups.has(g.id)?' on':''}${lk?' locked':''}" data-g="${g.id}"${lk?' data-lock="1"':''}>${g.name}${lk?'<span class="lockbadge">고정</span>':''}</button>`;});
+    return `<button type="button" class="selchip${fGroups.has(g.id)?' on':''}${lk?' locked':''}" data-g="${g.id}"${lk?' data-lock="1"':''}>${bkEsc(g.name)}${lk?'<span class="lockbadge">고정</span>':''}</button>`;});
   fNewGroups.forEach((ng,i)=>{
-    chips.push(`<button type="button" class="selchip pending" data-new="${i}">${ng.name} <span style="opacity:.7">· 새 그룹 ✕</span></button>`);});
+    chips.push(`<button type="button" class="selchip pending" data-new="${i}">${bkEsc(ng.name)} <span style="opacity:.7">· 새 그룹 ✕</span></button>`);});
   /* 나를 수정 중이면 새 그룹을 만들 수 없다 — 멤버가 나 하나뿐인 그룹은 2인 미만이라
      저장 직후 removeGroupAt에 걸려 사라진다(§7.2 "나 없는 그룹 금지"의 반대편 경우). */
   if(!meEdit)chips.push(`<button type="button" class="selchip newgrp" id="f-newgrp-btn">＋ 새 그룹</button>`);
@@ -10524,7 +10531,7 @@ function ptRenderGroups(){
     el.innerHTML='<span class="none">아직 그룹이 없습니다 — 그룹 칸에 이름을 적으면 <b>새로 만듭니다</b>.</span>';
     return;}
   el.innerHTML='<span>쓸 수 있는 그룹 —</span>'
-    +groups.map(g=>`<span class="gchip">${g.name}</span>`).join('')
+    +groups.map(g=>`<span class="gchip">${bkEsc(g.name)}</span>`).join('')
     +'<span>· 여럿이면 쉼표로 · 없는 이름은 <b>새로 만듭니다</b></span>';}
 
 function ptRenderLists(){
@@ -11441,7 +11448,7 @@ function resetGroupForm(presetIds,editTarget){
      생성 모드에서는 아직 자기 자신이 groups[]에 없어 이 문제가 구조적으로 생기지 않는다. */
   const excl=editGroup?descendantIds(editGroup):null;
   ps.innerHTML=`<option value="">없음 (최상위)</option>`
-    +groups.filter(g=>!excl||!excl.has(g.id)).map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+    +groups.filter(g=>!excl||!excl.has(g.id)).map(g=>`<option value="${g.id}">${bkEsc(g.name)}</option>`).join('');
   ps.value=editGroup&&editGroup.parentId?editGroup.parentId:'';
   ps.onchange=()=>updGrpMoreSummary();
   const gm=document.getElementById('g-more');if(gm)gm.open=false;
@@ -11460,7 +11467,7 @@ function renderGMembers(){
   const meG=meNode();
   mg.innerHTML=nodes.map(n=>{const lk=!!meG&&n===meG; /* [§7.2 가드] 나만 잠금 */
     return `<div class="memrow${pickedMembers.has(n.id)?' on':''}${lk?' locked':''}" data-id="${n.id}"${lk?' data-lock="1"':''}>
-    <span class="dot" style="background:${EL_INFO[n.el].css};color:${EL_INFO[n.el].css}"></span>${n.name}${lk?'<span class="lockbadge">고정</span>':''}
+    <span class="dot" style="background:${EL_INFO[n.el].css};color:${EL_INFO[n.el].css}"></span>${bkEsc(n.name)}${lk?'<span class="lockbadge">고정</span>':''}
     <span class="st">${STEMS[n.stemIdx]} ${EL_KO[n.el]}</span><span class="chk">${pickedMembers.has(n.id)?'✓':''}</span></div>`;}).join('')
     /* 사람 시트의 "＋ 새 그룹" 칩과 대칭 위치 — 목록 끝에 둔다 */
     +`<div class="memrow newp" id="g-newp-open">＋ 새 사람</div>`;
