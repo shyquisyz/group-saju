@@ -2040,6 +2040,23 @@
 <script src="solar-terms.js"></script>
 <script src="my-data.js"></script>
 <script>
+/* ═══ 계측 [2026-09-04] — 깔때기 사건 여섯 개, 스위치 하나 ═══
+   GoatCounter(쿠키 없음·개인정보 없음·무료)의 1×1 픽셀 방식을 쓴다 — 스크립트를 하나도 더 싣지 않는다.
+   보내는 것은 **사건 이름뿐**이다. 이름·생년월일·그룹명은 어떤 경로로도 나가지 않는다(사건 이름은
+   상수라 사용자 입력이 섞일 수 없다). 기본은 **꺼짐**(ON:false) — 사이트 코드(SITE)를 사용자가
+   GoatCounter에서 만든 뒤 넣고 ON을 true로 바꾸면 켜진다. 꺼져 있으면 track()은 아무것도 안 한다.
+   사건 이름(경로가 아니라 사건이므로 '/'로 시작하지 않는다 — GoatCounter 규칙):
+     first-visit · me-registered · first-other-added · card-created · share-done · image-saved */
+const ANALYTICS={ON:false,SITE:''};   /* SITE: 'xxxx' → https://xxxx.goatcounter.com */
+function track(ev,force){
+  if(!ANALYTICS.ON||!ANALYTICS.SITE)return;
+  if(!force&&demoMode)return;                /* 예시 은하에서의 동작은 세지 않는다(first-visit만 예외) */
+  try{
+    const img=new Image();
+    img.src='https://'+ANALYTICS.SITE+'.goatcounter.com/count?p='+encodeURIComponent(ev)
+      +'&e=true&rnd='+Date.now();
+  }catch(e){}}
+
 /* ═════════ 명리 엔진 ═════════ */
 const STEMS=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
 const STEM_EL=['mok','mok','hwa','hwa','to','to','geum','geum','su','su'];
@@ -5921,6 +5938,9 @@ function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updat
     createdAt:createdAt===undefined?null:createdAt,
     updatedAt:updatedAt===undefined?null:updatedAt};
   mesh.userData.node=node;nodes.push(node);
+  /* [계측] 첫 상대 추가 — 나 다음의 두 번째 사람. 부팅 복원·백업 불러오기(saveSuspended)와
+     예시 은하(track 안에서 가드)는 세지 않는다. */
+  if(nodes.length===2&&!saveSuspended)track('first-other-added');
   return node;}
 /* [2026-08-28] `sys`(이 선이 속한 최상위 성계)를 함께 담는다. 끝점을 **그 성계의 인스턴스**로
    잡기 위해서다 — 아래 rebuildEdges 주석 참고. sys가 없으면 주 인스턴스를 쓴다. */
@@ -8107,7 +8127,10 @@ if(boot.status==='ok'){
   /* [예시 은하, 2026-08-28] 저장본도 my-data.js도 없는 **첫 방문**이면 예시를 띄운다.
      빈 우주에 안내 문구만 있는 화면으로는 무엇을 하는 서비스인지 알 수 없었다.
      applySeed를 그대로 쓴다 — 형식이 같아 별도 로더가 필요 없다. */
-  if(!window.SEED&&boot.status==='none'){demoMode=true;applySeed(DEMO_SEED);}
+  if(!window.SEED&&boot.status==='none'){demoMode=true;applySeed(DEMO_SEED);
+    /* [계측] 저장본도 시드도 없는 방문 = 아직 등록하지 않은 사람의 방문. 예시 은하가 켜진 상태라
+       force로 예시 가드를 넘긴다. */
+    track('first-visit',true);}
   else applySeed(window.SEED);
   if(boot.status==='corrupt'){
     /* 원본을 **지우지 않고** 옮겨 둔다. 되돌릴 여지를 남긴다. */
@@ -9927,6 +9950,7 @@ let cardPair=null, cardCanvas=null, cardBusy=false;
 function cardMsg(t){const el=document.getElementById('card-msg');if(el)el.textContent=t||'';}
 function openCardSheet(a,b){
   cardPair={a,b};cardCanvas=null;
+  track('card-created');                     /* [계측] 카드 생성 */
   const sheet=document.getElementById('cardsheet');
   const host=document.getElementById('card-prev');
   const wait=document.getElementById('card-wait');
@@ -10010,7 +10034,7 @@ async function cardShare(){
     const file=new File([blob],cardFileName(cardPair.a,cardPair.b),{type:'image/png'});
     if(!cardCanShare()){cardMsg('이 브라우저는 공유를 지원하지 않습니다 — 「이미지로 저장」을 눌러 주세요.');}
     else{
-      try{await navigator.share(cardSharePayload(file));cardMsg('공유했습니다.');}
+      try{await navigator.share(cardSharePayload(file));cardMsg('공유했습니다.');track('share-done');}
       catch(e){ if(e&&e.name==='AbortError')cardMsg(''); else cardMsg('공유가 안 되었습니다 — 「이미지로 저장」을 눌러 주세요.'); }}
   }catch(err){cardMsg('공유하지 못했습니다.');console.error('[card]',err);}
   go.disabled=false;go.textContent=label;cardBusy=false;}
@@ -10030,6 +10054,7 @@ async function cardSave(){
   try{
     const blob=await cardBlob(); if(!blob)throw new Error('toBlob null');
     const name=cardFileName(cardPair.a,cardPair.b);
+    track('image-saved');                    /* [계측] 이미지 저장(누른 시점 — 어느 경로로 가든) */
     if(isIOS()&&cardCanShare()){
       const file=new File([blob],name,{type:'image/png'});
       try{
@@ -11227,6 +11252,7 @@ document.getElementById('ob-start').onclick=()=>{
   const t0=nowISO();
   const me=addNode({name,stemIdx:stemOfBirth(birth),birth,isMe:true,
     createdAt:t0,updatedAt:t0});
+  track('me-registered');                    /* [계측] 본인 등록 완료 */
   document.getElementById('onboard').classList.remove('on');
   layoutGalaxy();rebuildRings();renderNav();
   selectGroup(null);showNode(me);fitGalaxy(false);
