@@ -1300,6 +1300,45 @@
   #panelclose::before{content:'';position:absolute;left:50%;top:50%;
     transform:translate(-50%,-50%);width:44px;height:44px}
   #panelclose:active{opacity:.7}
+  /* ═══ 패널 붙박이 버튼 한 쌍 — 확대(#pfull)·닫기(#pclose) [2026-09-04, 개편 2/4] ═══
+     docs/mobile-panel-redesign.md §2.3 + 사용자 결정(2026-09-04): ~~패널 위쪽 바깥~~ →
+     **패널 오른쪽 위에 붙박이.** 열렸을 때 제목 줄(#phead)과 같은 높이에 나란히 선다.
+     제목 글자를 조금 가려도 되지만 스크롤바 위에 앉거나 태그바·다른 버튼과 겹치면 안 된다.
+     [세로] bottom = --panel-h − 81 : 패널 윗변에서 제목 줄 중심까지 61px(손잡이 40 + 머리 40/2)
+       에 버튼 반높이 20을 뺀 값. 패널 높이가 변해도(tall·확대) 제목 줄을 따라간다.
+     [가로] right 20 — 스크롤바(8px)를 비켜 11px 남긴다(320 실측: 버튼 오른끝 300 < 스크롤바 311).
+     [크기] 보이는 알약 40, 누르는 판은 ::before 44(터치 기준). #panelclose와 같은 방식.
+     [층] 6 — 패널(5) 위, #dim(7)·시트(8·13) 아래. 시트가 뜨면 버튼이 시트를 뚫고 나오면 안 된다.
+     [기호] 글꼴 의존을 없애려고 문자(⤢/✕) 대신 **인라인 SVG**. 폰 글꼴에 ⤢가 없는 기기가 있다.
+     [나타남] body.panel-open 이 붙을 때 — 패널이 올라오는 .28s 뒤에 나타나도록 지연을 둔다.
+       --panel-h 는 transform과 무관한 실측 높이라, 지연이 없으면 패널보다 먼저 자리에 떠 있다. */
+  .pfix{position:fixed;z-index:6;width:40px;height:40px;border-radius:99px;
+    display:grid;place-items:center;padding:0;
+    border:1px solid rgba(255,255,255,.18);background:rgba(28,29,44,.92);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    color:#cfd2e2;cursor:pointer;font-family:inherit;box-shadow:0 4px 18px rgba(0,0,0,.5);
+    bottom:calc(var(--panel-h,52vh) - 81px);
+    opacity:0;pointer-events:none;transition:opacity .15s}
+  .pfix::before{content:'';position:absolute;left:50%;top:50%;
+    transform:translate(-50%,-50%);width:44px;height:44px}
+  .pfix svg{width:18px;height:18px;display:block;stroke:currentColor;stroke-width:2;
+    stroke-linecap:round;stroke-linejoin:round;fill:none}
+  .pfix:active{opacity:.75}
+  body.panel-open .pfix{opacity:1;pointer-events:auto;transition:opacity .15s .28s}
+  #pclose{right:20px}
+  #pfull{right:68px}                  /* 40 + 8 간격 */
+  #pfull .ic-shrink{display:none}
+  body.panel-full #pfull .ic-expand{display:none}
+  body.panel-full #pfull .ic-shrink{display:block}
+  /* ═══ 확대 모드 (R3) ═══ --panel-h 가 --vvh 가 된다. 100vh가 아닌 이유는 인앱 브라우저에서
+     100vh가 실제로 보이는 높이보다 크기 때문이다(#cardsheet 등이 이미 --vvh를 쓴다).
+     제목 줄은 여전히 패널 안 61px 자리라 버튼과 같은 높이에 놓인다 — 시안 §2.4의 충돌은
+     버튼이 패널 바깥에서 안으로 들어오며 생긴 것이고, 지금 배치는 처음부터 제목 줄 위다.
+     예시 배지·「펼치기」 알약은 확대 중엔 감춘다 — 화면 전체가 패널이라 둘 자리가 없다. */
+  body.panel-full #panel{max-height:var(--vvh,100vh);height:var(--vvh,100vh);
+    border-radius:0;border-top:0}
+  body.panel-full #demobadge{display:none}
+  body.panel-full #demoback{display:none !important}   /* demoPeek이 인라인 display:block을 쓴다 */
   #panelresize{display:none}
   /* [★ 2026-08-31 모바일 실측] 닫기 반원(#paneldock)이 **모바일에서 항상 떠 있었다** —
      화면 왼쪽 중앙에 26×76 조각이 패널을 닫든 열든 보인다(390/360/320 세 폭 모두 확인).
@@ -1512,6 +1551,10 @@
     body.panel-open #paneldock{display:block}
     /* 데스크톱에서는 패널 안 ✕ 대신 바깥 반원을 쓴다 — 여는 버튼과 대칭이 되게 */
     body.panel-open #panelclose{display:none}
+    /* [2026-09-04] 붙박이 한 쌍(확대·닫기)도 모바일 것이다 — 데스크톱은 반원 방식 그대로.
+       확대 모드 규칙도 모바일 조건 밖에 있으므로 여기서 함께 무력화한다. */
+    body.panel-open .pfix{display:none}
+    body.panel-full #panel{max-height:none;height:100%;border-radius:0}
     /* [2026-08-31] 데스크톱은 반원 방식 그대로 — 머리를 감추고 본문 h2를 되살린다 */
     #phead{display:none}
     #panel h2{display:block}
@@ -1563,6 +1606,11 @@
   데스크톱에서는 이 줄 전체를 감춘다(반원 방식 유지) — 안에 든 #panelclose도 함께 감춰지는데,
   데스크톱은 원래 패널이 열리면 #panelclose를 숨기던 동작이라 결과가 같다. -->
 <div id="phead"><span id="pheadname"></span><button id="panelclose" aria-label="패널 닫기">✕</button></div><div id="grouptree"></div><div id="panelbody"></div><div id="wipehost"></div></div>
+<!-- [2026-09-04 개편 2/4] 모바일 패널 붙박이 한 쌍. 패널 **바깥**(형제)에 둔다 — 패널은
+     overflow-y:auto 스크롤 상자라 안에 두면 같이 밀려 올라간다(#paneldock을 밖으로 뺀 것과 같은 이유).
+     기호는 인라인 SVG — 글꼴에 ⤢가 없는 폰이 있다(위 .pfix 주석). -->
+<button type="button" id="pfull" class="pfix" aria-label="패널 전체 확대" title="전체 확대"><svg class="ic-expand" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"/></svg><svg class="ic-shrink" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10h-6V4M14 10l7-7M4 14h6v6M10 14l-7 7"/></svg></button>
+<button type="button" id="pclose" class="pfix" aria-label="패널 닫기" title="닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 
 <!-- ═══ 설정 [2026-08-28] ═══
      "저장된 내용 모두 지우기"가 패널 바닥에 그대로 나와 있어 어색했다.
@@ -4219,6 +4267,8 @@ function syncPanelH(){
   const root=document.documentElement;
   if(innerWidth>=768||!panelEl||!panelEl.classList.contains('open')){
     if(panelHLast!==-1){panelHLast=-1;root.style.removeProperty('--panel-h');}
+    /* [개편 2/4] 닫히면 확대도 풀린다 — 닫는 경로가 여섯 곳이라 여기 한 곳에서 정리한다 */
+    if(document.body.classList.contains('panel-full'))setPanelFull(false);
     return;}
   const h=Math.round(panelEl.getBoundingClientRect().height);
   if(h===panelHLast)return;
@@ -9652,6 +9702,12 @@ draghandle.addEventListener('pointermove',e=>{
 function endPanelDrag(){
   if(!pDrag)return;
   panel.classList.remove('dragging');panel.style.transform='';
+  /* [2026-09-04 개편 2/4] 확대 상태에서 아래로 끌면 **52vh로 돌아온다**(§6-1의 (가)).
+     화면 전체에서 110px 규칙을 그대로 두면 읽다가 실수로 닫는 사고가 는다 — 닫기는 ✕가 맡는다.
+     위로 끄는 것은 더 갈 곳이 없어 무시한다. */
+  if(document.body.classList.contains('panel-full')){
+    if(pDrag.dy>45)setPanelFull(false);
+    pDrag=null;return;}
   if(pDrag.dy>110){panel.classList.remove('open','tall');deselect();}
   else if(pDrag.dy<-45)panel.classList.add('tall');
   else if(pDrag.dy>45)panel.classList.remove('tall');
@@ -9672,6 +9728,21 @@ function closePanel(){
   if(keepView)return;
   if(activeGroup)fitGroup(activeGroup);else fitGalaxy();}
 document.getElementById('panelclose').onclick=closePanel;
+/* [2026-09-04 개편 2/4] 붙박이 닫기는 closePanel을 **그대로** 부른다 — keepView 분기(위)를
+   지나야 한다. 시안(prototype-overrides.js)의 deselect() 직접 호출을 옮기면 그 분기를 건너뛴다. */
+document.getElementById('pclose').onclick=closePanel;
+/* ═══ 확대 모드 (R3) ═══ body.panel-full 하나로 켜고 끈다. CSS가 패널을 --vvh로 늘리고
+   syncPanelH가 그 높이를 --panel-h로 넘겨 버튼·태그바가 따라온다.
+   [기억하지 않는다] 닫히면 풀린다(syncPanelH에서 정리) — 다음 사람은 52vh로 시작한다.
+   §6-2는 미결이었고 기억하는 쪽은 나중에 saveUiPref에 얹을 수 있다. 안 기억하는 쪽이 되돌리기 쉽다. */
+function setPanelFull(on){
+  document.body.classList.toggle('panel-full',!!on);
+  const b=document.getElementById('pfull');
+  if(b){b.setAttribute('aria-label',on?'패널 크기 되돌리기':'패널 전체 확대');
+    b.title=on?'되돌리기':'전체 확대';}
+  if(on)panel.classList.remove('tall'); /* 확대가 tall보다 크다 — 둘이 겹치면 되돌릴 때 tall이 남는다 */
+  syncPanelH();}
+document.getElementById('pfull').onclick=()=>setPanelFull(!document.body.classList.contains('panel-full'));
 /* [2026-08-30] ~~paneldock.onclick=closePanel~~ — 폭 조절 구동부가 직접 맡는다.
    둘 다 있으면 끌어서 놓을 때마다 패널이 닫힌다(아래 ‘패널 폭 조절’ 구역). */
 
