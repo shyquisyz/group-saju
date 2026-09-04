@@ -105,7 +105,7 @@
 
 ## 파일 구성
 
-HTML 1개 + 데이터 3개 + 문서 4개 + 생성기 1개. **앱은 빌드·의존성 설치가 없다.**
+HTML 1개 + 데이터 3개 + 문서 5개 + 생성기 1개. **앱은 빌드·의존성 설치가 없다.**
 
 | 파일 | 역할 |
 |---|---|
@@ -117,6 +117,7 @@ HTML 1개 + 데이터 3개 + 문서 4개 + 생성기 1개. **앱은 빌드·의�
 | `GALAXY-LAYOUT-SPEC.md` | 은하 레이아웃 사양서 — 좌표·궤도·카메라 수치 |
 | `README.md` | 저장소 첫 화면 |
 | `docs/service-plan-draft.md` | **확산 이후 서비스화 검토서 · 지시 문서 아님.** [확정] 중 `HANDOFF-v2.md`에 근거가 없는 것은 [권장]으로 읽는다 — **`HANDOFF-v2.md`가 우선**. [2026-09-04 루트에서 이동, 옛 이름 `saju-galaxy-claude-code-handoff.md`] |
+| `docs/mobile-panel-redesign.md` | 모바일 패널 개편 설계안 [2026-09-04]. **구현 전 단계** — 확정 요구 R1~R3 · 검토 과제 T1~T3 · 시안 갈무리(`docs/mobile-panel-redesign/`) · 미결 질문 6건 |
 | `tools/gen-solar-terms.mjs` | 위 표의 생성기. **손으로 돌린다** — `npm i lunar-javascript@1.7.7` 필요 |
 
 **`solar-terms.js`는 선택 파일이 아니다.** `my-data.js`는 없어도 앱이 돌지만, 이건 없으면

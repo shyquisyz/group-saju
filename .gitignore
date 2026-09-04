@@ -55,6 +55,14 @@ group-saju-backup-*.json
 !assets/candidates/
 !assets/candidates/*.jpg
 !assets/candidates/*.png
+
+# [2026-09-04] 설계안 시안 갈무리도 예외다. 위 *.png 규칙이 막으려던 것은
+# **작업용 레퍼런스 이미지**(저작권 불분명 · 용량 큼)인데, 이쪽은 성격이 다르다 —
+# 우리가 우리 화면을 찍은 것이고, docs/mobile-panel-redesign.md §7이 이 파일들을
+# 경로로 가리킨다. 갈무리가 없으면 설계안 문서가 가리킬 곳이 없어진다.
+# 사람 정보는 없다 — DEMO_SEED 예시 인물만 나온다(그 시드는 이미 index.html에 있다).
+!docs/mobile-panel-redesign/
+!docs/mobile-panel-redesign/*.png
 *.fig
 
 # ── OS · 편집기 ──
