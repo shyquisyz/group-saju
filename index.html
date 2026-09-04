@@ -1353,7 +1353,21 @@
      데스크톱은 패널이 왼쪽이고 이 둘은 오른쪽 아래라 겹치지 않으므로 모바일에서만 감춘다.
      패널을 닫으면 body.panel-open이 떨어지며 그대로 돌아온다. */
   @media (max-width:767px){
-    body.panel-open #fab,body.panel-open #zoomctl{display:none}}
+    body.panel-open #fab,body.panel-open #zoomctl{display:none}
+    /* ═══ T1 · 태그바를 패널 위로 [2026-09-04 개편 4/4] ═══ docs/mobile-panel-redesign.md §3 T1.
+       패널이 열리면 태그바(이름 색인)가 **통째로** 가려졌다(패널 top 405, 태그바 792~844).
+       "이 사람 읽다가 저 사람"이 패널을 닫아야만 됐다. bottom을 --panel-h로 올려 패널 윗변에 붙인다.
+       [전환] 패널이 올라오는 .28s와 같은 곡선으로 따라간다 — --panel-h는 transform과 무관한 실측
+       높이라 전환이 없으면 태그바만 먼저 튀어 오른다. 측정할 때는 getAnimations()가 비었는지 볼 것
+       (백그라운드 탭에서 멈춘 전환이 값을 덮는다 — 시안 회차에서 밟았다).
+       [확대] 화면 전체가 패널이라 올릴 자리가 없다 — 숨긴다.
+       [버튼과의 겹침] 시안 06(버튼이 태그바를 깔고 앉음)은 버튼이 패널 *바깥 위*에 있어서였다.
+       지금 버튼은 패널 *안* 제목 줄 높이(윗변 +26~66)라 태그바(윗변 위 52px)와 만나지 않는다. */
+    body.panel-open #tagbar{bottom:var(--panel-h,52vh);transition:bottom .28s cubic-bezier(.2,.8,.2,1)}
+    body.panel-full #tagbar{opacity:0;pointer-events:none}
+    /* 「등록 화면 펼치기」 알약(예시 모드)도 태그바 위에 앉는 것이라 함께 올린다 —
+       안 올리면 패널 위에 떠서 본문을 가린다(z 13 > 패널 5. 개편 전부터 그랬다). */
+    body.panel-open #demoback{bottom:calc(var(--panel-h,52vh) + var(--tagbar-h,52px) + 12px)}}
   /* ═══ 여닫는 반원 [2026-08-30] ═══
      ~~좌하단 알약 버튼~~ → **화면 왼쪽 중앙에 붙은 반원.** 좌하단에서는 패널 안 "설정"과
      자리를 다퉜고(겹침 버그의 뿌리), 세로 중앙은 아무것도 없는 자리라 부딪힐 것이 없다.
