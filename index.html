@@ -2043,11 +2043,16 @@
 /* ═══ 계측 [2026-09-04] — 깔때기 사건 여섯 개, 스위치 하나 ═══
    GoatCounter(쿠키 없음·개인정보 없음·무료)의 1×1 픽셀 방식을 쓴다 — 스크립트를 하나도 더 싣지 않는다.
    보내는 것은 **사건 이름뿐**이다. 이름·생년월일·그룹명은 어떤 경로로도 나가지 않는다(사건 이름은
-   상수라 사용자 입력이 섞일 수 없다). 기본은 **꺼짐**(ON:false) — 사이트 코드(SITE)를 사용자가
-   GoatCounter에서 만든 뒤 넣고 ON을 true로 바꾸면 켜진다. 꺼져 있으면 track()은 아무것도 안 한다.
+   상수라 사용자 입력이 섞일 수 없다). ~~기본은 꺼짐(ON:false) — 사이트 코드(SITE)를 사용자가
+   GoatCounter에서 만든 뒤 넣고 ON을 true로 바꾸면 켜진다.~~ → **[2026-09-05] 켜짐.** 계정을 만들고
+   사이트 코드를 넣어 ON:true로 바꿨다(아래). 끄려면 ON을 false로 되돌린다 — track()은 그 즉시 멈춘다.
    사건 이름(경로가 아니라 사건이므로 '/'로 시작하지 않는다 — GoatCounter 규칙):
      first-visit · me-registered · first-other-added · card-created · share-done · image-saved */
-const ANALYTICS={ON:false,SITE:''};   /* SITE: 'xxxx' → https://xxxx.goatcounter.com */
+const ANALYTICS={ON:true,SITE:'shyquisyz'};   /* [2026-09-05] 계측 켜짐 — GoatCounter 사이트 코드.
+   집계 주소 https://shyquisyz.goatcounter.com/count. 공식 스니펫(<script data-goatcounter=… src="//gc.zgo.at/count.js">)
+   이 향하는 곳과 같은 주소다 — 우리는 스크립트를 안 싣고 그 스니펫이 쓰는 것과 같은 /count 픽셀
+   엔드포인트(공식 문서 "GoatCounter documentation" pixel 절)를 직접 부른다. 두 방식 모두 공식이고
+   같은 곳으로 보낸다 — 스니펫을 바꿔 끼운 것이 아니라 처음부터 우리 형식이 그 형식이었다. */
 function track(ev,force){
   if(!ANALYTICS.ON||!ANALYTICS.SITE)return;
   if(!force&&demoMode)return;                /* 예시 은하에서의 동작은 세지 않는다(first-visit만 예외) */
