@@ -72,8 +72,8 @@
 ```bash
 git clone https://github.com/shyquisyz/group-saju.git
 cd group-saju
-python -m http.server 8899
-# → http://localhost:8899
+python -m http.server 8900
+# → http://localhost:8900
 ```
 
 `file://`로 직접 열어도 대체로 뜨지만 일부 기능이 막히므로 로컬 서버를 권한다.
