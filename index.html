@@ -2162,7 +2162,7 @@ function cityOptionsHtml(){
    [배경 교체] assets/card-bg.jpg 한 파일만 바꾸면 카드 배경이 바뀐다. 파일이 없으면
    앱의 우주 톤을 캔버스로 직접 그린다(cardPaintBg) — 그림이 없다고 기능이 멎지 않는다. */
 const CARD_W=1080, CARD_H=1350;
-const CARD_PAD=84;                    /* 안전 여백 — 모든 요소가 이 안에 들어간다 */
+const CARD_PAD=84;                    /* 안전 여백 — 바닥 서명이 이 안에 들어간다 */
 const CARD_BG_SRC='assets/card-bg.jpg';
 const CARD_SITE='shyquisyz.github.io/group-saju';
 /* [2026-08-30] 공유 페이로드에 넣는 주소. 카드 그림 아래 주소 줄(CARD_SITE)과 같은 곳을
@@ -2170,9 +2170,45 @@ const CARD_SITE='shyquisyz.github.io/group-saju';
 const CARD_URL='https://'+CARD_SITE+'/';
 const CARD_FONT="'Pretendard',-apple-system,'Apple SD Gothic Neo',sans-serif";
 /* 카드 글자 크기 — 화면 토큰(15/18/22/26)에 카드폭/폰폭 비(1080/390≈2.77)를 곱해 반올림했다.
-   **위계 비율은 그대로 두고 크기만 키운다** — 확정된 폰트 체계를 카드에서 새로 만들지 않는다. */
+   **위계 비율은 그대로 두고 크기만 키운다** — 확정된 폰트 체계를 카드에서 새로 만들지 않는다.
+   [2026-09-05 B 3/3] 바닥 서명(lg·sm)과 리본(sm)이 이 표를 쓴다. 타로 명패 글자는 아래
+   CARD_B.fs — 같은 비율(42:50:62 ≈ 18:22:27)을 타로 한 장 폭(470/1080)으로 줄인 값이다. */
 const CARD_FS={sm:42, base:50, lg:62, xl:72};
 const CARD_COL={ink:'#eceef2', mut:'#a0a2b2', mut2:'#8a8c9c', gold:'#e8c66a', line:'#2a2c3d'};
+/* ═══ 타로 카드 [2026-09-05 B 3/3] ═══
+   [무엇] ~~글로 된 관계 카드(제목·방향 두 줄·딱지·해설)~~ → **타로 두 장**. 왼쪽 "A에게 B는",
+   오른쪽 "B에게 A는". 장당 9:16, 안에 그림(십신별 민화 10장 중 하나) + 명패 띠(상대 일간 오행의
+   오방색) + 오방색 가는 선. 옛 계획 함수(cardPlanAt)는 지웠다 — 같은 이름의 cardPlan이 새 명령을 낸다.
+   [소재] assets/card-b/web/*.webp — 그림 10장(폭 800)·테두리 1장(폭 900). **카드를 만들 때만** 받는다.
+   첫 화면 로딩에는 한 바이트도 안 실린다(preload 없음, 아래 cardAssets가 유일한 적재 경로).
+   [테두리 안쪽 빈 영역] frame.png(1536×2752)의 가운데 빈 하지 영역을 실측했다 —
+   가로 332~1205, 세로 366~2354(밝기<110인 픽셀을 가운데 행·열에서 훑음, 2026-09-05).
+   비율로 적어 두고 그리는 크기에 곱한다. 테두리 그림을 바꾸면 이 넷만 다시 잰다.
+   [★ 영역 비율] 그 빈 영역은 세로로 길다(0.44). 명패를 빼도 그림 자리가 4:5보다 훨씬 길어서
+   cover로 채우면 **가로가 잘린다**(폭 기준 약 30%). 지시대로 cover를 기본으로 두되 PIC_FIT으로
+   바꿀 수 있게 했다 — 'cover'(자름) / 'fit'(4:5 그대로, 남는 높이는 명패로). 회차 보고에 선택지로 올렸다. */
+const CARD_B={
+  tw:470, th:836, gap:40,           /* 타로 한 장 470×836(9:16 = 835.6), 두 장 사이 40 → 980 = 화면 폭의 90.7% */
+  top:170,                          /* 두 장의 윗변. 리본(있을 때)은 그 위 62~124 */
+  frame:{src:'frame', w:1536, h:2752,
+    inner:{x:332/1536, y:366/2752, w:873/1536, h:1988/2752}},
+  fs:{sm:18, nick:27, nickSmall:22, pil:20},   /* 명패 글자 — 42:62 비율을 타로 폭으로 줄인 값 */
+  bandPad:12, textPad:14, lineW:2,
+  ribbon:{y:62, h:62, px:CARD_FS.sm, padX:44},
+  PIC_FIT:'cover'};
+/* 십신 → 그림 파일. 순서는 TEN_GODS/REL_NICK와 같다(0 비견 … 9 정인). 파일명은 assets/card-b/의 번호다. */
+const CARD_PIC=['09-bigyeon','10-geopjae','07-siksin','08-sanggwan','06-pyeonjae','05-jeongjae',
+  '04-pyeongwan','03-jeonggwan','02-pyeonin','01-jeongin'];
+/* 오방색 명패 — 일간 오행(甲乙 목·丙丁 화·戊己 토·庚辛 금·壬癸 수) 순.
+   글자 명암비(WCAG)는 청 6.84 · 적 5.95 · 황 9.63 · 백 15.56 · 흑 17.12 (2026-09-05 계산, 전부 4.5 이상).
+   청·적·흑은 흰 글자, 황·백은 먹색 글자(사용자 지시). */
+const CARD_OBANG=[
+  {name:'청',bg:'#1f5f8b',fg:'#ffffff'},
+  {name:'적',bg:'#b8322a',fg:'#ffffff'},
+  {name:'황',bg:'#e2b93b',fg:'#1a1611'},
+  {name:'백',bg:'#f3eee3',fg:'#1a1611'},
+  {name:'흑',bg:'#1b1b22',fg:'#ffffff'}];
+function cardElem(stemIdx){return Math.floor(((stemIdx%10)+10)%10/2);}
 
 let cardMeasure=null;
 function cardMeasureCtx(){
@@ -2198,59 +2234,98 @@ function cardWrap(text,px,weight,maxW){
     cur=acc;}
   push();
   return lines.length?lines:[''];}
-/** 카드에 들어갈 글을 만든다 — **순수**하다(DOM도 이미지도 안 본다). */
+/** 줄 수가 max를 넘으면 마지막 줄 끝을 '…'로 줄인다(글자 단위). 명패 폭은 유한하다. */
+function cardClampLines(lines,max,px,weight,maxW){
+  if(lines.length<=max)return lines;
+  const ctx=cardMeasureCtx(); ctx.font=cardFont(px,weight);
+  const out=lines.slice(0,max); let last=out[max-1];
+  while(last.length&&ctx.measureText(last+'…').width>maxW)last=last.slice(0,-1);
+  out[max-1]=last+'…'; return out;}
+/** 상대의 일주 두 글자(예: 辛丑). 표 밖(1900 이전 등)이면 일간 한 글자만. */
+function cardPillar(p){
+  try{const r=p.birth?sajuOf({y:p.birth.y,m:p.birth.m,d:p.birth.d,
+      hour:Number.isInteger(p.birth.hour)?p.birth.hour:null,min:p.birth.min,lon:p.birth.lon}):null;
+    if(r)return pillarStr(r.day);}catch(e){}
+  return STEMS[((p.stemIdx%10)+10)%10]||'';}
+/** 카드에 들어갈 글을 만든다 — **순수**하다(DOM도 이미지도 안 본다).
+    [방향] 왼쪽 장은 A가 보는 B — 그림·명패색·일주가 전부 **B**의 것이다. 오른쪽은 그 반대. */
 function cardText(a,b){
   const gAB=relGod(a,b), gBA=relGod(b,a);
   const hc=hapChung(a,b);
+  const side=(x,y,g)=>({dir:x.name+'에게 '+y.name+particle(y.name,'은는'),
+    nick:REL_NICK[g], pic:CARD_PIC[g], god:TEN_GODS[g],
+    elem:cardElem(y.stemIdx), pillar:cardPillar(y)});
   return {title:a.name+' ↔ '+b.name,
-    dir1:a.name+'에게 '+b.name+particle(b.name,'은는')+' 「'+REL_NICK[gAB]+'」',
-    dir2:b.name+'에게 '+a.name+particle(a.name,'은는')+' 「'+REL_NICK[gBA]+'」',
-    chip:hc?hc.tag.replace(/^·\s*/,''):null,   /* 화면 딱지의 앞 '· '는 카드에서 뺀다 */
-    takeH:NICK_TAKE_H, take:REL_TAKE[gAB]};}
-/** 그리기 명령 목록. scale은 내용이 넘칠 때만 1보다 작아진다(아래 cardPlan 참고). */
-function cardPlanAt(t,scale){
-  const S=v=>Math.round(v*scale);
-  const maxW=CARD_W-CARD_PAD*2;
-  const ops=[]; let y=CARD_PAD+S(24);
-  const line=(text,px,weight,fill,lh)=>{
-    cardWrap(text,px,weight,maxW).forEach(ln=>{
-      ops.push({op:'text',x:CARD_PAD,y:y+px,text:ln,px,weight,fill});
-      y+=Math.round(px*(lh||1.32));});};
-  line(t.title,S(CARD_FS.xl),700,CARD_COL.ink,1.24);
-  y+=S(26);
-  ops.push({op:'rect',x:CARD_PAD,y:y,w:S(96),h:S(5),fill:CARD_COL.gold}); y+=S(5)+S(40);
-  line(t.dir1,S(CARD_FS.lg),700,CARD_COL.gold,1.38); y+=S(22);
-  line(t.dir2,S(CARD_FS.lg),700,CARD_COL.gold,1.38); y+=S(30);
-  if(t.chip){
-    const px=S(CARD_FS.sm), padX=S(26), h=Math.round(px*1.9);
-    const ctx=cardMeasureCtx(); ctx.font=cardFont(px,600);
-    const w=Math.round(ctx.measureText(t.chip).width)+padX*2;
-    ops.push({op:'pill',x:CARD_PAD,y:y,w,h,r:Math.round(h/2),
-      fill:'rgba(232,198,106,.14)',stroke:CARD_COL.gold,
-      text:t.chip,px,weight:600,textFill:CARD_COL.gold});
-    y+=h+S(34);}
-  line(t.takeH,S(CARD_FS.sm),700,CARD_COL.gold,1.5); y+=S(6);
-  line(t.take,S(CARD_FS.base),400,CARD_COL.ink,1.52);
-  const contentBottom=y;
-  /* 바닥 서명은 항상 카드 아래쪽에 붙는다 — 내용 길이와 무관하게 자리가 같아야 한다 */
-  const fpx=S(CARD_FS.lg), spx=S(CARD_FS.sm);
-  const footY=CARD_H-CARD_PAD-spx-Math.round(fpx*0.42);
-  ops.push({op:'text',x:CARD_PAD,y:footY,text:'사주은하',px:fpx,weight:700,fill:CARD_COL.gold});
-  ops.push({op:'text',x:CARD_PAD,y:footY+Math.round(spx*1.5),text:CARD_SITE,
-    px:spx,weight:400,fill:CARD_COL.mut2});
-  return {ops,contentBottom,footTop:footY-Math.round(fpx*0.9),scale};}
-/** 카드 한 장의 그리기 명령. 내용이 서명 자리를 침범하면 **한 번만** 줄여 다시 만든다.
-    줄이는 비율은 넘친 만큼에서 바로 계산하므로 무작위도, 반복도 없다(결정론). */
+    left:side(a,b,gAB), right:side(b,a,gBA),
+    chip:hc?hc.tag.replace(/^·\s*/,''):null};}   /* 화면 딱지의 앞 '· '는 카드에서 뺀다 */
+/** 명패 한 장의 줄 계획. 작은 줄은 1줄→넘치면 한 단계(×0.85) 줄여 최대 2줄,
+    별명은 최대 2줄→넘치면 한 단계(nick→nickSmall) 줄여 다시 2줄. 그래도 넘치면 '…'. */
+function cardBandLines(s,maxW){
+  const F=CARD_B.fs;
+  let dpx=F.sm, dl=cardWrap(s.dir,dpx,600,maxW);
+  if(dl.length>1){dpx=Math.round(F.sm*0.85);dl=cardWrap(s.dir,dpx,600,maxW);}
+  dl=cardClampLines(dl,2,dpx,600,maxW);
+  let npx=F.nick, nl=cardWrap(s.nick,npx,700,maxW);
+  if(nl.length>2){npx=F.nickSmall;nl=cardWrap(s.nick,npx,700,maxW);}
+  nl=cardClampLines(nl,2,npx,700,maxW);
+  const ppx=F.pil, pl=[s.pillar];
+  const h=CARD_B.bandPad*2+Math.round(dpx*1.3)*dl.length+6+Math.round(npx*1.22)*nl.length+6+Math.round(ppx*1.3);
+  return {dpx,dl,npx,nl,ppx,pl,h};}
+/** 그리기 명령 목록. 왼쪽·오른쪽 명패는 **같은 높이**로 맞춘다(둘 중 큰 쪽) —
+    두 장의 그림 아랫변이 어긋나면 한 세트로 안 보인다. */
 function cardPlan(a,b){
   const t=cardText(a,b);
-  let plan=cardPlanAt(t,1);
-  const avail=plan.footTop-(CARD_PAD+24);
-  const need=plan.contentBottom-(CARD_PAD+24);
-  if(need>avail&&need>0){
-    const k=Math.max(0.68,Math.floor(avail/need*1000)/1000);
-    plan=cardPlanAt(t,k);}
-  plan.text=t;
-  return plan;}
+  const B=CARD_B, ops=[];
+  const x0=Math.round((CARD_W-(B.tw*2+B.gap))/2);
+  const fr=B.frame, fs=B.tw/fr.w, fh=Math.round(fr.h*fs);          /* 테두리를 폭에 맞춰 470×842 */
+  const fy=B.top+Math.round((B.th-fh)/2);                            /* 9:16 칸보다 6px 긴 만큼 위아래 3px씩(종이 여백) */
+  const inner={x:Math.round(fr.inner.x*B.tw), y:fy-B.top+Math.round(fr.inner.y*fh),
+    w:Math.round(fr.inner.w*B.tw), h:Math.round(fr.inner.h*fh)};   /* 카드 칸 기준 상대 좌표 */
+  const textW=inner.w-B.textPad*2;
+  const L=cardBandLines(t.left,textW), R=cardBandLines(t.right,textW);
+  /* 'fit'이면 그림을 4:5 그대로 두고 **남는 높이를 전부 명패에** 준다(빈 칸을 남기지 않는다).
+     'cover'면 명패는 글자에 필요한 만큼만, 그림이 나머지를 채운다. */
+  const fitH=Math.round(inner.w/(4/5));
+  const bandH=B.PIC_FIT==='fit'?Math.max(Math.max(L.h,R.h),inner.h-fitH):Math.max(L.h,R.h);
+  const picH=inner.h-bandH;
+  /* 리본 — 딱지가 있을 때만. 없으면 이 요소 자체가 없다(op가 안 생긴다). */
+  if(t.chip){
+    const px=B.ribbon.px; const ctx=cardMeasureCtx(); ctx.font=cardFont(px,700);
+    const w=Math.round(ctx.measureText(t.chip).width)+B.ribbon.padX*2;
+    ops.push({op:'ribbon',x:Math.round((CARD_W-w)/2),y:B.ribbon.y,w,h:B.ribbon.h,
+      text:t.chip,px,weight:700,fill:CARD_COL.gold,tail:'#b6944a',textFill:'#101018'});}
+  [[t.left,L,x0],[t.right,R,x0+B.tw+B.gap]].forEach(([s,ln,cx])=>{
+    const cy=B.top, col=CARD_OBANG[s.elem];
+    const ix=cx+inner.x, iy=cy+inner.y;
+    ops.push({op:'frame',key:fr.src,x:cx,y:fy,w:B.tw,h:fh,clip:{x:cx,y:cy,w:B.tw,h:B.th}});
+    /* 그림 — 소재는 4:5. cover면 넘치는 쪽을 자른다: 세로 넘침은 **위를 남기고** 아래를,
+       가로 넘침은 가운데를 남긴다. u·v·uw·vh는 소재 기준 0~1 비율(실제 픽셀 크기와 무관). */
+    const pw=inner.w, ph=picH, sr=4/5;
+    let crop;
+    if(B.PIC_FIT==='fit'){crop={dw:pw,dh:Math.min(ph,Math.round(pw/sr)),u:0,v:0,uw:1,vh:1};}
+    else if(pw/ph>sr){crop={dw:pw,dh:ph,u:0,v:0,uw:1,vh:Math.min(1,ph/(pw/sr))};}
+    else{const uw=pw/(ph*sr);crop={dw:pw,dh:ph,u:(1-uw)/2,v:0,uw:Math.min(1,uw),vh:1};}
+    ops.push({op:'pic',key:s.pic,god:s.god,x:ix,y:iy,w:crop.dw,h:crop.dh,u:crop.u,v:crop.v,uw:crop.uw,vh:crop.vh,
+      areaW:pw,areaH:ph});
+    /* 명패 띠 — 그림 바로 아래, 빈 영역 바닥까지 */
+    const by=iy+picH;
+    ops.push({op:'band',x:ix,y:by,w:inner.w,h:bandH,fill:col.bg,elem:col.name});
+    let ty=by+B.bandPad, tx=ix+Math.round(inner.w/2);
+    const put=(lines,px,weight,lh)=>{lines.forEach(l=>{
+      ops.push({op:'text',x:tx,y:ty+Math.round(px*0.95),text:l,px,weight,fill:col.fg,align:'center',maxW:textW});
+      ty+=Math.round(px*lh);});};
+    put(ln.dl,ln.dpx,600,1.3); ty+=6;
+    put(ln.nl,ln.npx,700,1.22); ty+=6;
+    put(ln.pl,ln.ppx,600,1.3);
+    /* 오방색 가는 선 — 테두리 바로 안쪽(빈 영역 가장자리) */
+    ops.push({op:'line',x:ix+1,y:iy+1,w:inner.w-2,h:inner.h-2,stroke:col.bg,lw:B.lineW});});
+  /* 바닥 서명 — 종전 카드와 같은 자리·같은 크기 */
+  const fpx=CARD_FS.lg, spx=CARD_FS.sm;
+  const footY=CARD_H-CARD_PAD-spx-Math.round(fpx*0.42);
+  ops.push({op:'text',x:CARD_PAD,y:footY,text:'사주은하',px:fpx,weight:700,fill:CARD_COL.gold,align:'left',maxW:CARD_W-CARD_PAD*2});
+  ops.push({op:'text',x:CARD_PAD,y:footY+Math.round(spx*1.5),text:CARD_SITE,
+    px:spx,weight:400,fill:CARD_COL.mut2,align:'left',maxW:CARD_W-CARD_PAD*2});
+  return {ops,text:t,bandH,picH,inner,keys:[fr.src,t.left.pic,t.right.pic]};}
 /** 좌표에서 유도한 0~1 값 — Math.random을 쓰지 않으려고 둔 정수 해시다(결정론) */
 function cardStarHash(i){
   let x=(i*2654435761)%4294967296; x^=x>>>13; x=(x*1274126177)%4294967296;
@@ -2271,35 +2346,49 @@ function cardPaintBg(ctx){
     ctx.globalAlpha=0.25+cardStarHash(i*7+5)*0.6;
     ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
   ctx.globalAlpha=1;}
-/** 명령 목록을 실제로 그린다. img가 있으면 배경 그림, 없으면 cardPaintBg. */
-function cardPaint(ctx,plan,img){
+/** 명령 목록을 실제로 그린다. img는 배경(없으면 cardPaintBg), pics는 key→Image(없는 키는 빈 하지색 판). */
+function cardPaint(ctx,plan,img,pics){
   ctx.clearRect(0,0,CARD_W,CARD_H);
   if(img){
-    /* cover — 비율이 달라도 잘리기만 하고 늘어나지 않는다 */
     const s=Math.max(CARD_W/img.width,CARD_H/img.height);
     const w=img.width*s,h=img.height*s;
     ctx.drawImage(img,(CARD_W-w)/2,(CARD_H-h)/2,w,h);
   }else cardPaintBg(ctx);
-  /* 글자 깔개 — 배경이 어떤 그림이든 글이 읽히게. 위아래로 자연스럽게 사라진다 */
+  /* 글자 깔개 — 종전과 같다. 타로 두 장은 자체 배경(하지)이라 영향이 없고, 리본·서명이 읽히게 한다 */
   const v=ctx.createLinearGradient(0,0,0,CARD_H);
   v.addColorStop(0,'rgba(7,7,14,.30)');v.addColorStop(.18,'rgba(7,7,14,.72)');
   v.addColorStop(.86,'rgba(7,7,14,.76)');v.addColorStop(1,'rgba(7,7,14,.40)');
   ctx.fillStyle=v;ctx.fillRect(0,0,CARD_W,CARD_H);
-  ctx.textBaseline='alphabetic';ctx.textAlign='left';
+  ctx.textBaseline='alphabetic';
+  const get=k=>pics&&pics.get?pics.get(k):null;
   plan.ops.forEach(o=>{
+    if(o.op==='frame'){const im=get(o.key);
+      ctx.save();ctx.beginPath();ctx.rect(o.clip.x,o.clip.y,o.clip.w,o.clip.h);ctx.clip();
+      if(im)ctx.drawImage(im,o.x,o.y,o.w,o.h);
+      else{ctx.fillStyle='#f1e9d6';ctx.fillRect(o.clip.x,o.clip.y,o.clip.w,o.clip.h);
+        ctx.lineWidth=6;ctx.strokeStyle='#2b2620';ctx.strokeRect(o.clip.x+20,o.clip.y+24,o.clip.w-40,o.clip.h-48);}
+      ctx.restore();return;}
+    if(o.op==='pic'){const im=get(o.key);
+      ctx.save();ctx.beginPath();ctx.rect(o.x,o.y,o.areaW,o.areaH);ctx.clip();
+      ctx.fillStyle='#f4ecd8';ctx.fillRect(o.x,o.y,o.areaW,o.areaH);
+      if(im)ctx.drawImage(im,o.u*im.width,o.v*im.height,o.uw*im.width,o.vh*im.height,o.x,o.y,o.w,o.h);
+      ctx.restore();return;}
+    if(o.op==='band'){ctx.fillStyle=o.fill;ctx.fillRect(o.x,o.y,o.w,o.h);return;}
+    if(o.op==='line'){ctx.lineWidth=o.lw;ctx.strokeStyle=o.stroke;
+      ctx.strokeRect(o.x+o.lw/2,o.y+o.lw/2,o.w-o.lw,o.h-o.lw);return;}
     if(o.op==='text'){ctx.font=cardFont(o.px,o.weight);ctx.fillStyle=o.fill;
-      ctx.fillText(o.text,o.x,o.y);return;}
-    if(o.op==='rect'){ctx.fillStyle=o.fill;ctx.fillRect(o.x,o.y,o.w,o.h);return;}
-    if(o.op==='pill'){
-      const {x,y,w,h,r}=o;
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
-      ctx.fillStyle=o.fill;ctx.fill();
-      ctx.lineWidth=Math.max(2,Math.round(o.px*0.06));ctx.strokeStyle=o.stroke;ctx.stroke();
-      ctx.font=cardFont(o.px,o.weight);ctx.fillStyle=o.textFill;
-      ctx.fillText(o.text,x+Math.round((w-ctx.measureText(o.text).width)/2),
-        y+Math.round(h/2+o.px*0.36));}});}
+      ctx.textAlign=o.align||'left';ctx.fillText(o.text,o.x,o.y);ctx.textAlign='left';return;}
+    if(o.op==='ribbon'){
+      const {x,y,w,h}=o, n=Math.round(h*0.36), t=Math.round(h*0.22);
+      /* 뒤 꼬리 두 개(살짝 아래, 어두운 금) → 앞 띠 → 글자 */
+      ctx.fillStyle=o.tail;
+      ctx.beginPath();ctx.moveTo(x-n,y+t);ctx.lineTo(x+n,y+t);ctx.lineTo(x+n,y+h+t);ctx.lineTo(x-n,y+h+t);
+      ctx.lineTo(x-n+Math.round(n*0.6),y+h/2+t);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(x+w+n,y+t);ctx.lineTo(x+w-n,y+t);ctx.lineTo(x+w-n,y+h+t);ctx.lineTo(x+w+n,y+h+t);
+      ctx.lineTo(x+w+n-Math.round(n*0.6),y+h/2+t);ctx.closePath();ctx.fill();
+      ctx.fillStyle=o.fill;ctx.fillRect(x,y,w,h);
+      ctx.font=cardFont(o.px,o.weight);ctx.fillStyle=o.textFill;ctx.textAlign='center';
+      ctx.fillText(o.text,x+w/2,y+Math.round(h/2+o.px*0.36));ctx.textAlign='left';}});}
 let cardBgImg=null, cardBgTried=false;
 /** 배경 그림을 한 번만 받아 둔다. 없으면 null로 남고 카드는 그려진 배경을 쓴다. */
 function cardBg(){
@@ -2310,14 +2399,35 @@ function cardBg(){
     im.onload=()=>{cardBgImg=im;res(im);};
     im.onerror=()=>{cardBgImg=null;res(null);};
     im.src=CARD_BG_SRC;});}
+/* ═══ 타로 소재 적재 [2026-09-05] — **여기가 유일한 적재 경로다.** 카드를 만들 때 필요한 세 장
+   (테두리 + 방향별 그림 둘)만 받고 캐시한다. 못 받은 키는 null — 그 자리는 빈 하지색 판으로 그려지고
+   카드 생성은 멎지 않는다. 같은 키를 두 번 요청하면 같은 Promise를 돌려준다(동시 요청 중복 방지). */
+const CARD_B_DIR='assets/card-b/web/';
+const cardPicCache=new Map();
+function cardAsset(key){
+  if(cardPicCache.has(key))return cardPicCache.get(key);
+  const p=new Promise(res=>{const im=new Image();
+    im.onload=()=>res(im); im.onerror=()=>res(null);
+    im.src=CARD_B_DIR+key+'.webp';});
+  cardPicCache.set(key,p); return p;}
+async function cardAssets(keys){
+  const uniq=[...new Set(keys)];
+  const ims=await Promise.all(uniq.map(cardAsset));
+  const m=new Map(); uniq.forEach((k,i)=>m.set(k,ims[i])); return m;}
 /** 카드 한 장을 캔버스에 그려 돌려준다. 폰트가 뜨기 전에 그리면 대체 글꼴로 그려지므로
-    document.fonts.ready를 기다린다 — 여기서 안 기다리면 첫 장만 모양이 다르다. */
+    document.fonts.ready를 기다린다 — 여기서 안 기다리면 첫 장만 모양이 다르다.
+    [계측용] renderCard.last에 소재 적재·그리기 시간(ms)을 남긴다 — 배포 주소에서 3초 기준을 재는 데 쓴다. */
 async function renderCard(a,b){
+  const t0=performance.now();
   const cv=document.createElement('canvas');cv.width=CARD_W;cv.height=CARD_H;
   const ctx=cv.getContext('2d');
   try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;}catch(e){}
-  const img=await cardBg();
-  cardPaint(ctx,cardPlan(a,b),img);
+  const plan=cardPlan(a,b);
+  const [img,pics]=await Promise.all([cardBg(),cardAssets(plan.keys)]);
+  const t1=performance.now();
+  cardPaint(ctx,plan,img,pics);
+  renderCard.last={loadMs:Math.round(t1-t0),paintMs:Math.round(performance.now()-t1),
+    missing:plan.keys.filter(k=>!pics.get(k))};
   return cv;}
 /* ═══════ 도시 선택기 — 탭 + 격자 [2026-08-30] ═══════
    [문제] ~~두 단(왼쪽 권역 · 오른쪽 도시)~~은 권역 칸이 한 번 고른 뒤에도 가로를 상시
@@ -9196,35 +9306,48 @@ function sajuSelfTest(){
      /수·목 기운이 힘이 됩니다/.test(txt(w))&&/화·토·금 기운이 힘이 됩니다/.test(txt(st)),
      '신약→'+(txt(w).match(/편이라 ([^ ]+) 기운/)||[])[1]+' / 신강→'+(txt(st).match(/편이라 ([^ ]+) 기운/)||[])[1]);
   }
-  /* 25. 관계 카드 [2026-08-30] — 캔버스를 뜨지 않고 **그리기 명령 목록**으로 검증한다 */
+  /* 25. 관계 카드 [2026-08-30 → 2026-09-05 타로 판] — 캔버스를 뜨지 않고 **그리기 명령 목록**으로 검증한다 */
   {
     const P=(x,y)=>JSON.stringify(cardPlan(x,y).ops);
     /* ① 결정론 — 같은 쌍이면 5회 모두 같은 명령 목록 */
     const five=[P(me,other),P(me,other),P(me,other),P(me,other),P(me,other)];
     T('cardDeterministic: 같은 쌍 5회 동일', five.every(x=>x===five[0]),
       '길이 '+five[0].length);
-    /* ② 딱지 없는 쌍이면 그 줄 자체가 없다 — pill 명령이 하나도 없어야 한다 */
+    /* ② 십신 10 → 그림 10 — 표가 열 칸 다 차 있고 서로 다르며, 어느 쌍이든 두 장의 그림 키가 표 안에 있다 */
+    const picOk=CARD_PIC.length===10&&CARD_PIC.every(k=>typeof k==='string'&&/^\d\d-[a-z]+$/.test(k))
+      &&new Set(CARD_PIC).size===10&&REL_NICK.length===10;
+    const pk=cardPlan(me,other).ops.filter(o=>o.op==='pic').map(o=>o.key);
+    T('cardPicMap: 별명 10 → 그림 10 전부 존재', picOk&&pk.length===2&&pk.every(k=>CARD_PIC.indexOf(k)>=0),
+      CARD_PIC.join(',')+' / 이 쌍: '+pk.join(','));
+    /* ③ 딱지 없는 쌍이면 리본 자체가 없다 — ribbon 명령이 하나도 없어야 한다 */
     const withHc=nodes.find(x=>x!==me&&hapChung(me,x));
     const noHc=nodes.find(x=>x!==me&&!hapChung(me,x));
-    const hasPill=p=>cardPlan(me,p).ops.some(o=>o.op==='pill');
-    T('cardChipOmit: 딱지 없으면 줄 생략',
-      (!noHc||!hasPill(noHc))&&(!withHc||hasPill(withHc)),
+    const hasRib=p=>cardPlan(me,p).ops.some(o=>o.op==='ribbon');
+    T('cardRibbonOmit: 딱지 없으면 리본 미출력',
+      (!noHc||!hasRib(noHc))&&(!withHc||hasRib(withHc)),
       '딱지 있는 쌍 '+(withHc?withHc.name:'없음')+' / 없는 쌍 '+(noHc?noHc.name:'없음'));
-    /* ③ 긴 이름 줄바꿈 — 합성 인물로 시험한다(데모에 긴 이름이 없다).
-          한 줄도 안전 여백(폭 1080 - 84*2 = 912)을 넘지 않아야 한다. */
+    /* ④ 긴 이름·긴 별명 줄바꿈 — 합성 인물로 시험한다(데모에 긴 이름이 없다).
+          모든 글자 줄이 자기 칸 폭(maxW) 안에 있어야 한다. 별명은 REL_NICK에서 가장 긴 것을 강제로 넣는다. */
     const longName='가나다라마바사아자차카타파하가나다라마바사';
     const fake={...other, name:longName};
     const lp=cardPlan(me,fake);
     const ctx=cardMeasureCtx();
     const over=lp.ops.filter(o=>o.op==='text').filter(o=>{
       ctx.font=cardFont(o.px,o.weight);
-      return o.x+ctx.measureText(o.text).width>CARD_W-CARD_PAD+1;});
-    T('cardWrapLong: 긴 이름도 안전 여백 안', over.length===0,
+      return ctx.measureText(o.text).width>o.maxW+1;});
+    T('cardWrapLong: 긴 이름도 명패 폭 안', over.length===0,
       over.length?over[0].text:'넘친 줄 0');
-    /* ④ 모든 요소가 카드 안 — 위·아래·왼쪽까지 */
-    const outside=lp.ops.filter(o=>o.x<CARD_PAD-1||o.y<0||o.y>CARD_H);
+    const longest=REL_NICK.reduce((a,b)=>a.length>=b.length?a:b);
+    const nk=lp.ops.filter(o=>o.op==='text'&&o.weight===700&&o.align==='center');
+    T('cardWrapNick: 별명 최대 2줄', nk.length>=2&&nk.length<=4, '별명 줄 수 '+nk.length+' / 가장 긴 별명 '+longest.length+'자');
+    /* ⑤ 모든 요소가 카드 안 — 위·아래·왼쪽·오른쪽 */
+    const outside=lp.ops.filter(o=>o.op!=='text'&&(o.x<0||o.y<0||o.x+(o.w||0)>CARD_W||o.y+(o.h||0)>CARD_H));
     T('cardInside: 모든 요소가 카드 안', outside.length===0, String(outside.length));
-    /* ⑤ 서명 두 줄은 항상 있다 */
+    /* ⑥ 두 장이 화면 폭의 90% 이상 */
+    const fr=lp.ops.filter(o=>o.op==='frame');
+    const span=fr.length===2?(fr[1].clip.x+fr[1].clip.w-fr[0].clip.x):0;
+    T('cardSpan: 두 장이 폭 90% 이상', fr.length===2&&span>=CARD_W*0.9, span+'/'+CARD_W);
+    /* ⑦ 서명 두 줄은 항상 있다 */
     const txts=cardPlan(me,other).ops.filter(o=>o.op==='text').map(o=>o.text);
     T('cardFooter: 서명과 주소가 있다',
       txts.indexOf('사주은하')>=0&&txts.indexOf(CARD_SITE)>=0, txts.slice(-2).join(' / '));
