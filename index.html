@@ -1342,6 +1342,11 @@
     border-radius:0;border-top:0}
   body.panel-full #demobadge{display:none}
   body.panel-full #demoback{display:none !important}   /* demoPeek이 인라인 display:block을 쓴다 */
+  /* [2026-09-06 B 3c] 「등록 화면 펼치기」 알약(z-index 13)이 시트(카드 8·백업/설정 13)보다
+     위에 뜬다 — 접은 예시 모드에서 카드 시트를 열면 알약이 시트 위에 겹쳤다(320/390 실측).
+     #dim.on은 시트가 하나라도 열려 있을 때 항상 켜지므로(카드·인물·그룹·백업·설정 공통 경로),
+     여기 하나로 다섯 시트 전부에서 겹침을 막는다. 인라인 display:block을 쓰므로 !important. */
+  #dim.on ~ #demoback{display:none !important}
   #panelresize{display:none}
   /* [★ 2026-08-31 모바일 실측] 닫기 반원(#paneldock)이 **모바일에서 항상 떠 있었다** —
      화면 왼쪽 중앙에 26×76 조각이 패널을 닫든 열든 보인다(390/360/320 세 폭 모두 확인).
