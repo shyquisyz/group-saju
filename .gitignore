@@ -62,6 +62,9 @@ group-saju-backup-*.json
 !assets/card-b/*.png
 !assets/card-b/alt/
 !assets/card-b/alt/*.png
+# [2026-09-05 B 3/3] 카드 렌더용 축소본(WebP). 앱이 카드 생성 시에만 지연 로드한다 — 배포에 실려야 한다.
+!assets/card-b/web/
+!assets/card-b/web/*.webp
 
 # [2026-09-04] 설계안 시안 갈무리도 예외다. 위 *.png 규칙이 막으려던 것은
 # **작업용 레퍼런스 이미지**(저작권 불분명 · 용량 큼)인데, 이쪽은 성격이 다르다 —
