@@ -56,6 +56,13 @@ group-saju-backup-*.json
 !assets/candidates/*.jpg
 !assets/candidates/*.png
 
+# [2026-09-05] 타로풍 카드 그림(B 회차) 원본. candidates/와 같은 성격 — **고를 대상**이라 남긴다.
+# alt/는 합격 기준에 못 미쳐 물린 시안. 사용자가 2/2에서 고르라고 함께 둔다(용량 각 ~6MB).
+!assets/card-b/
+!assets/card-b/*.png
+!assets/card-b/alt/
+!assets/card-b/alt/*.png
+
 # [2026-09-04] 설계안 시안 갈무리도 예외다. 위 *.png 규칙이 막으려던 것은
 # **작업용 레퍼런스 이미지**(저작권 불분명 · 용량 큼)인데, 이쪽은 성격이 다르다 —
 # 우리가 우리 화면을 찍은 것이고, docs/mobile-panel-redesign.md §7이 이 파일들을
@@ -66,6 +73,7 @@ group-saju-backup-*.json
 # [2026-09-04] 회차 보고의 실측 갈무리도 같은 성격이다(우리 화면·예시 인물만·보고가 경로로 가리킨다).
 !docs/reports/
 !docs/reports/**/*.png
+!docs/reports/**/*.jpg
 *.fig
 
 # ── OS · 편집기 ──
