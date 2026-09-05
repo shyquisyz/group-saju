@@ -2182,20 +2182,23 @@ const CARD_COL={ink:'#eceef2', mut:'#a0a2b2', mut2:'#8a8c9c', gold:'#e8c66a', li
    [소재] assets/card-b/web/*.webp — 그림 10장(폭 800)·테두리 1장(폭 900). **카드를 만들 때만** 받는다.
    첫 화면 로딩에는 한 바이트도 안 실린다(preload 없음, 아래 cardAssets가 유일한 적재 경로).
    [테두리 안쪽 빈 영역] frame.png(1536×2752)의 가운데 빈 하지 영역을 실측했다 —
-   가로 332~1205, 세로 366~2354(밝기<110인 픽셀을 가운데 행·열에서 훑음, 2026-09-05).
+   ~~가로 332~1205, 세로 366~2354~~ → [3b] v2: 가로 220~1310, 세로 245~2519(밝기<110인 픽셀을 행·열 5곳에서 훑음, 2026-09-05).
    비율로 적어 두고 그리는 크기에 곱한다. 테두리 그림을 바꾸면 이 넷만 다시 잰다.
-   [★ 영역 비율] 그 빈 영역은 세로로 길다(0.44). 명패를 빼도 그림 자리가 4:5보다 훨씬 길어서
-   cover로 채우면 **가로가 잘린다**(폭 기준 약 30%). 지시대로 cover를 기본으로 두되 PIC_FIT으로
-   바꿀 수 있게 했다 — 'cover'(자름) / 'fit'(4:5 그대로, 남는 높이는 명패로). 회차 보고에 선택지로 올렸다. */
+   [★ 영역 비율] 그 빈 영역은 세로로 길다(v1 0.44 → v2 0.48). 명패를 빼도 그림 자리가 4:5보다 길어서
+   cover로 채우면 **가로가 잘린다**(v1에서 폭 기준 27%). ~~지시대로 cover를 기본으로 두되~~ →
+   **[3b 사용자 결정] 'fit'이 기본** — 그림은 4:5 그대로 잘림 없이, 남는 높이는 명패가 쓴다(글자는 띠 세로 가운데).
+   'cover'는 PIC_FIT으로 되돌릴 수 있다. */
 const CARD_B={
   tw:470, th:836, gap:40,           /* 타로 한 장 470×836(9:16 = 835.6), 두 장 사이 40 → 980 = 화면 폭의 90.7% */
   top:170,                          /* 두 장의 윗변. 리본(있을 때)은 그 위 62~124 */
   frame:{src:'frame', w:1536, h:2752,
-    inner:{x:332/1536, y:366/2752, w:873/1536, h:1988/2752}},
+    /* [2026-09-05 3b] 테두리 v2(얇은 띠). v1 실측 ~~332~1205 × 366~2354~~ → v2 220~1310 × 245~2519
+       (같은 방법, 5개 행·열 교차 확인). 빈 영역 1091×2275, 가로/세로 0.480. 옛 그림은 frame-v1.png */
+    inner:{x:220/1536, y:245/2752, w:1091/1536, h:2275/2752}},
   fs:{sm:18, nick:27, nickSmall:22, pil:20},   /* 명패 글자 — 42:62 비율을 타로 폭으로 줄인 값 */
   bandPad:12, textPad:14, lineW:2,
   ribbon:{y:62, h:62, px:CARD_FS.sm, padX:44},
-  PIC_FIT:'cover'};
+  PIC_FIT:'fit'};                  /* [2026-09-05 3b] ~~'cover'~~ → 'fit'(사용자 결정) — 그림 4:5 그대로, 남는 높이는 명패 */
 /* 십신 → 그림 파일. 순서는 TEN_GODS/REL_NICK와 같다(0 비견 … 9 정인). 파일명은 assets/card-b/의 번호다. */
 const CARD_PIC=['09-bigyeon','10-geopjae','07-siksin','08-sanggwan','06-pyeonjae','05-jeongjae',
   '04-pyeongwan','03-jeonggwan','02-pyeonin','01-jeongin'];
@@ -2310,7 +2313,9 @@ function cardPlan(a,b){
     /* 명패 띠 — 그림 바로 아래, 빈 영역 바닥까지 */
     const by=iy+picH;
     ops.push({op:'band',x:ix,y:by,w:inner.w,h:bandH,fill:col.bg,elem:col.name});
-    let ty=by+B.bandPad, tx=ix+Math.round(inner.w/2);
+    /* [3b] 글 덩어리 높이를 재서 띠의 세로 가운데에 놓는다 — fit이면 띠가 글보다 훨씬 크다. cover면 blockH≈bandH라 종전과 같다 */
+    const blockH=Math.round(ln.dpx*1.3)*ln.dl.length+6+Math.round(ln.npx*1.22)*ln.nl.length+6+Math.round(ln.ppx*1.3);
+    let ty=by+Math.max(B.bandPad,Math.round((bandH-blockH)/2)), tx=ix+Math.round(inner.w/2);
     const put=(lines,px,weight,lh)=>{lines.forEach(l=>{
       ops.push({op:'text',x:tx,y:ty+Math.round(px*0.95),text:l,px,weight,fill:col.fg,align:'center',maxW:textW});
       ty+=Math.round(px*lh);});};
