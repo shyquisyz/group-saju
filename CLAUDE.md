@@ -8,6 +8,11 @@
 **[2026-09-04] 작업 폴더가 옮겨졌다.** 저장소 사본은 이제
 `D:\work\web service\사주은하\sajugalaxy.com\` 에 있다.
 **이 저장소 사본의 옛 경로는 기록이 없다** — `.git/config`에도 남지 않아 확인하지 못했다(2026-09-04).
+→ **[2026-09-05 정정]** `~/.claude.json`의 `projects` 키에 `D:/work/web service/group-saju` 항목이 있다 —
+저장소 이름과 같아 **이 사본의 옛 경로로 추정**한다(확정 아님. 그 폴더에서 Claude Code를 돌렸다는 것만 확실하다).
+**실제 영향**: 프로젝트별 MCP 서버(Magnific, `https://mcp.magnific.com`)가 **옛 경로에만 등록**돼 있어 새 경로에서는
+안 뜬다. 옮긴 뒤 처음 Magnific이 필요했던 2026-09-05 B 회차가 이걸로 멈췄다. 새 경로에서 다시 등록해야 한다 —
+`claude mcp add --transport http magnific https://mcp.magnific.com` (이 폴더에서, 세션 재시작 필요).
 아래 `Galaxy saju`는 이 저장소가 아니라 **별개의 아카이브 저장소**다.
 **폴더 이름일 뿐이다** — 저장소 이름(`group-saju`)·원격(`https://github.com/shyquisyz/group-saju.git`)·
 배포 주소는 그대로다. 폴더 이름 `sajugalaxy.com`은 아직 **도메인이 아니다**
