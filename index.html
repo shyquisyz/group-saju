@@ -107,7 +107,7 @@
     --fs-xl:26px;    /* h1 */
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%;overflow:hidden}
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none}   /* [3e] 문서 자체는 절대 안 움직인다 — 패널·시트 안에서만 스크롤 */
   body{font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo',sans-serif;color:var(--ink);
     background:#07070e;
     background-image:radial-gradient(ellipse 80% 60% at 70% 20%, rgba(45,55,110,.22), transparent 60%),
@@ -969,16 +969,16 @@
      카드를 접었을 때는 #demoback이 대신한다. */
   body.demo #ob-start{position:sticky;bottom:0;z-index:2;margin-top:10px;
     box-shadow:0 -12px 22px 6px var(--card)}
-  body.demo .obcard{max-height:calc(100vh - 56px);
+  body.demo .obcard{max-height:calc(var(--vvh, 100vh) - 56px);   /* [3e] ~~100vh~~ — iOS는 100vh가 보이는 높이보다 커 첫 화면 카드가 화면 밖으로 삐져나갔다(추정, 3e 보고) */
     box-shadow:0 28px 90px rgba(0,0,0,.85)}
   @media (max-width:767px){
     /* 좁은 화면에서는 옆으로 못 비킨다 — **아래로 붙이고 위쪽을 은하에 내준다** */
     body.demo #onboard{align-items:flex-end;justify-content:center;padding:0 8px 8px}
-    body.demo .obcard{max-height:64vh}
+    body.demo .obcard{max-height:calc(var(--vvh, 100vh) * .64)}   /* [3e] ~~64vh~~ */
   }
   .obcard{background:var(--card);backdrop-filter:blur(16px);border:1px solid var(--line);
     border-radius:16px;padding:24px 22px;width:min(520px,calc(100vw - 28px));
-    max-height:calc(100vh - 32px);overflow-y:auto;box-shadow:0 28px 80px rgba(0,0,0,.7)}
+    max-height:calc(var(--vvh, 100vh) - 32px);overflow-y:auto;box-shadow:0 28px 80px rgba(0,0,0,.7)}   /* [3e] ~~100vh~~ */
   .obcard .brand{font-family:'Space Mono',monospace;font-size:var(--fs-sm);letter-spacing:.22em;
     color:var(--gold);margin-bottom:10px}
   .obcard h2{font-size:var(--fs-xl);font-weight:800;line-height:1.35;margin-bottom:8px}
@@ -1186,6 +1186,10 @@
   #cardsheet .cardbtns{margin:0}
   #cardsheet #card-savehint{margin:6px 0 0}
   #cardsheet .cardnote2{margin-top:6px}
+  /* [3e] 「문구 복사」 — 문구 옆 작은 버튼. 주 동작이 아니라 테두리만 있는 낮은 무게 */
+  .cardcopy{display:inline-block;margin-left:6px;padding:2px 9px;font:inherit;font-size:var(--fs-sm);line-height:1.5;
+    color:var(--mut);background:transparent;border:1px solid var(--line);border-radius:6px;cursor:pointer;vertical-align:baseline}
+  .cardcopy:hover{color:var(--ink);border-color:var(--mut2)}
   #cardsheet .cardlong{margin-top:14px;padding-top:14px}
   #cardsheet .cardlong .cardnote{margin:0}
   .cardwait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -1970,7 +1974,8 @@
        iOS는 「이미지로 저장」이 공유 시트를 여는데, 그걸 안 적으면 "저장을 눌렀는데 왜
        공유창이 뜨지"가 된다. 문구는 openCardSheet 에서 기기에 맞게 채운다. -->
   <div class="cardnote" id="card-savehint"></div>
-  <div class="cardnote2" id="card-msg"></div>
+  <div class="cardnote2"><span id="card-msg"></span> <button type="button" id="card-copytext" class="cardcopy" hidden>문구 복사</button></div>
+  <!-- [2026-09-06 3e] PC에서만 보인다(openCardSheet). 공유 문구(카드 설명 한 문장 + 링크)를 따로 복사한다 — 이미지와 분리 -->
   <!-- 인앱 브라우저는 a[download] 를 막는 경우가 많다. 그때는 **그림을 직접 내어** 길게 누르게 한다 —
        그 동작은 웹뷰가 막을 수 없는 OS 기본 기능이다. -->
   <div class="cardlong" id="card-long" hidden>
@@ -2193,20 +2198,26 @@ const CARD_COL={ink:'#eceef2', mut:'#a0a2b2', mut2:'#8a8c9c', gold:'#e8c66a', li
    cover로 채우면 **가로가 잘린다**(v1에서 폭 기준 27%). ~~지시대로 cover를 기본으로 두되~~ →
    **[3b 사용자 결정] 'fit'이 기본** — 그림은 4:5 그대로 잘림 없이, 남는 높이는 명패가 쓴다(글자는 띠 세로 가운데).
    'cover'는 PIC_FIT으로 되돌릴 수 있다. */
+/* [2026-09-06 3e 사용자 결정] 카드 한 장의 가로/세로 비. ~~9:16(테두리 소재 비율 그대로)~~ → **2:3**.
+   3:4로 보려면 이 값만 3/4로 바꾼다 — 그 밖의 치수는 전부 여기서 계산된다. 테두리 소재(9:16)는 이 비율보다
+   길기 때문에 **가운데 띠를 잘라 이어 붙인다**(cardPaint의 frame 분기, 이음매는 cardFrameSeam이 찾는다). */
+const CARD_RATIO=2/3;
 const CARD_B={
-  tw:470, th:836, gap:40,           /* 타로 한 장 470×836(9:16 = 835.6), 두 장 사이 40 → 980 = 화면 폭의 90.7% */
-  top:170,                          /* 두 장의 윗변. 리본(있을 때)은 그 위 62~124 */
+  ratio:CARD_RATIO,
+  margin:30, gap:32,                /* 바깥 여백·두 장 사이. 폭 = (1080 − 60 − 32)/2 = 494 → 두 장 1020 = 94.4% */
   frame:{src:'frame', w:1536, h:2752,
     /* [2026-09-05 3b] 테두리 v2(얇은 띠). v1 실측 ~~332~1205 × 366~2354~~ → v2 220~1310 × 245~2519
        (같은 방법, 5개 행·열 교차 확인). 빈 영역 1091×2275, 가로/세로 0.480. 옛 그림은 frame-v1.png */
     inner:{x:220/1536, y:245/2752, w:1091/1536, h:2275/2752}},
   /* [2026-09-06 3d] ~~fs:{sm:18, nick:27, nickSmall:22, pil:20}~~ → 카톡 썸네일(1080 카드가 약 300px로 축소)에서
-     별명이 안 읽혔다(실기기 보고). fit 모드의 명패 278px를 채우도록 키운다. 별명은 2줄 허용(어절 단위 줄바꿈),
-     넘치면 nickSmall로 한 단계. 값의 근거는 3d 보고서 §1(300px 축소 갈무리의 글자 잉크 높이 실측). */
-  fs:{sm:24, nick:52, nickSmall:42, nickMin:36, pil:26},   /* 44는 300px 축소에서 잉크 10px(기준 11 미만)이라 52로 */
+     별명이 안 읽혔다(실기기 보고). 별명은 2줄 허용(어절 단위 줄바꿈), 넘치면 nickSmall→nickMin 단계.
+     값의 근거는 3d 보고서 §1(300px 축소 갈무리의 글자 잉크 높이 실측 — 52px에서 12~13px, 42px에서 11px). */
+  fs:{sm:24, nick:52, nickSmall:46, nickMin:40, pil:26},   /* [3e] nickSmall 42→46: 2:3 명패(폭 323)에서 42px 잉크 10px(기준 11 미만) 실측 → 46(12.8px 글자) */
+  bandH:278,                        /* [3e] 명패 높이 고정(3b 실측값 유지). 글이 더 필요하면 그만큼만 커진다 */
   bandPad:12, textPad:14, lineW:2,
-  ribbon:{y:62, h:62, px:CARD_FS.sm, padX:44},
-  PIC_FIT:'fit'};                  /* [2026-09-05 3b] ~~'cover'~~ → 'fit'(사용자 결정) — 그림 4:5 그대로, 남는 높이는 명패 */
+  ribbon:{h:62, gapBelow:46, px:CARD_FS.sm, padX:44}};
+/* ~~PIC_FIT:'fit'~~ [3e] 카드가 낮아져 4:5 그림이 다 들어갈 수 없다 → **cover · 가운데 기준**으로 고정(사용자 지시).
+   9:16 시절엔 'fit'(잘림 0)이었다 — 3b 보고서 참고. */
 /* 십신 → 그림 파일. 순서는 TEN_GODS/REL_NICK와 같다(0 비견 … 9 정인). 파일명은 assets/card-b/의 번호다. */
 const CARD_PIC=['09-bigyeon','10-geopjae','07-siksin','08-sanggwan','06-pyeonjae','05-jeongjae',
   '04-pyeongwan','03-jeonggwan','02-pyeonin','01-jeongin'];
@@ -2269,6 +2280,10 @@ function cardText(a,b){
   return {title:a.name+' ↔ '+b.name,
     left:side(a,b,gAB), right:side(b,a,gBA),
     chip:hc?hc.tag.replace(/^·\s*/,''):null};}   /* 화면 딱지의 앞 '· '는 카드에서 뺀다 */
+/** [3e] PC 「문구 복사」에 넣는 공유 문구 — 카드 설명 한 문장 + 링크. 이름은 기기 안 클립보드에만 간다. */
+function cardShareText(a,b){
+  const t=cardText(a,b);
+  return t.left.dir+' 「'+t.left.nick+'」 · '+t.right.dir+' 「'+t.right.nick+'」 — 사주은하\n'+CARD_URL;}
 /** 명패 한 장의 줄 계획. 작은 줄은 1줄→넘치면 한 단계(×0.85) 줄여 최대 2줄,
     별명은 최대 2줄→넘치면 한 단계(nick→nickSmall) 줄여 다시 2줄. 그래도 넘치면 '…'. */
 function cardBandLines(s,maxW){
@@ -2278,51 +2293,58 @@ function cardBandLines(s,maxW){
   dl=cardClampLines(dl,2,dpx,600,maxW);
   let npx=F.nick, nl=cardWrap(s.nick,npx,700,maxW);
   if(nl.length>2){npx=F.nickSmall;nl=cardWrap(s.nick,npx,700,maxW);}
-  if(nl.length>2&&F.nickMin){npx=F.nickMin;nl=cardWrap(s.nick,npx,700,maxW);}   /* [3d] 52→42→36 세 단계. 가장 긴 별명(16자)이 42에서 3줄이 될 수 있어 한 단계 더 */
+  if(nl.length>2&&F.nickMin){npx=F.nickMin;nl=cardWrap(s.nick,npx,700,maxW);}   /* [3d] 52→42→36 세 단계 */
   nl=cardClampLines(nl,2,npx,700,maxW);
   const ppx=F.pil, pl=[s.pillar];
   const h=CARD_B.bandPad*2+Math.round(dpx*1.3)*dl.length+6+Math.round(npx*1.22)*nl.length+6+Math.round(ppx*1.3);
   return {dpx,dl,npx,nl,ppx,pl,h};}
-/** 그리기 명령 목록. 왼쪽·오른쪽 명패는 **같은 높이**로 맞춘다(둘 중 큰 쪽) —
-    두 장의 그림 아랫변이 어긋나면 한 세트로 안 보인다. */
+/** 카드 한 장의 치수 — 전부 CARD_RATIO에서 나온다. 테스트·보고가 같은 값을 보게 따로 뺐다. */
+function cardGeom(){
+  const B=CARD_B, fr=B.frame;
+  const tw=Math.floor((CARD_W-B.margin*2-B.gap)/2);           /* 494 */
+  const th=Math.round(tw/B.ratio);                             /* 2:3 → 741, 3:4 → 659 */
+  const fs=tw/fr.w, fh=Math.round(fr.h*fs);                    /* 테두리를 폭에 맞춘 자연 높이(885) */
+  const excess=Math.max(0,fh-th);                              /* 잘라낼 세로(카드 px). 9:16이면 0~6 */
+  const cutSrc=Math.round(excess/fs);                          /* 같은 값을 소재 px로 */
+  const inner={x:Math.round(fr.inner.x*tw), y:Math.round(fr.inner.y*fh),
+    w:Math.round(fr.inner.w*tw), h:Math.round(fr.inner.h*fh)-excess};
+  const top=Math.round(CARD_H/2-th/2);                         /* 카드를 세로 가운데에 — 그림·명패가 화면 중앙 근처 */
+  const x0=Math.round((CARD_W-(tw*2+B.gap))/2);
+  return {tw,th,fs,fh,excess,cutSrc,inner,top,x0,ribbonY:top-B.ribbon.gapBelow-B.ribbon.h};}
+/** 그리기 명령 목록. 왼쪽·오른쪽 명패는 **같은 높이**(고정 278, 글이 더 필요하면 그만큼)로 맞춘다. */
 function cardPlan(a,b){
   const t=cardText(a,b);
-  const B=CARD_B, ops=[];
-  const x0=Math.round((CARD_W-(B.tw*2+B.gap))/2);
-  const fr=B.frame, fs=B.tw/fr.w, fh=Math.round(fr.h*fs);          /* 테두리를 폭에 맞춰 470×842 */
-  const fy=B.top+Math.round((B.th-fh)/2);                            /* 9:16 칸보다 6px 긴 만큼 위아래 3px씩(종이 여백) */
-  const inner={x:Math.round(fr.inner.x*B.tw), y:fy-B.top+Math.round(fr.inner.y*fh),
-    w:Math.round(fr.inner.w*B.tw), h:Math.round(fr.inner.h*fh)};   /* 카드 칸 기준 상대 좌표 */
+  const B=CARD_B, ops=[], G=cardGeom(), fr=B.frame, inner=G.inner;
   const textW=inner.w-B.textPad*2;
   const L=cardBandLines(t.left,textW), R=cardBandLines(t.right,textW);
-  /* 'fit'이면 그림을 4:5 그대로 두고 **남는 높이를 전부 명패에** 준다(빈 칸을 남기지 않는다).
-     'cover'면 명패는 글자에 필요한 만큼만, 그림이 나머지를 채운다. */
-  const fitH=Math.round(inner.w/(4/5));
-  const bandH=B.PIC_FIT==='fit'?Math.max(Math.max(L.h,R.h),inner.h-fitH):Math.max(L.h,R.h);
+  const bandH=Math.max(B.bandH,L.h,R.h);
   const picH=inner.h-bandH;
-  /* 리본 — 딱지가 있을 때만. 없으면 이 요소 자체가 없다(op가 안 생긴다). */
+  /* 리본 — 딱지가 있을 때만. 없으면 이 요소 자체가 없다(op가 안 생긴다). 자리는 카드 위 고정(딱지 유무로 카드가 안 움직인다) */
   if(t.chip){
     const px=B.ribbon.px; const ctx=cardMeasureCtx(); ctx.font=cardFont(px,700);
     const w=Math.round(ctx.measureText(t.chip).width)+B.ribbon.padX*2;
-    ops.push({op:'ribbon',x:Math.round((CARD_W-w)/2),y:B.ribbon.y,w,h:B.ribbon.h,
+    ops.push({op:'ribbon',x:Math.round((CARD_W-w)/2),y:G.ribbonY,w,h:B.ribbon.h,
       text:t.chip,px,weight:700,fill:CARD_COL.gold,tail:'#b6944a',textFill:'#101018'});}
-  [[t.left,L,x0],[t.right,R,x0+B.tw+B.gap]].forEach(([s,ln,cx])=>{
-    const cy=B.top, col=CARD_OBANG[s.elem];
+  [[t.left,L,G.x0],[t.right,R,G.x0+G.tw+B.gap]].forEach(([s,ln,cx])=>{
+    const cy=G.top, col=CARD_OBANG[s.elem];
     const ix=cx+inner.x, iy=cy+inner.y;
-    ops.push({op:'frame',key:fr.src,x:cx,y:fy,w:B.tw,h:fh,clip:{x:cx,y:cy,w:B.tw,h:B.th}});
-    /* 그림 — 소재는 4:5. cover면 넘치는 쪽을 자른다: 세로 넘침은 **위를 남기고** 아래를,
-       가로 넘침은 가운데를 남긴다. u·v·uw·vh는 소재 기준 0~1 비율(실제 픽셀 크기와 무관). */
+    /* 테두리 — 소재(9:16)가 카드보다 길면 빈 영역 안의 띠 cutSrc(소재 px)만큼을 잘라내고 위·아래를 이어 붙인다.
+       어디를 자를지는 그릴 때 cardFrameSeam이 정한다(그림 픽셀이 필요해서). 0이면 종전처럼 통째로. */
+    ops.push({op:'frame',key:fr.src,x:cx,y:cy,w:G.tw,h:G.th,cutSrc:G.cutSrc,
+      innerSrc:{top:fr.inner.y,bot:fr.inner.y+fr.inner.h,left:fr.inner.x,right:fr.inner.x+fr.inner.w},
+      clip:{x:cx,y:cy,w:G.tw,h:G.th}});
+    /* 그림 — 소재는 4:5, cover · **가운데 기준**(3e). 영역이 소재보다 넓으면 폭을 맞추고 위아래를 같은 양씩 자른다.
+       u·v·uw·vh는 소재 기준 0~1 비율(실제 픽셀 크기와 무관). */
     const pw=inner.w, ph=picH, sr=4/5;
     let crop;
-    if(B.PIC_FIT==='fit'){crop={dw:pw,dh:Math.min(ph,Math.round(pw/sr)),u:0,v:0,uw:1,vh:1};}
-    else if(pw/ph>sr){crop={dw:pw,dh:ph,u:0,v:0,uw:1,vh:Math.min(1,ph/(pw/sr))};}
-    else{const uw=pw/(ph*sr);crop={dw:pw,dh:ph,u:(1-uw)/2,v:0,uw:Math.min(1,uw),vh:1};}
+    if(pw/ph>sr){const vh=Math.min(1,ph*sr/pw);crop={dw:pw,dh:ph,u:0,v:(1-vh)/2,uw:1,vh};}
+    else{const uw=Math.min(1,pw/(ph*sr));crop={dw:pw,dh:ph,u:(1-uw)/2,v:0,uw,vh:1};}
     ops.push({op:'pic',key:s.pic,god:s.god,x:ix,y:iy,w:crop.dw,h:crop.dh,u:crop.u,v:crop.v,uw:crop.uw,vh:crop.vh,
       areaW:pw,areaH:ph});
     /* 명패 띠 — 그림 바로 아래, 빈 영역 바닥까지 */
     const by=iy+picH;
     ops.push({op:'band',x:ix,y:by,w:inner.w,h:bandH,fill:col.bg,elem:col.name});
-    /* [3b] 글 덩어리 높이를 재서 띠의 세로 가운데에 놓는다 — fit이면 띠가 글보다 훨씬 크다. cover면 blockH≈bandH라 종전과 같다 */
+    /* [3b] 글 덩어리 높이를 재서 띠의 세로 가운데에 놓는다 */
     const blockH=Math.round(ln.dpx*1.3)*ln.dl.length+6+Math.round(ln.npx*1.22)*ln.nl.length+6+Math.round(ln.ppx*1.3);
     let ty=by+Math.max(B.bandPad,Math.round((bandH-blockH)/2)), tx=ix+Math.round(inner.w/2);
     const put=(lines,px,weight,lh)=>{lines.forEach(l=>{
@@ -2339,7 +2361,7 @@ function cardPlan(a,b){
   ops.push({op:'text',x:CARD_PAD,y:footY,text:'사주은하',px:fpx,weight:700,fill:CARD_COL.gold,align:'left',maxW:CARD_W-CARD_PAD*2});
   ops.push({op:'text',x:CARD_PAD,y:footY+Math.round(spx*1.5),text:CARD_SITE,
     px:spx,weight:400,fill:CARD_COL.mut2,align:'left',maxW:CARD_W-CARD_PAD*2});
-  return {ops,text:t,bandH,picH,inner,keys:[fr.src,t.left.pic,t.right.pic]};}
+  return {ops,text:t,bandH,picH,inner,geom:G,keys:[fr.src,t.left.pic,t.right.pic]};}
 /** 좌표에서 유도한 0~1 값 — Math.random을 쓰지 않으려고 둔 정수 해시다(결정론) */
 function cardStarHash(i){
   let x=(i*2654435761)%4294967296; x^=x>>>13; x=(x*1274126177)%4294967296;
@@ -2360,6 +2382,21 @@ function cardPaintBg(ctx){
     ctx.globalAlpha=0.25+cardStarHash(i*7+5)*0.6;
     ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
   ctx.globalAlpha=1;}
+/** [3e] 테두리 띠를 어디서 자를지 — 빈 영역 세로 범위 안에서, 잘라낸 위 줄(a−1)과 아래 줄(a+cut)이 **가장 닮은**
+    a를 고른다(좌우 띠 픽셀의 절대차 합). 문양 사이의 조용한 줄을 찾는 셈이다. 이미지·cut마다 한 번만 계산하고 캐시. */
+const cardSeamCache=new Map();
+function cardFrameSeam(im,key,cutPx,inner){
+  const ck=key+':'+im.width+':'+cutPx; if(cardSeamCache.has(ck))return cardSeamCache.get(ck);
+  const W=im.width,H=im.height; const c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d'); x.drawImage(im,0,0); const d=x.getImageData(0,0,W,H).data;
+  const L=Math.round(inner.left*W), R=Math.round(inner.right*W), T=Math.round(inner.top*H)+6, Bt=Math.round(inner.bot*H)-6;
+  const cols=[]; for(let i=0;i<W;i++)if(i<L||i>=R)cols.push(i);
+  let best=Math.round((T+Bt-cutPx)/2), bestD=Infinity;
+  for(let a=T+1;a+cutPx<Bt;a+=2){
+    let sum=0; for(const cx of cols){const p=((a-1)*W+cx)*4,q=((a+cutPx)*W+cx)*4;
+      sum+=Math.abs(d[p]-d[q])+Math.abs(d[p+1]-d[q+1])+Math.abs(d[p+2]-d[q+2]);}
+    if(sum<bestD){bestD=sum;best=a;}}
+  cardSeamCache.set(ck,best); return best;}
 /** 명령 목록을 실제로 그린다. img는 배경(없으면 cardPaintBg), pics는 key→Image(없는 키는 빈 하지색 판). */
 function cardPaint(ctx,plan,img,pics){
   ctx.clearRect(0,0,CARD_W,CARD_H);
@@ -2378,7 +2415,14 @@ function cardPaint(ctx,plan,img,pics){
   plan.ops.forEach(o=>{
     if(o.op==='frame'){const im=get(o.key);
       ctx.save();ctx.beginPath();ctx.rect(o.clip.x,o.clip.y,o.clip.w,o.clip.h);ctx.clip();
-      if(im)ctx.drawImage(im,o.x,o.y,o.w,o.h);
+      if(im&&o.cutSrc>0){
+        /* [3e] 소재(9:16)가 카드(2:3)보다 길다 — 빈 영역 안쪽 띠에서 cutSrc(소재 px)만큼 잘라내고 위·아래를 붙인다 */
+        const W=im.width,H=im.height,sc=o.w/W;
+        const cutPx=Math.round(o.cutSrc*(W/CARD_B.frame.w));   /* cutSrc는 소재 기준(1536폭) → 실제 웹 소재(900폭)로 환산 */
+        const a=cardFrameSeam(im,o.key,cutPx,o.innerSrc);
+        ctx.drawImage(im,0,0,W,a,o.x,o.y,o.w,Math.round(a*sc));
+        ctx.drawImage(im,0,a+cutPx,W,H-a-cutPx,o.x,o.y+Math.round(a*sc),o.w,o.h-Math.round(a*sc));}
+      else if(im)ctx.drawImage(im,o.x,o.y,o.w,o.h);
       else{ctx.fillStyle='#f1e9d6';ctx.fillRect(o.clip.x,o.clip.y,o.clip.w,o.clip.h);
         ctx.lineWidth=6;ctx.strokeStyle='#2b2620';ctx.strokeRect(o.clip.x+20,o.clip.y+24,o.clip.w-40,o.clip.h-48);}
       ctx.restore();return;}
@@ -4540,6 +4584,38 @@ addEventListener('orientationchange',syncChromeMetrics);
     visualViewport.addEventListener('resize',set);
     visualViewport.addEventListener('scroll',set);}
 })();
+/* ═══ [2026-09-06 3e] 첫 진입 높이 재동기 ═══
+   [실기기] 아이폰 사파리 첫 진입에서 제목이 위로 밀리고 캔버스·태그바 아랫변이 툴바 위 ~160px에서 끝났다.
+   새로고침하면 사라진다. 크롬 시뮬레이션(3d)에선 재현 안 됨. 원인 후보: 첫 로드 때 높이를 잘못 읽음 /
+   문서가 보이는 높이보다 길어져 스크롤이 생김(첫 화면 카드가 100vh 기준이었다 — 위 CSS 정정).
+   [조치 — 원인 확정과 별개로 방어] load 직후·rAF 한 번 더·300ms·1000ms·visualViewport resize/scroll·
+   orientationchange에서 높이를 다시 읽고, 문서가 스크롤돼 있으면 0으로 되돌린 뒤 캔버스·태그바를 재배치한다. */
+let viewportDebug=null;
+if(/[?&]debug=1(&|$)/.test(location.search)){
+  /* TODO[뿌리기 전 제거] 임시 진단 표시 — ?debug=1일 때만. 왼쪽 위 작은 글자, 0.5초마다 갱신 */
+  const el=document.createElement('div'); el.id='vpdebug';
+  el.style.cssText='position:fixed;left:4px;top:4px;z-index:99999;font:11px/1.35 monospace;color:#7f7;background:rgba(0,0,0,.65);padding:3px 6px;pointer-events:none;white-space:pre';
+  document.body.appendChild(el);
+  const tick=()=>{const vv=window.visualViewport, cv=document.getElementById('scene'), tb=document.getElementById('tagbar');
+    el.textContent='innerH '+innerHeight+'  vvH '+(vv?Math.round(vv.height):'-')+'  vvTop '+(vv?Math.round(vv.offsetTop):'-')
+      +'\nscrollY '+Math.round(window.scrollY||0)+'  canvasH '+(cv?Math.round(cv.getBoundingClientRect().height):'-')
+      +'\ntagbar↓ '+(tb?Math.round(tb.getBoundingClientRect().bottom):'-')+'  '+(viewportDebug.last||'');};
+  viewportDebug=why=>{viewportDebug.last='last:'+why; tick();};
+  setInterval(tick,500); tick();}
+function viewportResync(why){
+  const vv=window.visualViewport; const h=(vv&&vv.height)||window.innerHeight||0;
+  if(h>0)document.documentElement.style.setProperty('--vvh',h+'px');
+  if((window.scrollY||0)>0||(vv&&vv.offsetTop>0)){try{window.scrollTo(0,0);}catch(e){}}
+  resize(); syncChromeMetrics();
+  if(viewportDebug)viewportDebug(why);}
+addEventListener('load',()=>{viewportResync('load');
+  requestAnimationFrame(()=>viewportResync('raf'));
+  setTimeout(()=>viewportResync('300ms'),300);
+  setTimeout(()=>viewportResync('1000ms'),1000);});
+if(window.visualViewport){
+  visualViewport.addEventListener('resize',()=>viewportResync('vv-resize'));
+  visualViewport.addEventListener('scroll',()=>viewportResync('vv-scroll'));}
+addEventListener('orientationchange',()=>{viewportResync('orient');setTimeout(()=>viewportResync('orient+300'),300);});
 
 /* ═════════ 카메라 ═════════ */
 /* v0.7: phi = Y축 기준 각도. 작을수록 위에서 내려다봄.
@@ -10109,6 +10185,7 @@ function openCardSheet(a,b){
      저장하는 길을 아예 없애 버렸다(카톡 인앱이 그렇다). */
   go.disabled=true;if(sv)sv.disabled=true;
   const lb=document.getElementById('card-long'); if(lb){lb.hidden=true;}
+  {const ct=document.getElementById('card-copytext'); if(ct)ct.hidden=!isDesktopPC();}   /* [3e] PC에서만 */
   /* [2026-08-30] 「이미지로 저장」이 실제로 하는 일을 그 자리에 적는다 */
   {const sh2=document.getElementById('card-savehint');
    if(sh2)sh2.textContent=isIOS()
@@ -10183,8 +10260,16 @@ async function cardShare(){
     const blob=await cardBlob(); if(!blob)throw new Error('toBlob null');
     const file=new File([blob],cardFileName(cardPair.a,cardPair.b),{type:'image/png'});
     if(isDesktopPC()){
-      /* [2026-09-06 3d] PC 전용 — 공유 문구+링크를 클립보드에, 이미지는 파일로. 클립보드는 사용자 제스처 안에서만
-         되므로(버튼 클릭 → 여기까지 toBlob 한 번뿐) 실패해도 이미지 저장은 그대로 하고 문구로 알린다. */
+      /* ~~[3d] 공유 문구+링크 클립보드 + PNG 저장~~ → **[2026-09-06 3e] 이미지 복사만.** 3d 방식은 「이미지로 저장」과
+         결과가 같아 버튼 둘의 뜻이 없었다(실기기 보고). 이미지와 문구를 한 번에 넣지 않는다 — 붙여넣기 대상마다 하나만
+         받아 예측이 안 된다. 문구는 옆 「문구 복사」가 따로 복사한다. 파일 저장은 하지 않는다. */
+      let copied=false;
+      try{if(navigator.clipboard&&navigator.clipboard.write&&typeof ClipboardItem!=='undefined'){
+        await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);copied=true;}}catch(e){console.warn('[card] clipboard image',e);}
+      if(copied){cardMsg('이미지가 복사됐어요 — 카톡 PC 등에 Ctrl+V');track('share-done');}
+      else cardMsg('이미지 복사가 안 됩니다 — 「이미지로 저장」을 눌러 주세요.');}
+    else if(false){
+      /* [3d 옛 분기 — 남겨 둔 것은 정정 기록용] */
       const text='사주은하 관계 카드 · '+cardPair.a.name+' ↔ '+cardPair.b.name+'\n'+CARD_URL;
       let copied=false;
       try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(text);copied=true;}}catch(e){}
@@ -10308,7 +10393,12 @@ document.querySelectorAll('#createtabs .tab').forEach(b=>b.onclick=()=>{
 /* [2026-08-30] 카드 시트의 확정 버튼 — 여기서만 바깥으로 나간다 */
 (function(){
   const g=document.getElementById('cardgo');if(g)g.onclick=cardShare;
-  const sv=document.getElementById('cardsave');if(sv)sv.onclick=cardSave;})();
+  const sv=document.getElementById('cardsave');if(sv)sv.onclick=cardSave;
+  /* [3e] 문구 복사 — 이미지와 별개 동작. 실패하면 문구를 화면에 그대로 내어 손으로 복사할 수 있게 한다 */
+  const ct=document.getElementById('card-copytext');if(ct)ct.onclick=async()=>{
+    if(!cardPair)return; const text=cardShareText(cardPair.a,cardPair.b);
+    try{await navigator.clipboard.writeText(text);cardMsg('문구를 복사했어요 — 붙여넣으세요.');}
+    catch(e){cardMsg('문구 복사가 안 됩니다: '+text);}};})();
 dim.onclick=closeSheets;
 /* [2026-08-31] 시트 넷의 ✕. 배경 탭(dim)은 그대로 두고 **보이는 손잡이**를 더한 것이다. */
 document.querySelectorAll('.sheetclose').forEach(b=>b.onclick=closeSheets);
