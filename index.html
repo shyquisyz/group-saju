@@ -2328,7 +2328,7 @@ function cardGeom(){
      494×741이고, 남는 높이는 카드 아래(리본·서명 사이)에 남는다. */
   const top=B.margin;
   const x0=Math.round((CARD_W-(tw*2+B.gap))/2);
-  return {tw,th,fs,fh,excess,cutSrc,inner,top,x0,ribbonY:top+th+B.ribbon.gapBelow};}   /* [3h] 리본은 카드 아래 */
+  return {tw,th,fs,fh,excess,cutSrc,inner,top,x0,ribbonY:top+th+B.margin};}   /* [3h] 딱지 리본은 카드 아래. [3i] 간격 = 여백 30 */
 /** 그리기 명령 목록. 왼쪽·오른쪽 명패는 **같은 높이**(고정 278, 글이 더 필요하면 그만큼)로 맞춘다. */
 function cardPlan(a,b){
   const t=cardText(a,b);
@@ -2377,19 +2377,26 @@ function cardPlan(a,b){
     put(ln.pl,ln.ppx,600,1.3);
     /* 오방색 가는 선 — 테두리 바로 안쪽(빈 영역 가장자리) */
     ops.push({op:'line',x:ix+1,y:iy+1,w:inner.w-2,h:inner.h-2,stroke:col.bg,lw:B.lineW});});
-  /* 바닥 서명 — 종전 카드와 같은 자리·같은 크기 */
+  /* 바닥 서명(사주은하 + 주소) — ~~캔버스 바닥(1350)에서 위로 잰 고정 자리~~ → **[2026-09-06 3i 사용자 결정]
+     카드 바로 아래 30px**, 그리고 캔버스 높이는 여기까지 + 아래 여백 30으로 **내용물에 맞춘다**(4:5 고정 제거).
+     딱지 리본이 있으면 카드와 서명 사이에 끼고(위아래 30씩) 그만큼 캔버스가 길어진다 — 같은 쌍이면 언제나 같은 높이(결정론). */
   const fpx=CARD_FS.lg, spx=CARD_FS.sm;
-  const footY=CARD_H-CARD_PAD-spx-Math.round(fpx*0.42);
+  const chip=ops.find(o=>o.op==='ribbon');
+  const footTop=chip?chip.y+chip.h+B.margin:G.top+G.th+B.margin;
+  const footY=footTop+Math.round(fpx*0.9);                       /* 첫 줄 기준선(대문자 높이만큼 내려온 자리) */
+  const siteY=footY+Math.round(spx*1.5);
   ops.push({op:'text',x:CARD_PAD,y:footY,text:'사주은하',px:fpx,weight:700,fill:CARD_COL.gold,align:'left',maxW:CARD_W-CARD_PAD*2});
-  ops.push({op:'text',x:CARD_PAD,y:footY+Math.round(spx*1.5),text:CARD_SITE,
+  ops.push({op:'text',x:CARD_PAD,y:siteY,text:CARD_SITE,
     px:spx,weight:400,fill:CARD_COL.mut2,align:'left',maxW:CARD_W-CARD_PAD*2});
-  return {ops,text:t,bandH,picH,inner,geom:G,keys:[fr.src,t.left.pic,t.right.pic]};}
+  const footerH=siteY+Math.round(spx*0.25)-footTop;              /* 서명 블록 높이(주소 줄 하강부까지) */
+  const h=footTop+footerH+B.margin;                              /* 캔버스 높이 */
+  return {ops,text:t,bandH,picH,inner,geom:G,h,footTop,footerH,keys:[fr.src,t.left.pic,t.right.pic]};}
 /** 좌표에서 유도한 0~1 값 — Math.random을 쓰지 않으려고 둔 정수 해시다(결정론) */
 function cardStarHash(i){
   let x=(i*2654435761)%4294967296; x^=x>>>13; x=(x*1274126177)%4294967296;
   return ((x>>>0)%100000)/100000;}
 /** 배경 그림이 없을 때의 배경 — 앱의 우주 톤을 직접 그린다 */
-function cardPaintBg(ctx){
+function cardPaintBg(ctx,CARD_H){   /* [3i] 높이는 plan.h — 인자로 받는다(이름은 아래 식을 그대로 두려고 CARD_H) */
   ctx.fillStyle='#07070e';ctx.fillRect(0,0,CARD_W,CARD_H);
   const g=ctx.createRadialGradient(CARD_W*0.72,CARD_H*0.20,0,CARD_W*0.72,CARD_H*0.20,CARD_W*0.95);
   g.addColorStop(0,'rgba(60,120,190,.34)');g.addColorStop(.42,'rgba(30,40,90,.20)');
@@ -2421,12 +2428,13 @@ function cardFrameSeam(im,key,cutPx,inner){
   cardSeamCache.set(ck,best); return best;}
 /** 명령 목록을 실제로 그린다. img는 배경(없으면 cardPaintBg), pics는 key→Image(없는 키는 빈 하지색 판). */
 function cardPaint(ctx,plan,img,pics){
+  const CARD_H=plan.h||1350;   /* [3i] 캔버스 높이는 계획이 정한다(내용물에 맞춤) */
   ctx.clearRect(0,0,CARD_W,CARD_H);
   if(img){
     const s=Math.max(CARD_W/img.width,CARD_H/img.height);
     const w=img.width*s,h=img.height*s;
     ctx.drawImage(img,(CARD_W-w)/2,(CARD_H-h)/2,w,h);
-  }else cardPaintBg(ctx);
+  }else cardPaintBg(ctx,CARD_H);
   /* 글자 깔개 — 종전과 같다. 타로 두 장은 자체 배경(하지)이라 영향이 없고, 리본·서명이 읽히게 한다 */
   const v=ctx.createLinearGradient(0,0,0,CARD_H);
   v.addColorStop(0,'rgba(7,7,14,.30)');v.addColorStop(.18,'rgba(7,7,14,.72)');
@@ -2499,10 +2507,11 @@ async function cardAssets(keys){
     [계측용] renderCard.last에 소재 적재·그리기 시간(ms)을 남긴다 — 배포 주소에서 3초 기준을 재는 데 쓴다. */
 async function renderCard(a,b){
   const t0=performance.now();
-  const cv=document.createElement('canvas');cv.width=CARD_W;cv.height=CARD_H;
+  const cv=document.createElement('canvas');cv.width=CARD_W;
   const ctx=cv.getContext('2d');
   try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;}catch(e){}
   const plan=cardPlan(a,b);
+  cv.height=plan.h;   /* [3i] 높이 = 내용물(카드+서명+여백). 공유·저장도 이 캔버스 그대로 쓴다 */
   const [img,pics]=await Promise.all([cardBg(),cardAssets(plan.keys)]);
   const t1=performance.now();
   cardPaint(ctx,plan,img,pics);
@@ -9454,7 +9463,7 @@ function sajuSelfTest(){
     /* [3h] ~~최대 2줄~~ → 3줄 허용(글자 크기 고정·축소 없음). 두 장 합쳐 2~6줄 */
     T('cardWrapNick: 별명 최대 3줄·크기 고정', nk.length>=2&&nk.length<=6&&nk.every(o=>o.px===CARD_B.fs.nick), '별명 줄 수 '+nk.length+' / 가장 긴 별명 '+longest.length+'자');
     /* ⑤ 모든 요소가 카드 안 — 위·아래·왼쪽·오른쪽 */
-    const outside=lp.ops.filter(o=>o.op!=='text'&&(o.x<0||o.y<0||o.x+(o.w||0)>CARD_W||o.y+(o.h||0)>CARD_H));
+    const outside=lp.ops.filter(o=>o.op!=='text'&&(o.x<0||o.y<0||o.x+(o.w||0)>CARD_W||o.y+(o.h||0)>lp.h));   /* [3i] 높이는 lp.h */
     T('cardInside: 모든 요소가 카드 안', outside.length===0, String(outside.length));
     /* ⑥ 두 장이 화면 폭의 90% 이상 */
     const fr=lp.ops.filter(o=>o.op==='frame');
@@ -10208,7 +10217,8 @@ function syncCardPrevCap(){
      → **[2026-09-06 3g 사용자 결정] 높이 기준 축소를 뺀다.** PC 1280×800에서 컨테이너 410 안에 캔버스 326으로
      양옆이 비었다(3f 실측). 폭은 언제나 모달 내용 폭 100%, 높이는 폭×5/4. 모달이 뷰포트보다 길어지면
      `.sheet{overflow-y:auto}`가 안에서 스크롤한다(버튼은 스크롤 끝에서 보이면 된다). 재는 방법은 3f 보고서에 남아 있다. */
-  const RATIO=1350/1080;              /* 카드 세로/가로(4:5의 역수) */
+  /* ~~const RATIO=1350/1080~~ → [3i] 캔버스 높이/폭은 쌍마다 계획이 정한다(딱지 유무). 열려 있는 쌍의 계획을 쓴다 */
+  const RATIO=(typeof cardPair!=='undefined'&&cardPair&&cardPair.a)?cardPlan(cardPair.a,cardPair.b).h/CARD_W:1350/1080;
   const w=contentW, h=w*RATIO;
   document.documentElement.style.setProperty('--cardprev-w',Math.floor(w)+'px');
   document.documentElement.style.setProperty('--cardprev-h',Math.floor(h)+'px');}
