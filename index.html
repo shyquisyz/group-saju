@@ -2307,10 +2307,10 @@ function cardBandLines(s,maxW){
   let dpx=F.sm, dl=cardWrap(s.dir,dpx,600,maxW);
   if(dl.length>1){dpx=Math.round(F.sm*0.85);dl=cardWrap(s.dir,dpx,600,maxW);}
   dl=cardClampLines(dl,2,dpx,600,maxW);
-  let npx=F.nick, nl=cardWrap(s.nick,npx,700,maxW);
-  if(nl.length>2){npx=F.nickSmall;nl=cardWrap(s.nick,npx,700,maxW);}
-  if(nl.length>2&&F.nickMin){npx=F.nickMin;nl=cardWrap(s.nick,npx,700,maxW);}   /* [3d] 52→42→36 세 단계 */
-  nl=cardClampLines(nl,2,npx,700,maxW);
+  /* ~~[3d] 2줄 넘치면 52→46→40 단계 축소~~ → **[2026-09-06 3h 사용자 결정] 글자 크기 고정(52), 최대 3줄, 축소 없음.**
+     카드마다 별명 크기가 달라 보였다(실기기). 띠 높이도 3줄 기준으로 고정한다(cardPlan의 bandH). */
+  const npx=F.nick; let nl=cardWrap(s.nick,npx,700,maxW);
+  nl=cardClampLines(nl,3,npx,700,maxW);
   const ppx=F.pil, pl=[s.pillar];
   const h=CARD_B.bandPad*2+Math.round(dpx*1.3)*dl.length+6+Math.round(npx*1.22)*nl.length+6+Math.round(ppx*1.3);
   return {dpx,dl,npx,nl,ppx,pl,h};}
@@ -2324,16 +2324,20 @@ function cardGeom(){
   const cutSrc=Math.round(excess/fs);                          /* 같은 값을 소재 px로 */
   const inner={x:Math.round(fr.inner.x*tw), y:Math.round(fr.inner.y*fh),
     w:Math.round(fr.inner.w*tw), h:Math.round(fr.inner.h*fh)-excess};
-  const top=Math.round(CARD_H/2-th/2);                         /* 카드를 세로 가운데에 — 그림·명패가 화면 중앙 근처 */
+  /* ~~세로 가운데~~ → [2026-09-06 3h 사용자 결정] 위 여백 = 좌우 여백(margin). 폭이 먼저 한계(494)라 카드는
+     494×741이고, 남는 높이는 카드 아래(리본·서명 사이)에 남는다. */
+  const top=B.margin;
   const x0=Math.round((CARD_W-(tw*2+B.gap))/2);
-  return {tw,th,fs,fh,excess,cutSrc,inner,top,x0,ribbonY:top-B.ribbon.gapBelow-B.ribbon.h};}
+  return {tw,th,fs,fh,excess,cutSrc,inner,top,x0,ribbonY:top+th+B.ribbon.gapBelow};}   /* [3h] 리본은 카드 아래 */
 /** 그리기 명령 목록. 왼쪽·오른쪽 명패는 **같은 높이**(고정 278, 글이 더 필요하면 그만큼)로 맞춘다. */
 function cardPlan(a,b){
   const t=cardText(a,b);
   const B=CARD_B, ops=[], G=cardGeom(), fr=B.frame, inner=G.inner;
   const textW=inner.w-B.textPad*2;
   const L=cardBandLines(t.left,textW), R=cardBandLines(t.right,textW);
-  const bandH=Math.max(B.bandH,L.h,R.h);
+  /* [3h] 띠 높이 = 3줄 기준 고정(짧은 별명도 같은 높이). 글은 띠 가운데 정렬(아래 blockH) */
+  const band3=B.bandPad*2+Math.round(B.fs.sm*1.3)+6+Math.round(B.fs.nick*1.22)*3+6+Math.round(B.fs.pil*1.3);
+  const bandH=Math.max(band3,L.h,R.h);
   const picH=inner.h-bandH;
   /* 리본 — 딱지가 있을 때만. 없으면 이 요소 자체가 없다(op가 안 생긴다). 자리는 카드 위 고정(딱지 유무로 카드가 안 움직인다) */
   if(t.chip){
@@ -2353,10 +2357,12 @@ function cardPlan(a,b){
        u·v·uw·vh는 소재 기준 0~1 비율(실제 픽셀 크기와 무관). */
     const pw=inner.w, ph=picH, sr=4/5;
     let crop;
-    if(pw/ph>sr){const vh=Math.min(1,ph*sr/pw);crop={dw:pw,dh:ph,u:0,v:(1-vh)/2,uw:1,vh};}
-    else{const uw=Math.min(1,pw/(ph*sr));crop={dw:pw,dh:ph,u:(1-uw)/2,v:0,uw,vh:1};}
+    /* ~~cover·가운데~~ → [2026-09-06 3h 사용자 결정] **contain** — 네 변이 다 보이게, 남는 자리는 크림(cardPaint의 areaW/areaH 채움).
+       그림 칸 크기는 그대로. ox/oy는 칸 안 오프셋. */
+    if(pw/ph>sr){const dh=ph,dw=Math.round(ph*sr);crop={dw,dh,u:0,v:0,uw:1,vh:1,ox:Math.round((pw-dw)/2),oy:0};}
+    else{const dw=pw,dh=Math.round(pw/sr);crop={dw,dh,u:0,v:0,uw:1,vh:1,ox:0,oy:Math.round((ph-dh)/2)};}
     ops.push({op:'pic',key:s.pic,god:s.god,x:ix,y:iy,w:crop.dw,h:crop.dh,u:crop.u,v:crop.v,uw:crop.uw,vh:crop.vh,
-      areaW:pw,areaH:ph});
+      ox:crop.ox||0,oy:crop.oy||0,areaW:pw,areaH:ph});
     /* 명패 띠 — 그림 바로 아래, 빈 영역 바닥까지 */
     const by=iy+picH;
     ops.push({op:'band',x:ix,y:by,w:inner.w,h:bandH,fill:col.bg,elem:col.name});
@@ -2445,7 +2451,7 @@ function cardPaint(ctx,plan,img,pics){
     if(o.op==='pic'){const im=get(o.key);
       ctx.save();ctx.beginPath();ctx.rect(o.x,o.y,o.areaW,o.areaH);ctx.clip();
       ctx.fillStyle='#f4ecd8';ctx.fillRect(o.x,o.y,o.areaW,o.areaH);
-      if(im)ctx.drawImage(im,o.u*im.width,o.v*im.height,o.uw*im.width,o.vh*im.height,o.x,o.y,o.w,o.h);
+      if(im)ctx.drawImage(im,o.u*im.width,o.v*im.height,o.uw*im.width,o.vh*im.height,o.x+(o.ox||0),o.y+(o.oy||0),o.w,o.h);
       ctx.restore();return;}
     if(o.op==='band'){ctx.fillStyle=o.fill;ctx.fillRect(o.x,o.y,o.w,o.h);return;}
     if(o.op==='line'){ctx.lineWidth=o.lw;ctx.strokeStyle=o.stroke;
@@ -9445,7 +9451,8 @@ function sajuSelfTest(){
       over.length?over[0].text:'넘친 줄 0');
     const longest=REL_NICK.reduce((a,b)=>a.length>=b.length?a:b);
     const nk=lp.ops.filter(o=>o.op==='text'&&o.weight===700&&o.align==='center');
-    T('cardWrapNick: 별명 최대 2줄', nk.length>=2&&nk.length<=4, '별명 줄 수 '+nk.length+' / 가장 긴 별명 '+longest.length+'자');
+    /* [3h] ~~최대 2줄~~ → 3줄 허용(글자 크기 고정·축소 없음). 두 장 합쳐 2~6줄 */
+    T('cardWrapNick: 별명 최대 3줄·크기 고정', nk.length>=2&&nk.length<=6&&nk.every(o=>o.px===CARD_B.fs.nick), '별명 줄 수 '+nk.length+' / 가장 긴 별명 '+longest.length+'자');
     /* ⑤ 모든 요소가 카드 안 — 위·아래·왼쪽·오른쪽 */
     const outside=lp.ops.filter(o=>o.op!=='text'&&(o.x<0||o.y<0||o.x+(o.w||0)>CARD_W||o.y+(o.h||0)>CARD_H));
     T('cardInside: 모든 요소가 카드 안', outside.length===0, String(outside.length));
