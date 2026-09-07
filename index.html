@@ -2221,12 +2221,12 @@ const CARD_RATIO=2/3;   /* ~~[3e] 카드 비율~~ → **[2026-09-06 4b 사용자
                            나온다(cardGeom). 값은 이력으로 남긴다 — 3e~3i 보고서가 이 이름을 가리킨다. */
 const CARD_B={
   ratio:CARD_RATIO,                 /* [4b] 더는 안 쓴다(위 참고) */
-  picH:528,                         /* [2026-09-06 4b 사용자 결정] 그림 칸 높이. 폭은 테두리 빈 영역에서 계산(351) → 351×528 ≈ 2:3 세로형 */
+  /* [2026-09-08 ⑨ 사용자 결정] 그림 좌우 여백 폐지 — 5장 공통 picW/picH 상수는 지웠다(파일마다 다름, cardFrameFit이 낸다). */
+  picMargin:4,                      /* [2026-09-08 ⑧] 그림 위쪽에 확보하는 흰 여백(픽셀, 좌우와 무관) — picY = topB 배율값 + 이 값 */
   margin:30, gap:32,                /* 바깥 여백·두 장 사이. 폭 = (1080 − 60 − 32)/2 = 494 → 두 장 1020 = 94.4% */
-  frame:{src:'frame', w:1536, h:2752,
-    /* [2026-09-05 3b] 테두리 v2(얇은 띠). v1 실측 ~~332~1205 × 366~2354~~ → v2 220~1310 × 245~2519
-       (같은 방법, 5개 행·열 교차 확인). 빈 영역 1091×2275, 가로/세로 0.480. 옛 그림은 frame-v1.png */
-    inner:{x:220/1536, y:245/2752, w:1091/1536, h:2275/2752}},
+  th:905,                           /* [2026-09-08 ⑨ 사용자 결정] 872→905(+33) — 그림 칸이 파일별 최대 폭으로 커지며 명패가
+                                        도로 줄어 fire가 최대 필요 높이(290, "여유를 전염시키는 낙천주의자" 3줄)보다 21px
+                                        모자랐다. +33으로 5장 전부 여유 ≥12px 확보(fire 정확히 12). 상한 950 이내. */
   /* [2026-09-06 3d] ~~fs:{sm:18, nick:27, nickSmall:22, pil:20}~~ → 카톡 썸네일(1080 카드가 약 300px로 축소)에서
      별명이 안 읽혔다(실기기 보고). 별명은 2줄 허용(어절 단위 줄바꿈), 넘치면 nickSmall→nickMin 단계.
      값의 근거는 3d 보고서 §1(300px 축소 갈무리의 글자 잉크 높이 실측 — 52px에서 12~13px, 42px에서 11px). */
@@ -2234,11 +2234,45 @@ const CARD_B={
   bandH:278,                        /* [3e] 명패 높이 고정(3b 실측값 유지). 글이 더 필요하면 그만큼만 커진다 */
   bandPad:12, textPad:14, lineW:2,
   ribbon:{h:62, gapBelow:46, px:CARD_FS.sm, padX:44}};
+const CARD_W_PANEL=Math.floor((CARD_W-CARD_B.margin*2-CARD_B.gap)/2);   /* 494 — 카드 한 장 폭, cardFrameFit이 테두리 배율에 쓴다 */
 /* ~~PIC_FIT:'fit'~~ [3e] 카드가 낮아져 4:5 그림이 다 들어갈 수 없다 → **cover · 가운데 기준**으로 고정(사용자 지시).
    9:16 시절엔 'fit'(잘림 0)이었다 — 3b 보고서 참고. */
 /* 십신 → 그림 파일. 순서는 TEN_GODS/REL_NICK와 같다(0 비견 … 9 정인). 파일명은 assets/card-b/의 번호다. */
-const CARD_PIC=['09-bigyeon','10-geopjae','07-siksin','08-sanggwan','06-pyeonjae','05-jeongjae',
-  '04-pyeongwan','03-jeonggwan','02-pyeonin','01-jeongin'];
+/* [2026-09-07 B4d] 테두리 5장 실측값 — 오행 순(목화토금수), CARD_OBANG과 같은 인덱스.
+   소스 전부 1536×2752. L·R=안쪽 흰 좌우 x, y0·y1=곧은(모서리 무늬 없는) 구간 시작·끝 y.
+   측정법: 흰색 임계값 RGB 모두 248, 4px 이내 종이질감 끊김은 이어 붙임, 세로 중앙 행 폭 기준
+   ±4px까지 곧은 구간(B5~B7·B4c~B4d 보고서와 같은 방법). 그림을 바꾸면 이 값만 다시 잰다. */
+const CARD_FRAME_KEYS=['wood','fire','earth','metal','water'];
+const CARD_FRAME_GEOM={
+  /* topB·botB = 안쪽 진짜 흰 경계(모서리 무늬 곡선이 아직 끝나기 전이라도 흰 시작·끝) — [2026-09-07 ⑤ 재실측]
+     중앙 x 한 열을 위·아래로 훑어 흰색(임계값 248)이 처음·마지막 나오는 y. y0·y1(곧은 반복 구간)과는 다른 값이다. */
+  wood:{L:241,R:1294,y0:601,y1:2151,topB:258,botB:2498,H:2752,minW:1052},
+  fire:{L:221,R:1317,y0:241,y1:2496,topB:240,botB:2497,H:2752,minW:1094},   /* [2026-09-08 ⑧ 정정] 옛 topB211/botB2721은
+    측정 오류였다 — 중앙 열 "첫/마지막 흰 픽셀" 방식이 위쪽 y210~213의 얇은 흰 틈(장식 사이 4px)에 낚였다.
+    실측(y=207~209 살구색 무늬, 210~213 흰 4px, 215~ 검정·붉은 무늬 재개)으로 확인. 20행 연속 흰색 조건으로
+    재측정해 y0/y1(241/2496)에 근접한 값으로 바로잡음 — fire는 원래도 다른 4장처럼 여유가 거의 없었다. */
+  earth:{L:259,R:1276,y0:266,y1:2486,topB:262,botB:2488,H:2752,minW:1018},
+  metal:{L:260,R:1275,y0:271,y1:2481,topB:267,botB:2485,H:2752,minW:1016},
+  water:{L:229,R:1306,y0:236,y1:2516,topB:233,botB:2519,H:2752,minW:1078}};
+/* [2026-09-08 ⑨] topB/botB 전체 재검증(20행 연속 흰색) — 5장 모두 기록값과 일치(차이 0), 정정 없음.
+   minW = 곧은 구간(y0~y1) 전체를 2px 간격으로 훑은 좌우 흰 폭 최솟값(1536폭 기준). 그림 칸이 이 폭을 그대로 쓴다(여백 0). */
+/** 테두리 3분할 계산 — [2026-09-08 ⑨ 재설계] 그림 좌우 여백 폐지 — 파일마다 자기 안쪽 폭(minW)을 그대로
+    그림 폭으로 쓴다(5장 통일 폐지, 파일마다 다름). 명패도 같은 폭을 쓴다. 카드 높이(th)는 여전히 5장 공통.
+    명패 앵커 규칙은 그대로 유지 — 그림 위 변=topB(+여백), 명패 아래 변=botB. */
+function cardFrameFit(elem){
+  const key=CARD_FRAME_KEYS[elem], g=CARD_FRAME_GEOM[key];
+  const fs=CARD_W_PANEL/1536;
+  const top=Math.round(g.y0*fs), bottom=Math.round((g.H-g.y1)*fs);
+  const th=CARD_B.th;                                        /* 872 — 5장 공통 */
+  const picW=Math.round(g.minW*fs), picH=Math.round(picW*5/4);  /* [⑨] 파일별 그림 칸 — 안쪽 폭 그대로, 4:5 */
+  const mid=th-top-bottom;
+  const picY=Math.round(g.topB*fs);                          /* [2026-09-08 ⑪ 사용자 결정] 여백 폐지 — 그림 윗변=진짜 흰 위 경계, 6px 겹침으로 처리(picMargin 안 씀) */
+  const whiteBottom=th-Math.round((g.H-g.botB)*fs);           /* 진짜 흰 아래 경계(카드 로컬 y) */
+  const band=whiteBottom-(picY+picH);                         /* 명패 높이 — 그림 아래부터 흰 아래 경계까지 */
+  const innerL=Math.round(g.L*fs), innerR=Math.round(g.R*fs);
+  return {key,fs,top,bottom,mid,th,picY,whiteBottom,picW,picH,band,innerL,innerR,src:g};}
+const CARD_PIC=['pic-09-bigyeon','pic-10-geopjae','pic-07-siksin','pic-08-sanggwan','pic-06-pyeonjae','pic-05-jeongjae',
+  'pic-04-pyeongwan','pic-03-jeonggwan','pic-02-pyeonin','pic-01-jeongin'];   /* [2026-09-07 B4d] 새 15장 세트 파일명(assets/card-b/*.png) */
 /* 오방색 명패 — 일간 오행(甲乙 목·丙丁 화·戊己 토·庚辛 금·壬癸 수) 순.
    글자 명암비(WCAG)는 청 6.84 · 적 5.95 · 황 9.63 · 백 15.56 · 흑 17.12 (2026-09-05 계산, 전부 4.5 이상).
    청·적·흑은 흰 글자, 황·백은 먹색 글자(사용자 지시). */
@@ -2319,79 +2353,73 @@ function cardBandLines(s,maxW){
 /** 띠 높이 — 3줄 기준 고정(3h). 짧은 별명도 같은 높이. 실측 290 = 24+31+6+63×3+6+34 */
 function cardBand3(){const B=CARD_B;
   return B.bandPad*2+Math.round(B.fs.sm*1.3)+6+Math.round(B.fs.nick*1.22)*3+6+Math.round(B.fs.pil*1.3);}
-/** 카드 한 장의 치수 — ~~전부 CARD_RATIO에서 나온다~~ → [4b] 폭 494(캔버스에서), 높이 = 테두리 위 79 + 그림 칸 528 + 띠 290(+extraBand) + 테두리 아래 74 = 971.
-    extraBand: 글이 3줄 기준을 넘길 때 띠가 더 필요한 만큼(보통 0). 테스트·보고가 같은 값을 보게 따로 뺐다. */
-function cardGeom(extraBand){
-  const B=CARD_B, fr=B.frame;
-  const tw=Math.floor((CARD_W-B.margin*2-B.gap)/2);           /* 494 */
-  const fs=tw/fr.w, fh=Math.round(fr.h*fs);                    /* 테두리를 폭에 맞춘 자연 높이(885) */
-  const innerY=Math.round(fr.inner.y*fh), innerNatH=Math.round(fr.inner.h*fh);   /* 79, 732 */
-  const bottom=fh-innerY-innerNatH;                            /* 테두리 아래 두께 74 */
-  const bandH=cardBand3()+(extraBand||0);
-  const innerH=B.picH+bandH;                                   /* 818 */
-  const th=innerY+innerH+bottom;                               /* 971 */
-  /* 소재(9:16, 885)가 카드보다 길면 잘라내고(cutSrc, 3e), 짧으면 **가운데 한 토막을 되풀이해 늘인다**(insSrc, 4b).
-     둘 다 소재 px(1536폭 기준). 어디를 자르고 되풀이할지는 그릴 때 cardFrameSeam이 픽셀을 보고 정한다. 비율로 늘이지 않는다(사용자 지시). */
-  const excess=Math.max(0,fh-th);                              /* 잘라낼 세로(카드 px). 지금은 0 */
-  const cutSrc=Math.round(excess/fs);
-  const insSrc=Math.round(Math.max(0,th-fh)/fs);              /* 늘일 세로 86 → 소재 267 */
-  const inner={x:Math.round(fr.inner.x*tw), y:innerY,
-    w:Math.round(fr.inner.w*tw), h:innerH};
-  /* ~~세로 가운데~~ → [2026-09-06 3h 사용자 결정] 위 여백 = 좌우 여백(margin). 폭이 먼저 한계(494)라 카드는
-     494×741이고, 남는 높이는 카드 아래(리본·서명 사이)에 남는다. */
+/** 카드 한 장의 치수 — [2026-09-07 ⑦] 카드 높이 CARD_B.th(860) 5장 공통 고정(⑥의 파일별 높이+바닥정렬 폐기). */
+function cardGeom(){
+  const B=CARD_B;
+  const tw=CARD_W_PANEL;                                       /* 494 */
+  const th=B.th;                                                /* 860 */
   const top=B.margin;
   const x0=Math.round((CARD_W-(tw*2+B.gap))/2);
-  return {tw,th,fs,fh,excess,cutSrc,insSrc,bandH,inner,top,x0,ribbonY:top+th+B.margin};}   /* [3h] 딱지 리본은 카드 아래. [3i] 간격 = 여백 30 */
-/** 그리기 명령 목록. 왼쪽·오른쪽 명패는 **같은 높이**(고정 278, 글이 더 필요하면 그만큼)로 맞춘다. */
+  return {tw,th,top,x0,ribbonY:top+th+B.margin};}
+/** 그리기 명령 목록. [2026-09-07 ⑦] 카드 높이 통일 복귀 — 양쪽 다 cy=G.top(공통). 띠 높이는 명패 앵커
+    규칙대로 cardFrameFit(elem).band를 그대로 쓴다(Math.max로 키우는 안전망 없음 — 4번에서 열 개 별명
+    전부가 이 값 이상으로 나오는지 이미 확인했다. 만약 넘치면 이 회차 분기표대로 다시 계산해야 한다). */
 function cardPlan(a,b){
   const t=cardText(a,b);
-  const B=CARD_B, ops=[], fr=B.frame;
-  const textW=cardGeom(0).inner.w-B.textPad*2;                 /* 폭은 띠 높이와 무관 */
-  const L=cardBandLines(t.left,textW), R=cardBandLines(t.right,textW);
-  /* [3h] 띠 높이 = 3줄 기준 고정(짧은 별명도 같은 높이). 글은 띠 가운데 정렬(아래 blockH).
-     [4b] 글이 더 필요하면 ~~그림 칸이 줄었다~~ → 카드가 그만큼 길어진다(그림 칸 528 고정) */
-  const band3=cardBand3();
-  const bandH=Math.max(band3,L.h,R.h);
-  const G=cardGeom(bandH-band3), inner=G.inner;
-  const picH=B.picH;
-  /* 리본 — 딱지가 있을 때만. 없으면 이 요소 자체가 없다(op가 안 생긴다). 자리는 카드 위 고정(딱지 유무로 카드가 안 움직인다) */
+  const B=CARD_B, ops=[];
+  const G=cardGeom();
+  const frameKeys=[];
+  /* 리본 — 딱지가 있을 때만. 없으면 이 요소 자체가 없다(op가 안 생긴다). 자리는 카드 바닥선 위 고정 */
   if(t.chip){
     const px=B.ribbon.px; const ctx=cardMeasureCtx(); ctx.font=cardFont(px,700);
     const w=Math.round(ctx.measureText(t.chip).width)+B.ribbon.padX*2;
     ops.push({op:'ribbon',x:Math.round((CARD_W-w)/2),y:G.ribbonY,w,h:B.ribbon.h,
       text:t.chip,px,weight:700,fill:CARD_COL.gold,tail:'#b6944a',textFill:'#101018'});}
-  [[t.left,L,G.x0],[t.right,R,G.x0+G.tw+B.gap]].forEach(([s,ln,cx])=>{
+  [[t.left,G.x0],[t.right,G.x0+G.tw+B.gap]].forEach(([s,cx])=>{
     const cy=G.top, col=CARD_OBANG[s.elem];
-    const ix=cx+inner.x, iy=cy+inner.y;
-    /* 테두리 — 소재(9:16)가 카드보다 길면 빈 영역 안의 띠 cutSrc(소재 px)만큼을 잘라내고 위·아래를 이어 붙인다.
-       어디를 자를지는 그릴 때 cardFrameSeam이 정한다(그림 픽셀이 필요해서). 0이면 종전처럼 통째로. */
-    ops.push({op:'frame',key:fr.src,x:cx,y:cy,w:G.tw,h:G.th,cutSrc:G.cutSrc,insSrc:G.insSrc,
-      innerSrc:{top:fr.inner.y,bot:fr.inner.y+fr.inner.h,left:fr.inner.x,right:fr.inner.x+fr.inner.w},
-      clip:{x:cx,y:cy,w:G.tw,h:G.th}});
-    /* 그림 — 소재는 4:5, cover · **가운데 기준**(3e). 영역이 소재보다 넓으면 폭을 맞추고 위아래를 같은 양씩 자른다.
-       u·v·uw·vh는 소재 기준 0~1 비율(실제 픽셀 크기와 무관). */
-    const pw=inner.w, ph=picH, sr=4/5;
-    let crop;
-    /* ~~cover·가운데~~ → [2026-09-06 3h 사용자 결정] **contain** — 네 변이 다 보이게, 남는 자리는 크림(cardPaint의 areaW/areaH 채움).
-       그림 칸 크기는 그대로. ox/oy는 칸 안 오프셋. */
-    if(pw/ph>sr){const dh=ph,dw=Math.round(ph*sr);crop={dw,dh,u:0,v:0,uw:1,vh:1,ox:Math.round((pw-dw)/2),oy:0};}
-    else{const dw=pw,dh=Math.round(pw/sr);crop={dw,dh,u:0,v:0,uw:1,vh:1,ox:0,oy:Math.round((ph-dh)/2)};}
-    ops.push({op:'pic',key:s.pic,god:s.god,x:ix,y:iy,w:crop.dw,h:crop.dh,u:crop.u,v:crop.v,uw:crop.uw,vh:crop.vh,
-      ox:crop.ox||0,oy:crop.oy||0,areaW:pw,areaH:ph});
-    /* 명패 띠 — 그림 바로 아래, 빈 영역 바닥까지 */
+    const fit=cardFrameFit(s.elem);
+    const picW=fit.picW, picH=fit.picH;                          /* [⑨] 파일별 그림 칸 — 여백 없이 안쪽 폭 그대로 */
+    const textW=picW-B.textPad*2;
+    const ln=cardBandLines(s,textW);                             /* [⑨] 그 쪽 폭 기준으로 줄바꿈(파일마다 다를 수 있음) */
+    const bandH=fit.band;                                       /* [⑦] 명패 앵커 규칙 — 흰 아래 경계까지 채움, 상한 없음 */
+    const frameKey='border-'+fit.key; frameKeys.push(frameKey);
+    /* 그림 — [⑨] 여백 없이 그 쪽 테두리의 안쪽 폭(innerL~innerR)을 그대로 채운다. */
+    const ix=cx+fit.innerL+Math.round((fit.innerR-fit.innerL-picW)/2), iy=cy+fit.picY;
+    /* [2026-09-08 ⑩ 사용자 결정] 그림·명패를 먼저 그리고 테두리 무늬를 나중에 덮어씌운다(반올림 1px 틈 방지).
+       OV=6 — 그림·명패를 사방 6px 키워 무늬 밑으로 밀어넣는다. 프레임은 원래(안 키운) 발자국만큼 구멍을
+       내고 그린다(hole) — 그 구멍 밖은 전부 무늬가 덮어써 6px 겹침이 자연스럽게 가려진다.
+       ~~오방색 가는 선~~(액자선) 폐지 — col.bg로 그려 카드별 배색을 그대로 따라가던 것이 "테두리 선"으로
+       보인 원인이었다(metal 흰 선·water 검은 선). 여백·선 전부 없앤다는 이번 결정으로 이 op를 지웠다. */
+    const OV=6;
+    ops.push({op:'pic',key:s.pic,god:s.god,x:ix-OV,y:iy-OV,w:picW+OV*2,h:picH+OV*2,u:0,v:0,uw:1,vh:1,
+      ox:0,oy:0,areaW:picW+OV*2,areaH:picH+OV*2});
+    /* 명패 띠 — 그림 바로 아래. 위쪽은 그림이 이미 덮으므로 안 키우고 좌우·아래만 6px */
     const by=iy+picH;
-    ops.push({op:'band',x:ix,y:by,w:inner.w,h:bandH,fill:col.bg,elem:col.name});
-    /* [3b] 글 덩어리 높이를 재서 띠의 세로 가운데에 놓는다 */
-    const blockH=Math.round(ln.dpx*1.3)*ln.dl.length+6+Math.round(ln.npx*1.22)*ln.nl.length+6+Math.round(ln.ppx*1.3);
-    let ty=by+Math.max(B.bandPad,Math.round((bandH-blockH)/2)), tx=ix+Math.round(inner.w/2);
+    ops.push({op:'band',x:ix-OV,y:by,w:picW+OV*2,h:bandH+OV,fill:col.bg,elem:col.name});
+    /* [2026-09-08 ⑪ 사용자 결정] 글 덩어리를 **실제 잉크 기준**으로 정중앙에 놓는다. blockH(줄간격 기준)로
+       중앙을 잡으면 첫 줄 위 여백·마지막 줄 하강부가 폰트마다 달라 3~5px 어긋난다(실측) — 첫 줄의 실제
+       올림(ascent)·마지막 줄의 실제 내림(descent)을 재서 잉크 중심을 계산하고, 그 중심이 띠 중앙에 오게 ty를 역산한다. */
+    const mctx=cardMeasureCtx();
+    mctx.font=cardFont(ln.dpx,600);
+    const firstAscent=mctx.measureText(ln.dl[0]||'가').actualBoundingBoxAscent||ln.dpx*0.8;
+    mctx.font=cardFont(ln.ppx,600);
+    const lastDescent=mctx.measureText(ln.pl[0]||'가').actualBoundingBoxDescent||ln.ppx*0.2;
+    const firstBaseRel=Math.round(ln.dpx*0.95);
+    const lastBaseRel=Math.round(ln.dpx*1.3)*ln.dl.length+6+Math.round(ln.npx*1.22)*ln.nl.length+6+Math.round(ln.ppx*0.95);
+    const inkTopRel=firstBaseRel-firstAscent, inkBotRel=lastBaseRel+lastDescent;
+    const inkCenterRel=(inkTopRel+inkBotRel)/2;
+    let ty=Math.round(by+bandH/2-inkCenterRel)+3, tx=ix+Math.round(picW/2);   /* [⑪] 잔차 보정 +3(실측 -2.5~-3, 5색 평균) —
+      ascent/descent만으로는 못 잡는 남은 오차. 원인은 가운데 별명 줄(줄간격 1.22)의 실제 잉크가 산정한
+      줄 간격보다 살짝 아래로 치우쳐 있어서로 보이나, 시간상 실측 보정으로 처리(±1px 안에 들어옴, 아래 실측 참고). */
     const put=(lines,px,weight,lh)=>{lines.forEach(l=>{
       ops.push({op:'text',x:tx,y:ty+Math.round(px*0.95),text:l,px,weight,fill:col.fg,align:'center',maxW:textW});
       ty+=Math.round(px*lh);});};
     put(ln.dl,ln.dpx,600,1.3); ty+=6;
     put(ln.nl,ln.npx,700,1.22); ty+=6;
     put(ln.pl,ln.ppx,600,1.3);
-    /* 오방색 가는 선 — 테두리 바로 안쪽(빈 영역 가장자리) */
-    ops.push({op:'line',x:ix+1,y:iy+1,w:inner.w-2,h:inner.h-2,stroke:col.bg,lw:B.lineW});});
+    /* 테두리 — 그림·명패보다 나중에 그려 그 위를 덮는다. hole = 원래(6px 안 키운) 발자국 — 이 구멍 밖만 그린다. */
+    ops.push({op:'frame',key:frameKey,x:cx,y:cy,w:G.tw,h:fit.th,fit,
+      clip:{x:cx,y:cy,w:G.tw,h:fit.th},hole:{x:ix,y:iy,w:picW,h:picH+bandH}});});
   /* 바닥 서명(사주은하 + 주소) — ~~캔버스 바닥(1350)에서 위로 잰 고정 자리~~ → **[2026-09-06 3i 사용자 결정]
      카드 바로 아래 30px**, 그리고 캔버스 높이는 여기까지 + 아래 여백 30으로 **내용물에 맞춘다**(4:5 고정 제거).
      딱지 리본이 있으면 카드와 서명 사이에 끼고(위아래 30씩) 그만큼 캔버스가 길어진다 — 같은 쌍이면 언제나 같은 높이(결정론). */
@@ -2405,7 +2433,7 @@ function cardPlan(a,b){
     px:spx,weight:400,fill:CARD_COL.mut2,align:'left',maxW:CARD_W-CARD_PAD*2});
   const footerH=siteY+Math.round(spx*0.25)-footTop;              /* 서명 블록 높이(주소 줄 하강부까지) */
   const h=footTop+footerH+B.margin;                              /* 캔버스 높이 */
-  return {ops,text:t,bandH,picH,inner,geom:G,h,footTop,footerH,keys:[fr.src,t.left.pic,t.right.pic]};}
+  return {ops,text:t,geom:G,h,footTop,footerH,keys:[...frameKeys,t.left.pic,t.right.pic]};}
 /** 좌표에서 유도한 0~1 값 — Math.random을 쓰지 않으려고 둔 정수 해시다(결정론) */
 function cardStarHash(i){
   let x=(i*2654435761)%4294967296; x^=x>>>13; x=(x*1274126177)%4294967296;
@@ -2426,21 +2454,6 @@ function cardPaintBg(ctx,CARD_H){   /* [3i] 높이는 plan.h — 인자로 받�
     ctx.globalAlpha=0.25+cardStarHash(i*7+5)*0.6;
     ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
   ctx.globalAlpha=1;}
-/** [3e] 테두리 띠를 어디서 자를지 — 빈 영역 세로 범위 안에서, 잘라낸 위 줄(a−1)과 아래 줄(a+cut)이 **가장 닮은**
-    a를 고른다(좌우 띠 픽셀의 절대차 합). 문양 사이의 조용한 줄을 찾는 셈이다. 이미지·cut마다 한 번만 계산하고 캐시. */
-const cardSeamCache=new Map();
-function cardFrameSeam(im,key,cutPx,inner){
-  const ck=key+':'+im.width+':'+cutPx; if(cardSeamCache.has(ck))return cardSeamCache.get(ck);
-  const W=im.width,H=im.height; const c=document.createElement('canvas');c.width=W;c.height=H;
-  const x=c.getContext('2d'); x.drawImage(im,0,0); const d=x.getImageData(0,0,W,H).data;
-  const L=Math.round(inner.left*W), R=Math.round(inner.right*W), T=Math.round(inner.top*H)+6, Bt=Math.round(inner.bot*H)-6;
-  const cols=[]; for(let i=0;i<W;i++)if(i<L||i>=R)cols.push(i);
-  let best=Math.round((T+Bt-cutPx)/2), bestD=Infinity;
-  for(let a=T+1;a+cutPx<Bt;a+=2){
-    let sum=0; for(const cx of cols){const p=((a-1)*W+cx)*4,q=((a+cutPx)*W+cx)*4;
-      sum+=Math.abs(d[p]-d[q])+Math.abs(d[p+1]-d[q+1])+Math.abs(d[p+2]-d[q+2]);}
-    if(sum<bestD){bestD=sum;best=a;}}
-  cardSeamCache.set(ck,best); return best;}
 /** 명령 목록을 실제로 그린다. img는 배경(없으면 cardPaintBg), pics는 key→Image(없는 키는 빈 하지색 판). */
 function cardPaint(ctx,plan,img,pics){
   const CARD_H=plan.h||1350;   /* [3i] 캔버스 높이는 계획이 정한다(내용물에 맞춤) */
@@ -2459,26 +2472,19 @@ function cardPaint(ctx,plan,img,pics){
   const get=k=>pics&&pics.get?pics.get(k):null;
   plan.ops.forEach(o=>{
     if(o.op==='frame'){const im=get(o.key);
-      ctx.save();ctx.beginPath();ctx.rect(o.clip.x,o.clip.y,o.clip.w,o.clip.h);ctx.clip();
-      if(im&&o.cutSrc>0){
-        /* [3e] 소재(9:16)가 카드(2:3)보다 길다 — 빈 영역 안쪽 띠에서 cutSrc(소재 px)만큼 잘라내고 위·아래를 붙인다 */
-        const W=im.width,H=im.height,sc=o.w/W;
-        const cutPx=Math.round(o.cutSrc*(W/CARD_B.frame.w));   /* cutSrc는 소재 기준(1536폭) → 실제 웹 소재(900폭)로 환산 */
-        const a=cardFrameSeam(im,o.key,cutPx,o.innerSrc);
-        ctx.drawImage(im,0,0,W,a,o.x,o.y,o.w,Math.round(a*sc));
-        ctx.drawImage(im,0,a+cutPx,W,H-a-cutPx,o.x,o.y+Math.round(a*sc),o.w,o.h-Math.round(a*sc));}
-      else if(im&&o.insSrc>0){
-        /* [2026-09-06 4b] 소재(885)가 카드(971)보다 짧다 — 3분할: 위(0~a+ins) · 가운데 토막(a~a+ins) 되풀이 · 아래(a~끝).
-           토막의 시작 a는 cardFrameSeam이 "행 a−1과 행 a+ins가 가장 닮은 곳"으로 고른다(자르기와 같은 기준이라 함수를 같이 쓴다).
-           옆 테두리는 연꽃무늬가 끝까지 되풀이돼 장식 없는 곧은 구간이 없다(4b 실측 0px) — 그래서 무늬 한 토막(주기 ≈191px의 45%)을
-           되풀이한다. 실측 이음새 차이 20.9(자르기 26.2보다 작다). 비율 늘이기는 금지(사용자 지시). */
-        const W=im.width,H=im.height,sc=o.w/W;
-        const insPx=Math.round(o.insSrc*(W/CARD_B.frame.w));
-        const a=cardFrameSeam(im,o.key,insPx,o.innerSrc);
-        const topH=Math.round((a+insPx)*sc);
-        ctx.drawImage(im,0,0,W,a+insPx,o.x,o.y,o.w,topH);
-        ctx.drawImage(im,0,a,W,H-a,o.x,o.y+topH,o.w,o.h-topH);}
-      else if(im)ctx.drawImage(im,o.x,o.y,o.w,o.h);
+      ctx.save();ctx.beginPath();ctx.rect(o.clip.x,o.clip.y,o.clip.w,o.clip.h);
+      /* [2026-09-08 ⑩] 그림·명패가 이미 그 위에 그려져 있다 — 그 발자국(hole)엔 안 그려서 6px 겹침 밖만 덮는다.
+         evenodd로 구멍을 낸다(사각형 두 개, 안쪽 것을 반대 방향으로 셈). */
+      if(o.hole)ctx.rect(o.hole.x,o.hole.y,o.hole.w,o.hole.h);
+      ctx.clip('evenodd');
+      if(im){
+        /* [2026-09-07 B4d] 3분할 — 위 고정부·아래 고정부는 fit.fs 그대로(안 늘림), 가운데만 fit.mid로 늘이거나 줄인다.
+           소스 경계는 fit.src.y0/y1(실측, 1536폭 기준) — 로드된 이미지 폭이 다르면 비례 환산(sx). */
+        const W=im.width,H=im.height,sx=W/1536,f=o.fit;
+        const y0s=Math.round(f.src.y0*sx), y1s=Math.round(f.src.y1*sx);
+        ctx.drawImage(im,0,0,W,y0s,o.x,o.y,o.w,f.top);
+        ctx.drawImage(im,0,y0s,W,y1s-y0s,o.x,o.y+f.top,o.w,f.mid);
+        ctx.drawImage(im,0,y1s,W,H-y1s,o.x,o.y+f.top+f.mid,o.w,f.bottom);}
       else{ctx.fillStyle='#f1e9d6';ctx.fillRect(o.clip.x,o.clip.y,o.clip.w,o.clip.h);
         ctx.lineWidth=6;ctx.strokeStyle='#2b2620';ctx.strokeRect(o.clip.x+20,o.clip.y+24,o.clip.w-40,o.clip.h-48);}
       ctx.restore();return;}
@@ -2488,8 +2494,6 @@ function cardPaint(ctx,plan,img,pics){
       if(im)ctx.drawImage(im,o.u*im.width,o.v*im.height,o.uw*im.width,o.vh*im.height,o.x+(o.ox||0),o.y+(o.oy||0),o.w,o.h);
       ctx.restore();return;}
     if(o.op==='band'){ctx.fillStyle=o.fill;ctx.fillRect(o.x,o.y,o.w,o.h);return;}
-    if(o.op==='line'){ctx.lineWidth=o.lw;ctx.strokeStyle=o.stroke;
-      ctx.strokeRect(o.x+o.lw/2,o.y+o.lw/2,o.w-o.lw,o.h-o.lw);return;}
     if(o.op==='text'){ctx.font=cardFont(o.px,o.weight);ctx.fillStyle=o.fill;
       ctx.textAlign=o.align||'left';ctx.fillText(o.text,o.x,o.y);ctx.textAlign='left';return;}
     if(o.op==='ribbon'){
@@ -2516,13 +2520,13 @@ function cardBg(){
 /* ═══ 타로 소재 적재 [2026-09-05] — **여기가 유일한 적재 경로다.** 카드를 만들 때 필요한 세 장
    (테두리 + 방향별 그림 둘)만 받고 캐시한다. 못 받은 키는 null — 그 자리는 빈 하지색 판으로 그려지고
    카드 생성은 멎지 않는다. 같은 키를 두 번 요청하면 같은 Promise를 돌려준다(동시 요청 중복 방지). */
-const CARD_B_DIR='assets/card-b/web/';
+const CARD_B_DIR='assets/card-b/';   /* [2026-09-07 B4d] 새 15장 세트(원본 png) — 웹용 축소본은 다음 회차 */
 const cardPicCache=new Map();
 function cardAsset(key){
   if(cardPicCache.has(key))return cardPicCache.get(key);
   const p=new Promise(res=>{const im=new Image();
     im.onload=()=>res(im); im.onerror=()=>res(null);
-    im.src=CARD_B_DIR+key+'.webp';});
+    im.src=CARD_B_DIR+key+'.png';});
   cardPicCache.set(key,p); return p;}
 async function cardAssets(keys){
   const uniq=[...new Set(keys)];
@@ -9197,7 +9201,7 @@ canvas.addEventListener('click',e=>{
 /* ═══ 회귀 테스트 [2026-08-31] ═══ 콘솔에서 `sajuSelfTest()`로 부른다.
    테스트 러너가 없는 프로젝트라, **깨지면 바로 드러나는 불변**만 골라 담았다.
    화면 상태를 바꾸므로 확인용이다 — 부른 뒤에는 보던 화면이 달라져 있다. */
-function sajuSelfTest(){
+async function sajuSelfTest(){
   const me=nodes.find(x=>x.isMe), out=[];
   const other=nodes.find(x=>!x.isMe);
   const T=(name,pass,detail)=>out.push({test:name,pass:!!pass,detail});
@@ -9461,7 +9465,7 @@ function sajuSelfTest(){
     T('cardDeterministic: 같은 쌍 5회 동일', five.every(x=>x===five[0]),
       '길이 '+five[0].length);
     /* ② 십신 10 → 그림 10 — 표가 열 칸 다 차 있고 서로 다르며, 어느 쌍이든 두 장의 그림 키가 표 안에 있다 */
-    const picOk=CARD_PIC.length===10&&CARD_PIC.every(k=>typeof k==='string'&&/^\d\d-[a-z]+$/.test(k))
+    const picOk=CARD_PIC.length===10&&CARD_PIC.every(k=>typeof k==='string'&&/^pic-\d\d-[a-z]+$/.test(k))
       &&new Set(CARD_PIC).size===10&&REL_NICK.length===10;
     const pk=cardPlan(me,other).ops.filter(o=>o.op==='pic').map(o=>o.key);
     T('cardPicMap: 별명 10 → 그림 10 전부 존재', picOk&&pk.length===2&&pk.every(k=>CARD_PIC.indexOf(k)>=0),
@@ -9499,6 +9503,11 @@ function sajuSelfTest(){
     const txts=cardPlan(me,other).ops.filter(o=>o.op==='text').map(o=>o.text);
     T('cardFooter: 서명과 주소가 있다',
       txts.indexOf('사주은하')>=0&&txts.indexOf(CARD_SITE)>=0, txts.slice(-2).join(' / '));
+    /* ⑧ [2026-09-08 ⑨] 그림 칸이 그 테두리의 안쪽 폭을 3px 이내로 채우는지 — 5장 전부.
+       ~~그림 칸 바깥 4px에 무늬가 없어야 한다~~(옛 여백 규칙, ⑨에서 여백 0으로 정의가 바뀌어 폐기). */
+    const fitDiffs=[0,1,2,3,4].map(e=>{const f=cardFrameFit(e);return {key:f.key,diff:Math.abs(f.picW-(f.innerR-f.innerL+1))};});
+    T('cardPicFillsWidth: 그림 폭이 안쪽 폭을 3px 이내로 채움(5장)',
+      fitDiffs.every(d=>d.diff<=3), fitDiffs.map(d=>d.key+':'+d.diff).join(' '));
   }
   /* 24. 패널 폭 — 화면을 못 재는 상태에서 저장값이 깎이면 안 된다 [2026-08-30] */
   T('panelWBg: innerWidth 0이면 저장 폭을 그대로 둔다',
@@ -9534,6 +9543,29 @@ function sajuSelfTest(){
   /* 17. 섹션 조립 — 빈 섹션을 만들지 않는다 */
   const secA=gSections({ms:[],cnt:{mok:0,hwa:0,to:0,geum:0,su:0},total:0});
   T('gSecEmpty: 전부 비면 상성란 자체가 없다', secA==='', String(secA).slice(0,30));
+  /* [2026-09-08 ⑩] 느린 검사 — 5장 전부 렌더해 그림 원래 발자국 경계(1px 밖)에 옛 액자선 색(col.bg)이
+     남아 있지 않은지 픽셀로 확인한다(테두리 무늬가 그 위를 덮어야 정상 — ⑨까지는 반대였다). 이미지 로딩이
+     필요해 다른 항목보다 느리다. */
+  try{
+    const seamBad=[];
+    for(let e=0;e<5;e++){
+      const p={...nodes[0],stemIdx:e*2,name:'X'}, q={...p,name:'Y'};
+      const cv=await renderCard(p,q);
+      const ctx=cv.getContext('2d');
+      const plan=cardPlan(p,q);
+      const pic=plan.ops.find(o=>o.op==='pic');
+      const frame=plan.ops.find(o=>o.op==='frame');
+      const col=CARD_OBANG[e];
+      const hole=frame.hole;
+      const gp=(x,y)=>Array.from(ctx.getImageData(x,y,1,1).data).slice(0,3);
+      const eq=(c,hex)=>{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+        return Math.abs(c[0]-r)<=2&&Math.abs(c[1]-g)<=2&&Math.abs(c[2]-b)<=2;};
+      const midx=hole.x+Math.round(hole.w/2);
+      const above=gp(midx,hole.y-1);
+      if(eq(above,col.bg))seamBad.push(CARD_FRAME_KEYS[e]);
+    }
+    T('cardNoSeamLine: 그림 경계에 옛 액자선(col.bg) 없음(5장, 느림)', seamBad.length===0, seamBad.join(',')||'0건');
+  }catch(e){T('cardNoSeamLine: 그림 경계에 옛 액자선 없음',false,'예외 '+e.message);}
   return out;}
 function deselect(){if(selected){if(!selected.isMe&&selectedMesh)selectedMesh.scale.setScalar(V2_TUNABLES.PLANET_SCALE);selected=null;selectedMesh=null;}}
 /* [§7.4] groupContext/targetMesh 둘 다 선택 인자 — 안 넘기면 지금까지와 100% 동일하게 동작한다
