@@ -3444,6 +3444,14 @@ const REL_PIECE=[
 /* 합충 조각 — hapChungOf()의 반환 키(chung·ganhap·yukhap)에 맞춘다. 해당 없으면(null) 조각을 안 붙인다.
    어느 십신 조각 앞에 붙어도 말이 되게 골랐다("부딪히면서 가는 엄마" / "손발이 맞는 큰손"). */
 const HC_PIECE={chung:'부딪히면서 가는', ganhap:'묘하게 끌리는', yukhap:'손발이 맞는'};
+/* [2026-09-09 A2] 기운 세기 조각 — personGangyak()의 판정('극약'/'신약'/'신강'/'극왕')에 맞춘다.
+   A1 진단(docs/reports/2026-09-09-A1-기운세기-진단.md)에서 자수·조립 검증까지 마친 승인 문구다.
+   빈 문자열('생년월일 없음 등')이면 조각을 통째로 생략한다 — 호출부(blk)가 처리. */
+const GANG_PIECE={
+  '극왕':'기운이 넘치도록 두터워서, 쓰고도 늘 남습니다.',
+  '신강':'기운이 든든한 편이라, 웬만한 일에는 흔들리지 않습니다.',
+  '신약':'기운이 넉넉한 편은 아니라, 무리가 쌓이면 티가 납니다.',
+  '극약':'기운을 아껴 써야 하는 편이라, 자리가 받쳐 줄 때 제 몫이 납니다.'};
 /** 본문 첫 줄 — [합충 조각] [십신 조각] 같은 존재입니다. 합충이 없으면 십신 조각만. */
 /** [2026-09-08 C4] 합충이 있으면 짧은 앞 문장으로 뗀다 — 합충 조각과 십신 조각이 둘 다
     명사 앞 꾸밈말이라 나란히 붙이면 앞 조각이 중간 단어에 잘못 붙어 읽혔다
@@ -10212,15 +10220,19 @@ function showNode(n,groupContext,targetMesh){
    태그와 제목은 화면마다 다르므로 여기서 만들지 않는다 — 관계 패널은 "A ↔ B"를 h2로 쓰고,
    인물 패널은 그 사람 이름을 h2로 쓴다.
    [collapse] 접을 덩어리의 key 목록. 관계 패널은 전용 화면이라 아무것도 안 접고,
-   인물 패널만 뒤 두 덩어리를 접는다(§5.11). */
-function pairBlock(a,b,collapse){
+   인물 패널만 뒤 두 덩어리를 접는다(§5.11).
+   [withStrength] [2026-09-09 A2] 기운 세기 조각을 얹을지. **관계 패널(showEdge)에서만 켠다.**
+   인물 패널(showNode)도 이 함수를 같이 쓰지만, 그쪽은 이미 「기운의 세기」·「힘이 되는 기운」
+   코너가 따로 있어 넣으면 한 화면에 세기 이야기가 네 번 나온다(A1 진단 「사용자 결정 필요」).
+   기본값을 안 넣음으로 둬서 인물 패널 호출부(10149행 부근)는 한 글자도 안 바뀐다. */
+function pairBlock(a,b,collapse,withStrength){
   const rel=relation(a.el,b.el);
   /* 비화는 방향이 없어 rel.from이 undefined다 — 그대로 두면 giver가 항상 b가 돼 문장 순서가
      제목("A ↔ B")과 뒤집힌다. 비화일 때는 a,b 순서를 그대로 쓴다. */
   const giver=rel.kind==='bi'?a:(a.el===rel.from?a:b);
   const receiver=giver===a?b:a;
   return {rel, giver, receiver,
-    reading:pairReading(a,b,giver,receiver,rel,collapse),
+    reading:pairReading(a,b,giver,receiver,rel,collapse,withStrength),
     card:pairCardHtml()};}
 /** 카드 저장 버튼 + 안내. 안내는 **버튼 아래**다 — 누르기 전에 읽혀야 한다. */
 function pairCardHtml(){
@@ -10240,7 +10252,7 @@ function showEdge(e){
      누가 주는지조차 밝히지 않았다 — relation()이 from을 돌려주는데도 쓰지 않고 있었다. */
   /* [2026-08-30] 조립은 pairBlock 한 곳에서 — 인물 패널이 같은 것을 쓴다(두 벌 방지).
      관계 패널은 전용 화면이라 아무것도 접지 않는다 — collapse 인자를 안 넘긴다. */
-  const PB=pairBlock(e.a,e.b);
+  const PB=pairBlock(e.a,e.b,undefined,true);   /* [2026-09-09 A2] 관계 패널에서만 기운 세기 조각을 켠다 */
   const rel=PB.rel;
   /* [2026-08-30] 십신 세 문단을 얹는다. 오행 문구(pairPhrase)는 ②에 그대로 남는다 —
      기존 카피 15개는 "성질까지 간다"는 원칙으로 쓴 자산이라 버리지 않는다. */
@@ -10274,7 +10286,7 @@ function showEdge(e){
   panel.classList.add('open');}
 
 /** 두 사람 관계의 세 문단. 소제목 형식은 개인 해석과 같다 */
-function pairReading(a,b,giver,receiver,rel,collapse){
+function pairReading(a,b,giver,receiver,rel,collapse,withStrength){
   const gAB=relGod(a,b), gBA=relGod(b,a);
   const out=[];
   /* ① 서로에게 무엇인가 — 양방향. 비대칭이 이 화면의 핵심이다 */
@@ -10291,15 +10303,23 @@ function pairReading(a,b,giver,receiver,rel,collapse){
      이 함수를 아예 안 부른다. 지금은 호출부가 없어 미사용이지만, 되돌릴 때를 위해 지우지 않았다).
      → **[2026-09-08 C7 정정] hcChipHtml()은 그 뒤 삭제했다**(참조 0곳 확인 후). hapChungOf()는 남아 있다.
      함수 정의 자리(2754행 부근) 주석 참고. */
-  /* [2026-09-08 C] 본문은 세 줄이다 — a(누구인지, 조각 조립) / b(뭐가 좋은지) / c(뭘 조심할지+할 일). */
-  const blk=(lead,g,hcKind)=>{
+  /* [2026-09-08 C] 본문은 세 줄이다 — a(누구인지, 조각 조립) / b(뭐가 좋은지) / c(뭘 조심할지+할 일).
+     [2026-09-09 A2] withStrength가 켜져 있으면 a줄 뒤·b줄 앞에 그 문단이 설명하는 사람의
+     기운 세기를 한 문장 끼운다. **person 인자가 "누구를 설명하는 문단인가"다** — 첫 호출은
+     "A에게 B는 …"(gAB)라 B를 설명하고, 둘째 호출은 "B 입장에서는"(gBA)이라 A를 설명한다
+     (relLead·REL_DESC가 gAB/gBA로 이미 그 사람을 가리키고 있다 — 새로 계산하지 않고 그대로 따른다).
+     personGangyak()이 빈 문자열이면(생년월일 없음 등, 분기 D) 조각을 통째로 생략한다 —
+     앞뒤로 공백 두 칸이나 빈 문장이 남지 않도록 gang 변수 자체를 빈 문자열로 둔다. */
+  const blk=(lead,g,hcKind,person)=>{
     const d=REL_DESC[g];
+    const gv=withStrength?personGangyak(person):'';
+    const gang=gv?(' '+GANG_PIECE[gv]):'';
     return `<div class="nickblk"><div class="nicklead">${lead}</div>`
       +`<div class="nickname">${REL_NICK[g]}</div>`
-      +`<div class="nickdesc">${relLead(g,hcKind)} ${d.b} ${d.c}</div></div>`;};
+      +`<div class="nickdesc">${relLead(g,hcKind)}${gang} ${d.b} ${d.c}</div></div>`;};
   const hcKind=(hapChung(a,b)||{}).kind||null;
-  let t1=blk(`${bkEsc(a.name)}에게 <b>${bkEsc(b.name)}</b>${particle(b.name,'은는')}`,gAB,hcKind)
-        +blk(`<b>${bkEsc(b.name)}</b> 입장에서는`,gBA,hcKind)
+  let t1=blk(`${bkEsc(a.name)}에게 <b>${bkEsc(b.name)}</b>${particle(b.name,'은는')}`,gAB,hcKind,b)
+        +blk(`<b>${bkEsc(b.name)}</b> 입장에서는`,gBA,hcKind,a)
         +`<div class="nicknote">${NICK_NOTE}`
         +(gAB!==gBA?' 한 사이인데 서로 다르게 보이는 것은 각자의 태어난 날을 기준으로 보기 때문입니다.'
                    :' 서로를 같은 자리로 봅니다.')
