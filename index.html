@@ -1474,6 +1474,8 @@
     font-family:inherit;font-size:var(--fs-sm);font-weight:600;cursor:pointer}
   .home-new:hover{color:var(--ink);border-color:var(--mut)}
   .home-empty{margin:0;font-size:var(--fs-sm);color:var(--mut)}
+  .home-h{margin:0}
+  #tagbar .tb-home{margin-left:-6px;font-weight:400;font-size:var(--fs-sm);opacity:.75}
   @media (max-width:360px){.phero-img{width:108px;height:108px}}
   /* ── v2 §5.3: 하단 태그 패널 ── #panel(상세 분석)과 역할이 다르다 — 이쪽은 이름 색인.
      z-index 4: #panel(5/6 데스크톱)·#fab·#zoomctl(6)·#dim(7)보다 아래라 그것들이 항상 위에 뜬다. */
@@ -8291,10 +8293,14 @@ function renderTagbar(){
   const systems=topLevelSystems();
   /* [D-5] 맨 앞 "은하" — selectGroup(null). 데스크톱 트리의 "은하 전체" 행과 같은 동작이고,
      모바일에는 그 트리가 없으므로 여기가 유일한 전체 복귀 경로가 된다. */
-  tagbarEl.innerHTML=`<span class="tb-galaxy${activeGroup?'':' on'}" id="tbgalaxy">은하</span>`
+  /* [2026-09-17] 은하 화면에서 한 번 더 누르면 홈(showHome)을 연다 — 폰에는 패널을 여는 › 버튼이
+     없어 홈을 볼 길이 없었다(사용자 보고). ☰ 표시는 "누르면 목록이 열린다"는 신호다. */
+  tagbarEl.innerHTML=`<span class="tb-galaxy${activeGroup?'':' on'}" id="tbgalaxy">은하<b class="tb-home" aria-hidden="true">☰</b></span>`
     +systems.map(g=>`<div class="tb-sys">${renderSystemHTML(g,0)}</div>`).join('');
   const gx=document.getElementById('tbgalaxy');
-  if(gx)gx.onclick=()=>selectGroup(null);
+  if(gx)gx.onclick=()=>{
+    if(activeGroup||activeVirtual)selectGroup(null);
+    else{showHome();panel.classList.add('open');}};
   tagbarEl.querySelectorAll('.tb-group').forEach(el=>el.onclick=()=>{
     const id=el.dataset.g;
     const g=id===UNCLASSIFIED_GROUP.id?UNCLASSIFIED_GROUP:groups.find(x=>x.id===id);
@@ -9310,7 +9316,8 @@ function showHome(){
       +`<span class="home-g-go">›</span></button>`;
     if(depth<MAX_GROUP_DEPTH)walk(g.id,depth+1);});
   walk(null,0);
-  pbody.innerHTML=`<div class="home">${sec('내 행성')}${hero}`
+  /* h2는 폰 패널 머리 제목(syncPanelHead)이 읽어 간다 */
+  pbody.innerHTML=`<div class="home"><h2 class="home-h">내 은하</h2>${sec('내 행성')}${hero}`
     +`${sec('사람들 · '+others.length+'명')}${people}`
     +`${sec('그룹 · '+groups.length+'개')}<div class="home-groups">${cards}`
     +`<button type="button" class="home-new" id="home-newg">+ 새 그룹</button></div></div>`;
