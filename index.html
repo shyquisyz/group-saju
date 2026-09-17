@@ -716,17 +716,6 @@
     cursor:pointer;font-family:inherit}
   .bkentry .bkbtn:hover{background:rgba(255,255,255,.11)}
   .bkundo{margin-top:8px}
-  /* [2026-08-28] 그룹 목록 접기 — 제목 줄 자체가 버튼이다 */
-  .gtoggle{display:flex;align-items:center;gap:6px;width:100%;padding:6px 4px;margin-bottom:6px;
-    border:0;background:none;color:var(--mut);font-family:inherit;cursor:pointer;text-align:left}
-  .gtoggle:hover{color:var(--ink)}
-  .gtoggle .tw{width:16px;text-align:center;font-size:var(--fs-sm);flex-shrink:0}
-  .gtoggle .eyebrow{margin:0}
-  /* 접었을 때만 채워진다 — 접힌 채로도 "지금 어디를 보고 있는지"는 남아야 한다 */
-  .gtoggle .gcur{font-size:var(--fs-sm);font-weight:600;color:var(--ink);
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .gtoggle .cnt{font-family:'Space Mono',monospace;font-size:var(--fs-sm);
-    color:var(--mut);margin-left:auto;flex-shrink:0}
 
   /* [2026-08-28] 인물 패널 뒤로 가기. 카드 맨 위, 태그 줄보다 앞이다 */
   /* [2026-08-31] 실측 30px → 누르는 판 44px */
@@ -1435,15 +1424,57 @@
   .halfbtn:hover{color:var(--ink);background:rgba(40,42,62,.95)}
   .halfbtn:active{opacity:.8}
   #panelopen{display:none;left:0}
-  #grouptree{display:none}
-  .gtree{margin:2px 0 16px;display:flex;flex-direction:column;gap:2px}
-  .gtree .trow{display:flex;align-items:center;gap:6px;padding:8px;border-radius:6px;
-    font-size:var(--fs-sm);font-weight:600;cursor:pointer}
-  .gtree .trow:hover{background:rgba(255,255,255,.05)}
-  .gtree .trow.on{background:rgba(255,255,255,.1)}
-  .gtree .trow .cnt{font-family:'Space Mono',monospace;font-size:var(--fs-sm);color:var(--mut);margin-left:auto;font-weight:400}
-  .gtree .tw{width:16px;text-align:center;color:var(--mut);font-size:var(--fs-sm);flex-shrink:0}
-  .gtree .newg{color:var(--mut);border:1px dashed var(--line);font-weight:500;justify-content:center}
+  /* ═══ 행성 초상 · 홈 [2026-09-17] ═══
+     [무엇을 바꿨나] ~~왼쪽 패널 위의 그룹 목록(#grouptree — 「GROUPS」 줄 목록)~~ 을 없앴다.
+     사용자: "그룹 디자인이 마음에 안 든다, 그룹만 있는 패널은 보이면 안 된다, 행성 이미지가
+     보였으면". 패널을 아무것도 안 고른 채 열면 이제 **홈**(내 행성 · 사람들 · 그룹 카드)이 뜬다.
+     그룹 이동은 홈의 카드 · 아래 태그바 · 각 패널의 뒤로 가기가 맡는다. */
+  .phero{display:flex;align-items:center;gap:16px;margin:4px 0 12px}
+  .phero-img,.home-me-img{flex:0 0 auto;width:132px;height:132px;border-radius:50%;object-fit:cover;
+    background:radial-gradient(circle at 50% 50%,var(--pc,#fff) -40%,transparent 68%);user-select:none}
+  .phero-t{min-width:0;display:flex;flex-direction:column;gap:6px}
+  .phero-t h2{margin:0}
+  .phero-t p{margin:0}
+  .phero-tags{display:flex;flex-wrap:wrap;gap:6px}
+  .phero-tags .tag,.home-me-t .tag{white-space:nowrap;align-self:flex-start}
+  .noimg{display:inline-block;opacity:.6}
+  .home{display:flex;flex-direction:column;gap:6px;padding-top:4px}
+  .home-me{display:flex;align-items:center;gap:16px;width:100%;padding:14px;border-radius:16px;
+    border:1px solid rgba(232,198,106,.28);background:linear-gradient(135deg,rgba(232,198,106,.08),rgba(255,255,255,.02));
+    color:var(--ink);font-family:inherit;text-align:left;cursor:pointer}
+  .home-me:hover{background:linear-gradient(135deg,rgba(232,198,106,.14),rgba(255,255,255,.04))}
+  .home-me-t{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .home-me-t b{font-size:var(--fs-lg)}
+  .home-me-t small,.home-g-t small{font-size:var(--fs-sm);color:var(--mut)}
+  .home-people{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:10px}
+  .home-p{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px 8px;border-radius:14px;
+    border:1px solid transparent;background:rgba(255,255,255,.03);color:var(--ink);font-family:inherit;
+    font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-width:0}
+  .home-p:hover{border-color:var(--line);background:rgba(255,255,255,.06)}
+  .home-p img,.home-p .noimg{width:68px;height:68px;border-radius:50%}
+  .home-p span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .home-p small{font-size:var(--fs-sm);font-weight:400;color:var(--mut);margin-top:-4px}
+  .home-groups{display:flex;flex-direction:column;gap:8px}
+  .home-g{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:14px;
+    border:1px solid var(--line);background:rgba(255,255,255,.035);color:var(--ink);font-family:inherit;
+    text-align:left;cursor:pointer}
+  .home-g:hover{background:rgba(255,255,255,.07)}
+  .home-g.sub{width:auto;margin-left:22px;padding:9px 12px;background:rgba(255,255,255,.02)}
+  .home-g-av{display:flex;flex:0 0 auto}
+  .home-g-av img,.home-g-av .noimg{width:34px;height:34px;border-radius:50%;margin-left:-10px;
+    background:#0d0e17;box-shadow:0 0 0 2px #12131e}
+  .home-g-av>:first-child{margin-left:0}
+  .home-g-av i{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
+    margin-left:-10px;border-radius:50%;background:#262838;box-shadow:0 0 0 2px #12131e;
+    font-style:normal;font-size:var(--fs-sm);color:var(--mut)}
+  .home-g-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .home-g-t b{font-size:var(--fs-base);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .home-g-go{margin-left:auto;color:var(--mut)}
+  .home-new{padding:11px;border-radius:14px;border:1px dashed var(--line);background:none;color:var(--mut);
+    font-family:inherit;font-size:var(--fs-sm);font-weight:600;cursor:pointer}
+  .home-new:hover{color:var(--ink);border-color:var(--mut)}
+  .home-empty{margin:0;font-size:var(--fs-sm);color:var(--mut)}
+  @media (max-width:360px){.phero-img{width:108px;height:108px}}
   /* ── v2 §5.3: 하단 태그 패널 ── #panel(상세 분석)과 역할이 다르다 — 이쪽은 이름 색인.
      z-index 4: #panel(5/6 데스크톱)·#fab·#zoomctl(6)·#dim(7)보다 아래라 그것들이 항상 위에 뜬다. */
   /* ── [UI재검토 2, 2026-08-25] 우주 위로 띄우기 ──
@@ -1562,13 +1593,7 @@
      그리고 애초에 "그룹 추가"가 좌하단 회색 텍스트, "사람 추가"가 우하단 원형 FAB로
      갈라져 있던 것 자체가 §6에서 지적된 문제다. */
   @media (min-width:768px){
-    #grouptree{display:block;
-      /* [★ 겹침 버그, 2026-08-28] `#grouptree`가 끝나는 자리와 `#panelbody`가 시작하는
-         자리가 **정확히 같았다**(실측: 둘 다 y=422, 간격 0px). 그래서 "내보내기·불러오기"
-         버튼과 그 아래 그룹 정보가 붙어 **겹쳐 보였다.**
-         두 영역은 성격이 다르다 — 위는 **탐색**(어디로 갈까), 아래는 **내용**(무엇을 보고
-         있나). 사이에 선을 긋고 여백을 줘서 경계를 눈에 보이게 한다. */
-      padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+    /* [2026-09-17] ~~#grouptree{display:block …}~~ — 그룹 목록을 홈 카드로 옮기며 요소째 없앴다 */
     #panelopen{display:block}
     /* ~~#panel.open+#panelopen~~ 제거 — 둘 사이에 설정 시트가 끼어 **영영 매치되지 않던** 규칙.
        body.panel-open 으로 대체했다(아래). */
@@ -1675,7 +1700,7 @@
   [★ 2026-08-31] 모바일 패널 머리. 왼쪽에 지금 보는 것의 이름, ~~오른쪽에 닫기~~.
   [2026-09-04 개편 3/4] 닫기는 패널 바깥의 붙박이 #pclose로 나갔다. 머리는 이름만 남고
   본문과 함께 스크롤한다. 데스크톱에서는 이 줄 전체를 감춘다(반원 방식 유지). -->
-<div id="phead"><span id="pheadname"></span></div><div id="grouptree"></div><div id="panelbody"></div><div id="wipehost"></div></div>
+<div id="phead"><span id="pheadname"></span></div><div id="panelbody"></div><div id="wipehost"></div></div>
 <!-- [2026-09-04 개편 2/4] 모바일 패널 붙박이 한 쌍. 패널 **바깥**(형제)에 둔다 — 패널은
      overflow-y:auto 스크롤 상자라 안에 두면 같이 밀려 올라간다(#paneldock을 밖으로 뺀 것과 같은 이유).
      기호는 인라인 SVG — 글꼴에 ⤢가 없는 폰이 있다(위 .pfix 주석). -->
@@ -6013,8 +6038,12 @@ function makeLabel(name,sub){
   const c=document.createElement('canvas');c.width=512;c.height=192;const x=c.getContext('2d');
   x.textAlign='center';x.shadowColor='rgba(0,0,0,.9)';x.shadowBlur=12;
   x.fillStyle='#eceef2';x.font='700 58px Pretendard, sans-serif';x.fillText(name,256,78);
+  const wName=x.measureText(name).width;
   x.fillStyle='#9a9cac';x.font='400 36px Pretendard, sans-serif';x.fillText(sub,256,130);
+  const wSub=x.measureText(sub).width;
   const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true}));
+  /* [2026-09-17] 이름표를 눌러도 그 사람이 잡히게(labelHitOnScreen) 글자가 차지하는 가로 비율을 남긴다 */
+  s.userData.textFrac=Math.min(1,(Math.max(wName,wSub)+32)/512);
   s.scale.set(V2_TUNABLES.LABEL_SPRITE_W,V2_TUNABLES.LABEL_SPRITE_H,1);s.renderOrder=10;return s;}
 /* [2026-08-24] 라벨 오프셋을 월드 -Y에서 **화면 아래**로 바꿨다.
    §5.4의 규칙은 "노드 반경 + LABEL_GAP만큼 노드 바로 아래"인데, 구현이 월드 -Y 고정이라
@@ -6757,6 +6786,74 @@ const sphereGeo=new THREE.SphereGeometry(1.0,42,42);
    경도(`lon`)와 성별을 미리 받아 둔 것과 같은 논리다.
    값이 없으면 `null`로 둔다. **지어낸 시각을 채워 넣지 않는다** — "없다"와 "모른다"를
    구분해 둬야 나중에 토큰·수정 정책을 붙일 때 쓸 수 있다. */
+/* ═══ 행성 초상 [2026-09-17] ═══
+   [왜] 패널에 행성 그림이 없어 "어떤 행성인지"를 글자(甲목 · 큰 나무의 행성)로만 읽었다.
+   사용자 요청: 행성을 프로필 사진처럼 넉넉하게 보여 달라.
+   [방법] 은하와 **같은 재질·같은 조명**으로 행성 하나만 따로 그려 이미지로 뽑는다(addNode와 같은
+   조립 순서). 메인 렌더러를 그대로 빌려 렌더 타깃에 그리고 원래 상태로 되돌린다 — WebGL 문맥을
+   하나 더 만들지 않는다. 렌더러는 색 변환·톤 매핑을 안 쓰므로 타깃에 그린 색이 화면과 같다.
+   [캐시] 모양은 일간(+항성 여부)만으로 정해진다 — 최대 20장. 2배로 그려 줄여서 계단을 없앤다.
+   [환경] 반사 환경(scene.environment)이 굽히기 전이면 결과를 캐시하지 않는다(부팅 직후 대비). */
+const _portraitCache=new Map();
+function planetPortrait(n){
+  const key=n.stemIdx+(n.isMe?'|star':'');
+  if(_portraitCache.has(key))return _portraitCache.get(key);
+  let url='';
+  try{url=renderPortrait(n.stemIdx,!!n.isMe);}
+  catch(e){console.warn('[행성 초상] 그리지 못했다',e);}
+  if(url&&scene.environment)_portraitCache.set(key,url);
+  return url;}
+function renderPortrait(stemIdx,isMe){
+  const S=256,W=S*2;
+  const info=EL_INFO[STEM_EL[stemIdx]];
+  const ps=new THREE.Scene();
+  ps.environment=scene.environment;
+  ps.add(new THREE.AmbientLight(0x8890b0,V2_TUNABLES.LIGHT_AMBIENT));
+  const key=new THREE.DirectionalLight(0xffffff,V2_TUNABLES.LIGHT_KEY);key.position.set(6,10,8);ps.add(key);
+  const rim=new THREE.DirectionalLight(0x9fc0ff,V2_TUNABLES.LIGHT_RIM);rim.position.set(-6,3,-9);ps.add(rim);
+  const mat=new THREE.MeshStandardMaterial(Object.assign({},stemSurface(stemIdx),
+    {emissive:stemEmissiveColor(stemIdx,info),emissiveIntensity:stemEmissive(stemIdx),transparent:true}));
+  const mesh=new THREE.Mesh(sphereGeo,mat);
+  if(!isMe){applyShell(mesh,stemIdx);const sh=makeShapes(stemIdx);if(sh)mesh.add(sh);}
+  /* 항성 빛무리는 은하보다 작게(.75) — 그대로면 구가 틀 안에서 너무 작아진다. 빛무리 끝 쪽은 알파가
+     거의 0이라 구 반경의 1.5배는 돼야 테두리 밖으로 보인다(실측: .55배는 안 보였다). */
+  const glow=isMe?makeGlow(info.css,V2_TUNABLES.STAR_GLOW_BASE*.75):makeCorona(stemIdx,info);
+  if(glow)mesh.add(glow);
+  ps.add(mesh);
+  const cam=new THREE.PerspectiveCamera(30,1,.1,100);
+  const reach=glow?Math.max(1.12,glow.scale.x*.4):1.12;   /* 화면에 담을 반경(월드) */
+  cam.position.set(0,.35,1).normalize().multiplyScalar(reach/Math.tan(15*Math.PI/180));
+  cam.lookAt(0,0,0);
+  const rt=new THREE.WebGLRenderTarget(W,W);
+  const prevRT=renderer.getRenderTarget(),prevC=renderer.getClearColor(new THREE.Color()),prevA=renderer.getClearAlpha();
+  const px=new Uint8Array(W*W*4);
+  try{
+    renderer.setRenderTarget(rt);renderer.setClearColor(0x000000,0);renderer.clear();
+    renderer.render(ps,cam);
+    renderer.readRenderTargetPixels(rt,0,0,W,W,px);
+  }finally{
+    renderer.setRenderTarget(prevRT);renderer.setClearColor(prevC,prevA);
+    rt.dispose();mat.dispose();}
+  const big=document.createElement('canvas');big.width=big.height=W;
+  const bx=big.getContext('2d'),img=bx.createImageData(W,W);
+  for(let y=0;y<W;y++)img.data.set(px.subarray((W-1-y)*W*4,(W-y)*W*4),y*W*4);   /* GL은 아래가 0행 */
+  /* [실측으로 잡음] 투명 바탕 위에 그린 결과는 색이 이미 알파가 곱해진 꼴이고, 빛무리(가산 합성)는
+     알파가 거의 안 쌓여 이미지로 옮기면 **사라졌다**(항성·丙 초상에서 빛무리 0). 검은 바탕 위에
+     보이는 그대로가 되게 알파를 max(알파, 밝기)로 올리고 색을 그만큼 나눠 되돌린다. */
+  const d=img.data;
+  for(let i=0;i<d.length;i+=4){
+    const a=Math.max(d[i+3],d[i],d[i+1],d[i+2]);
+    if(a===0||a===255&&d[i+3]===255)continue;
+    const k=255/a;
+    d[i]=Math.min(255,d[i]*k);d[i+1]=Math.min(255,d[i+1]*k);d[i+2]=Math.min(255,d[i+2]*k);d[i+3]=a;}
+  bx.putImageData(img,0,0);
+  const c=document.createElement('canvas');c.width=c.height=S;
+  const cx=c.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(big,0,0,S,S);
+  return c.toDataURL('image/png');}
+function portraitImg(n,cls){
+  const u=planetPortrait(n);
+  return u?`<img class="${cls}" src="${u}" alt="" draggable="false">`
+    :`<span class="${cls} noimg" style="background:${EL_INFO[n.el].css}"></span>`;}
 function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt,self}){
   const el=STEM_EL[stemIdx],info=EL_INFO[el];
   /* [A] map/bumpMap/roughness/metalness를 stemSurface가 한 번에 준다 — 오행별 재질 분리
@@ -7827,7 +7924,7 @@ function groupRole(A,n,gets){
 
 /* ═════════ 그룹 계층 (v0.7) ═════════ */
 /* [순환 parentId 방어, 2026-08-24] 그룹 계층은 parentId 하나로만 표현되므로 A→B→A 같은 고리가
-   생기면 이 파일의 재귀 세 곳(effectiveMembers / renderSystemHTML / renderTree의 walk)이 전부
+   생기면 이 파일의 재귀 세 곳(effectiveMembers / renderSystemHTML / showHome의 walk — ~~renderTree~~ 2026-09-17 삭제)이 전부
    무한루프에 빠져 브라우저가 멈춘다. 방어를 3중으로 둔다:
    (1) 상위 그룹 셀렉트에서 자기 자신과 모든 자손을 제외 — 고리를 애초에 못 만든다(openGrpSheet)
    (2) renderNav()의 위생 검사에서 조상 사슬을 훑어 고리를 끊는다 — 셀렉트를 안 거치는 경로
@@ -8049,7 +8146,7 @@ function createGroup(name,type,members,parentId,createdAt,key){
 /* ═════════ 그룹 탐색 UI 갱신 ═════════
    [v2 §5.3] 모바일 상단 칩바(#groupbar)를 하단 태그 패널(#tagbar)로 대체했다 — 최상위 그룹을
    훑어보고 클릭하는 기능이 거의 그대로 겹쳤고, HANDOFF가 명시한 "하단" 배치와도 이쪽이 맞는다.
-   데스크톱 사이드바 트리(#grouptree)는 접기/펼치기가 필요해 계속 유지 — 이름은 renderChips에서
+   ~~데스크톱 사이드바 트리(#grouptree)는 접기/펼치기가 필요해 계속 유지~~ → [2026-09-17] 홈 카드(showHome)로 대체 — 이름은 renderChips에서
    renderNav로 바꿨다(더 이상 칩을 그리지 않으므로). */
 /* [F-2] ~~let activeGroup=null;~~ 선언을 상단 선언 구역으로 옮겼다 — 사유는 그쪽 주석 참고 */
 function renderNav(){
@@ -8066,18 +8163,16 @@ function renderNav(){
       if(!par)break;
       if(seen.has(par.id)||++d>MAX_GROUP_DEPTH){cur.parentId=null;break;}
       seen.add(par.id);cur=par;}});
-  renderTree();renderTagbar();}
+  /* [2026-09-17] ~~renderTree()~~ — 그룹 목록을 홈 카드로 옮겼다(showHome). 홈이 떠 있으면
+     사람·그룹이 바뀐 것을 바로 반영하도록 다시 그린다. */
+  renderWipe();
+  /* pbody(const)는 파일 아래에서 선언돼 부팅 중 여기서 읽으면 TDZ로 멈춘다 — 요소를 직접 찾는다 */
+  const pb=document.getElementById('panelbody');
+  if(pb&&pb.querySelector('.home'))showHome();
+  renderTagbar();}
 
-/* v0.7: 좌측 패널 접히는 그룹 트리 (데스크톱) */
-const collapsedG=new Set();
-
-/* ═══ 그룹 목록 접기 [★ 2026-08-28] ═══
-   [기본을 펼침으로 둔 이유] 이 목록이 **주 내비게이션**이다. 접힌 채로 시작하면 처음 온
-   사람은 그룹이 있다는 것 자체를 모른다 — 화면을 아끼려다 기능을 감추는 셈이다.
-   대신 **한 번 접으면 기억한다.** 좁다고 느낀 사람은 한 번만 접으면 된다.
-   [저장 위치] `groupsaju:save`가 아니라 별도 키다. 화면 상태이지 사용자 데이터가 아니고,
-   저장 스키마에 넣으면 SAVE_VER을 올리고 MIGRATIONS를 더해야 한다(CLAUDE.md 저장 규칙) —
-   접힘 하나에 치를 값이 아니다. 읽기 실패는 조용히 펼침으로 떨어진다. */
+/* 화면 기억(도움말 접힘·패널 폭)은 `groupsaju:save`가 아니라 별도 키다 — 사용자 데이터가 아니라서
+   저장 스키마(SAVE_VER)를 건드리지 않는다. 읽기 실패는 조용히 기본값으로 떨어진다. */
 const UI_KEY='groupsaju:ui';
 /* ═══ 도움말 접힘 기억 [2026-08-31] ═══
    개인 패널의 도움말 세 곳이 각각 다른 모양이었다 — 득령·득지·득세 풀이는 **접히지도 않는
@@ -8111,9 +8206,6 @@ function helpIsOpen(k){return helpIsOpenD(k,true);}
    [남은 저장값] 이전 배포에서 저장된 `groupsaju:ui.pinchGain`은 **아무도 읽지 않으므로
    자동으로 무시된다.** 다음 saveUiPref()가 그 키 없이 다시 써서 조용히 사라진다. */
 const PINCH_GAIN=4;
-let treeCollapsed=(()=>{
-  try{return JSON.parse(localStorage.getItem(UI_KEY)||'{}').treeCollapsed===true;}
-  catch{return false;}})();
 /* ── 패널 폭 [2026-08-30] ──
    [범위] 최소 320 — 사주 표가 4열이라 그보다 좁으면 글자가 겹친다(실측).
           최대는 화면의 60%와 720px 중 작은 값 — 은하가 가려지면 이 앱의 의미가 없다.
@@ -8146,7 +8238,7 @@ function applyPanelW(){
 function saveUiPref(){
   try{
     const o=JSON.parse(localStorage.getItem(UI_KEY)||'{}');
-    o.treeCollapsed=treeCollapsed;
+    delete o.treeCollapsed;   /* [2026-09-17] 그룹 목록 접힘 — 목록이 없어져 안 읽는다 */
     /* [2026-08-30] 화면을 못 재는 상태(백그라운드 탭, innerWidth 0)에서는 폭을 **저장하지 않는다.**
        위 clampPanelW가 이미 값을 지키지만, 저장 쪽에도 같은 문턱을 둔다 — 폭은 화면에서
        유도한 값이고, 화면을 못 재는 순간의 유도값은 무엇이든 믿을 수 없다.
@@ -8156,57 +8248,6 @@ function saveUiPref(){
     delete o.pinchGain;   /* [2026-08-30] 임시 항목이었다 — 위 PINCH_GAIN 주석 참고 */
     localStorage.setItem(UI_KEY,JSON.stringify(o));
   }catch{/* 저장이 막혀 있어도 이번 세션 동안은 접힌 채로 동작한다 */}}
-function renderTree(){
-  const el=document.getElementById('grouptree');if(!el)return;
-  /* [2026-08-28] 제목 줄이 곧 접기 버튼이다 — 별도 아이콘을 옆에 두면 누를 곳이 둘이 된다.
-     접었을 때도 **지금 보고 있는 곳**은 남긴다(제목 옆 요약) — 안 그러면 접는 순간
-     "내가 어느 그룹에 있는지"를 잃는다. */
-  const curName=activeGroup?activeGroup.name:'은하 전체';
-  h=`<button type="button" class="gtoggle${treeCollapsed?' off':''}" id="gtoggle"
-       aria-expanded="${treeCollapsed?'false':'true'}">
-      <span class="tw">${treeCollapsed?'▸':'▾'}</span><span class="eyebrow">GROUPS</span>
-      <span class="gcur">${treeCollapsed?bkEsc(curName):''}</span>
-      <span class="cnt">${groups.length}</span></button>`;
-  if(treeCollapsed){
-    el.innerHTML=h;
-    const tg=el.querySelector('#gtoggle');
-    if(tg)tg.onclick=()=>{treeCollapsed=false;saveUiPref();renderTree();};
-    renderWipe();
-    return;}
-  h+=`<div class="gtree">`;
-  h+=`<div class="trow${activeGroup===null?' on':''}" data-root="1"><span class="tw">◦</span>은하 전체<span class="cnt">${nodes.length}</span></div>`;
-  const walk=(pid,depth)=>{groups.filter(g=>(g.parentId||null)===pid).forEach(g=>{
-    const kids=groups.some(c=>c.parentId===g.id);
-    h+=`<div class="trow${activeGroup===g?' on':''}" data-g="${g.id}" style="padding-left:${8+depth*16}px"><span class="tw"${kids?` data-t="${g.id}"`:''}>${kids?(collapsedG.has(g.id)?'▸':'▾'):'·'}</span>${bkEsc(g.name)}<span class="cnt">${effectiveMembers(g).length}</span></div>`;
-    if(kids&&!collapsedG.has(g.id)&&depth<MAX_GROUP_DEPTH)walk(g.id,depth+1);});};
-  walk(null,0);
-  h+=`<div class="trow newg" id="treenewg">+ 새 그룹</div></div>`;
-  /* [★ 모두 지우기, 2026-08-28] 새 화면을 만들지 않고 그룹 트리 맨 아래에 붙인다.
-     **일부러 작고 흐리게 둔다**(.wipe CSS 참고) — 되돌릴 수 없는 동작이라 못 찾는 것보다
-     실수로 누르는 쪽이 훨씬 위험하다. 사람이 하나도 없으면(첫 화면) 지울 것도 없으므로 감춘다. */
-  /* [★ 백업 진입점, 2026-08-28] **모두 지우기와 위계를 반대로 둔다.**
-     지우기는 되돌릴 수 없어 못 찾는 편이 안전하지만, 백업은 **찾을 수 있어야** 한다 —
-     못 찾으면 기능이 없는 것과 같다. 그래서 보통 크기로 위에 놓고, 지우기는 그 아래
-     작고 흐린 채로 남긴다. 사람이 0명이어도 보여준다(불러오기가 필요한 상태이므로). */
-
-  /* [2026-08-28] 백업·되돌리기 줄을 여기서 뺐다 — 설정(openSettings)으로 옮겼다.
-     그룹 트리는 **탐색**이고 그 둘은 **관리**라 성격이 다르다. */
-  /* [★ 자리 이동, 2026-08-28] ~~여기(그룹 트리 끝)~~ → **패널 맨 아래**(#wipehost).
-     트리는 패널 위쪽이라, 사람을 고르면 그 아래로 인물 카드가 붙어 지우기 버튼이
-     **화면 한가운데**에 놓였다. 되돌릴 수 없는 동작이 본문 한복판에 있으면 안 된다. */
-  el.innerHTML=h;
-  /* [2026-08-28] 백업·되돌리기 배선은 설정(openSettings)으로 옮겼다 — 여기 남기면
-     마크업이 없어져 죽은 코드가 된다. */
-  renderWipe();
-  const tg=el.querySelector('#gtoggle');
-  if(tg)tg.onclick=()=>{treeCollapsed=true;saveUiPref();renderTree();};
-  el.querySelectorAll('.tw[data-t]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();
-    const id=b.dataset.t;collapsedG.has(id)?collapsedG.delete(id):collapsedG.add(id);renderTree();});
-  el.querySelectorAll('.trow[data-g]').forEach(r=>r.onclick=()=>{
-    const g=groups.find(x=>x.id===r.dataset.g);if(g)selectGroup(g);});
-  const rt=el.querySelector('[data-root]');if(rt)rt.onclick=()=>selectGroup(null);
-  const ngt=el.querySelector('#treenewg');if(ngt)ngt.onclick=()=>openGrpSheet();}
-
 /* ═════════ v2 §5.3: 하단 태그 패널 ═════════
    [2026-08-24 표기 교체] 대괄호 문법 `[최상위(하위<이름, 이름>) 직속멤버]` → **중첩 캡슐**.
    - 캡슐 1개 = 그룹 1개. 그 안에 자식 그룹 캡슐과 직속 멤버 이름이 함께 들어간다
@@ -9240,11 +9281,54 @@ rebuildRings();layoutGalaxy();
    각 머티리얼의 생성 시 기본 불투명도(mesh/glow/label=1, rings=.7,
    edge=.7 또는 .55)가 정확히 이 함수의 옛 "on" 분기 값과 같으므로, 분기 코드를 통째로
    지워도 "항상 켜진" 상태로 자연히 수렴한다 — 별도로 되돌릴 코드가 필요 없다. */
+/* ═══ 홈 [2026-09-17] ═══ 아무것도 고르지 않은 채 패널을 열면 뜨는 화면.
+   ~~그룹 목록(#grouptree)만 있고 본문이 비어 있던 패널~~ 을 대신한다(사용자: "그룹만 있는 패널은
+   보이면 안 된다"). 내 행성 → 사람들 → 그룹 순서 — 이 앱의 중심이 "나"라서다(§2.1).
+   눌렀을 때 가는 곳은 3D 클릭과 같다: 사람은 showNode+focusNode, 그룹은 selectGroup. */
+function showHome(){
+  activeVirtual=false;
+  const me=nodes.find(x=>x.isMe);
+  if(!me){pbody.innerHTML='';return;}
+  const others=nodes.filter(x=>!x.isMe);
+  const sec=t=>`<div class="psec">${t}</div>`;
+  const hero=`<button type="button" class="home-me" data-home-n="${me.id}" style="--pc:${EL_INFO[me.el].css}">`
+    +portraitImg(me,'home-me-img')
+    +`<span class="home-me-t"><span class="tag sun">☀ 나 · 항성</span>`
+    +`<b>${bkEsc(me.name)}</b>`
+    +`<small>${STEMS[me.stemIdx]}${EL_KO[me.el]} 일간 · ${EL_INFO[me.el].planet}</small></span></button>`;
+  const people=others.length
+    ?`<div class="home-people">`+others.map(o=>`<button type="button" class="home-p" data-home-n="${o.id}">`
+        +portraitImg(o,'')+`<span>${bkEsc(o.name)}</span><small>${STEMS[o.stemIdx]}${EL_KO[o.el]}</small></button>`).join('')+`</div>`
+    :`<p class="home-empty">아직 등록한 사람이 없습니다 — 오른쪽 아래 <b>+</b>로 추가하면 여기에 행성이 모입니다.</p>`;
+  let cards='';
+  const walk=(pid,depth)=>groups.filter(g=>(g.parentId||null)===pid).forEach(g=>{
+    const ms=effectiveMembers(g);
+    const av=ms.slice(0,5).map(m=>portraitImg(m,'')).join('')+(ms.length>5?`<i>+${ms.length-5}</i>`:'');
+    cards+=`<button type="button" class="home-g${depth?' sub':''}" data-home-g="${g.id}"${depth>1?` style="margin-left:${22*depth}px"`:''}>`
+      +`<span class="home-g-av">${av}</span>`
+      +`<span class="home-g-t"><b>${bkEsc(g.name)}</b><small>${bkEsc(g.type)} · ${ms.length}명</small></span>`
+      +`<span class="home-g-go">›</span></button>`;
+    if(depth<MAX_GROUP_DEPTH)walk(g.id,depth+1);});
+  walk(null,0);
+  pbody.innerHTML=`<div class="home">${sec('내 행성')}${hero}`
+    +`${sec('사람들 · '+others.length+'명')}${people}`
+    +`${sec('그룹 · '+groups.length+'개')}<div class="home-groups">${cards}`
+    +`<button type="button" class="home-new" id="home-newg">+ 새 그룹</button></div></div>`;
+  pbody.querySelectorAll('[data-home-n]').forEach(el=>el.onclick=()=>{
+    const n=nodes.find(x=>x.id===el.dataset.homeN);
+    if(n){showNode(n);focusNode(n,n.mesh);}});
+  pbody.querySelectorAll('[data-home-g]').forEach(el=>el.onclick=()=>{
+    const g=groups.find(x=>x.id===el.dataset.homeG);
+    if(g)selectGroup(g);});
+  const ng=document.getElementById('home-newg');
+  if(ng)ng.onclick=()=>openGrpSheet();}
 function selectGroup(g){
   activeVirtual=false; /* [§5.5] 다른 패널로 넘어가므로 가상 성계 패널의 "실시간 반영" 대상에서 빠짐 */
   activeGroup=g;renderNav();deselect();
   applyStageGoals(); /* [F-2] 끌어당김·표시 목표값 갱신 — simulate가 0.7초에 걸쳐 따라간다 */
-  if(!g){navMark({t:'galaxy'});panel.classList.remove('open','tall');fitGalaxy();return;}
+  /* [2026-09-17] 은하로 돌아가면 패널 내용을 홈으로 바꿔 둔다 — 다시 열었을 때 옛 그룹 패널이나
+     빈 본문이 아니라 홈이 뜨게 */
+  if(!g){navMark({t:'galaxy'});showHome();panel.classList.remove('open','tall');fitGalaxy();return;}
   showGroup(g);fitGroup(g);}
 /* [F-2] 장면 목표값. **여기서는 목표만 정하고 실제 보간은 simulate()가 한다** — 선택 경로가
    여러 곳(3D 클릭·태그 패널·트리·패널 닫기)이라 애니메이션을 호출부마다 두면 어긋난다.
@@ -9911,6 +9995,44 @@ function nearestMeshOnScreen(targets,cx,cy,cr){
     const d=Math.hypot((v.x+1)/2*cr.width-cx,(1-v.y)/2*cr.height-cy);
     if(d<bestD){bestD=d;best=m;}});
   return best?{object:best}:null;}
+/* ═══ 이름표 누르기 [2026-09-17] ═══
+   [문제 — 사용자 보고·실측] 그룹 화면에서 행성 **아래 이름 글자**를 누르면 사람이 안 잡히고
+   "빈 곳 클릭"으로 처리돼 그룹 패널로 돌아갔다. 이름표는 행성에서 LABEL_GAP만큼 아래라
+   PICK_RADIUS_PX(22) 밖이기 때문이다(1024×768, 그룹 가족에서 행성–이름표 중심 약 50px).
+   [고침] 레이캐스트가 빗나가면 **이름표 글자 영역**을 먼저 보고, 그다음 행성 근접으로 간다.
+   이름표를 직접 누른 것이 옆 행성 22px 안보다 의도가 분명하다. */
+const _lbC=new THREE.Vector3(),_lbR=new THREE.Vector3(),_lbU=new THREE.Vector3();
+function labelOfTarget(m){
+  const d=m.userData;
+  if(d.group){const cm=groupCenters.get(d.group.id);return cm?cm.label:null;}
+  if(d.node&&d.node.mesh===m)return d.node.label;
+  for(const inst of groupInstances.values())if(inst.mesh===m)return inst.label;
+  const vc=virtualMembers.find(c=>c.mesh===m);
+  return vc?vc.label:null;}
+function labelRectOnScreen(label,cr){
+  if(!label||!label.visible||(label.material&&label.material.opacity<0.05))return null;
+  _lbC.copy(label.position).project(camera);
+  if(_lbC.z>1)return null;
+  const cx=(_lbC.x+1)/2*cr.width, cy=(1-_lbC.y)/2*cr.height;
+  _lbR.set(1,0,0).applyQuaternion(camera.quaternion).multiplyScalar(label.scale.x/2).add(label.position).project(camera);
+  _lbU.set(0,1,0).applyQuaternion(camera.quaternion).multiplyScalar(label.scale.y/2).add(label.position).project(camera);
+  const hw=Math.abs((_lbR.x+1)/2*cr.width-cx)*(label.userData.textFrac||1);
+  const hh=Math.abs((1-_lbU.y)/2*cr.height-cy);
+  /* 캔버스 192px 중 이름(윗줄)과 부제(아랫줄)가 차지하는 10~140px만 — 중심은 96px */
+  return {cx,cy,l:cx-hw-4,r:cx+hw+4,t:cy-hh*86/96-4,b:cy+hh*44/96+4};}
+function labelHitOnScreen(targets,px,py,cr){
+  let best=null,bestD=Infinity;
+  const seen=new Set();
+  targets.forEach(m=>{
+    if(!m||!m.visible)return;
+    const lb=labelOfTarget(m);
+    if(!lb||seen.has(lb))return;
+    seen.add(lb);
+    const R=labelRectOnScreen(lb,cr);
+    if(!R||px<R.l||px>R.r||py<R.t||py>R.b)return;
+    const d=Math.hypot(px-R.cx,py-R.cy);
+    if(d<bestD){bestD=d;best=m;}});
+  return best?{object:best}:null;}
 function meshForMemberInGroup(n,g){
   if(n.orbit&&n.orbit.group===g)return n.mesh;
   const inst=groupInstances.get(n.id+'|'+g.id);
@@ -9970,7 +10092,11 @@ canvas.addEventListener('click',e=>{
      44px 터치 타깃(Apple/Google 가이드라인)을 확보하되, 3D 크기는 §2.9 비율에 묶여 있어
      건드릴 수 없기 때문이다. Raycaster.params.threshold는 Points/Line 전용이라 Mesh엔 안 듣는다.
      화면 거리로 고르면 겹침 애매함도 같이 사라진다 — 손가락에 화면상 가장 가까운 것이 이긴다. */
-  const hit=ray.intersectObjects(targets)[0]
+  /* [2026-09-17] 이름표를 **맨 먼저** 본다 — 이름표는 깊이 검사 없이 맨 위에 그려지므로(makeLabel
+     depthTest:false) 글자 밑에 다른 행성이 있어도 사용자가 누른 것은 글자다. 실측: 그룹 가족에서
+     「아내」 글자가 큰 항성(나) 위에 겹쳐, 레이캐스트를 먼저 하면 「나」가 잡혔다. */
+  const hit=labelHitOnScreen(targets,e.clientX-cr.left,e.clientY-cr.top,cr)
+    ||ray.intersectObjects(targets)[0]
     ||nearestMeshOnScreen(targets,e.clientX-cr.left,e.clientY-cr.top,cr);
   if(hit&&hit.object.userData.virtualSlotHit){showVirtualSlot();}
   else if(hit&&hit.object.userData.group){selectGroup(hit.object.userData.group);}
@@ -9988,7 +10114,7 @@ canvas.addEventListener('click',e=>{
       undefined라 showNode가 activeGroup으로 자연히 폴백(하위호환) */
     showNode(n,ctx,hit.object);focusNode(n,hit.object);}
   else if(activeGroup){showGroup(activeGroup);deselect();fitGroup(activeGroup);}
-  else if(innerWidth>=768){activeVirtual=false;pbody.innerHTML='';deselect();fitGalaxy();} /* 데스크톱: 트리 유지 */
+  else if(innerWidth>=768){showHome();deselect();fitGalaxy();} /* 데스크톱: 패널은 열어 둔 채 홈으로(2026-09-17 ~~빈 본문 + 트리~~) */
   else{activeVirtual=false;panel.classList.remove('open','tall');deselect();fitGalaxy();}});
 /* ═══ 회귀 테스트 [2026-08-31] ═══ 콘솔에서 `sajuSelfTest()`로 부른다.
    테스트 러너가 없는 프로젝트라, **깨지면 바로 드러나는 불변**만 골라 담았다.
@@ -10591,6 +10717,34 @@ async function sajuSelfTest(){
     T('nodeSelfExplicit: 로드된 사람 전원의 self가 undefined가 아니다(null 또는 값)',
       undef.length===0, undef.length?('어긋남 '+undef.length+'명: '+undef.map(n=>n.name).join(',')):(nodes.length+'명 전원 통과'));
   }
+  /* ═══ [2026-09-17] 홈 · 행성 초상 · 이름표 누르기 ═══ */
+  try{
+    showHome();
+    T('homeView: 홈에 내 행성·사람 전원·그룹 전부가 있다(그룹만 있는 패널 금지)',
+      !!pbody.querySelector('.home-me')&&pbody.querySelectorAll('.home-p').length===nodes.length-1
+        &&pbody.querySelectorAll('.home-g').length===groups.length&&!document.getElementById('grouptree'),
+      '사람 '+pbody.querySelectorAll('.home-p').length+' / 그룹 '+pbody.querySelectorAll('.home-g').length);
+    const u=planetPortrait(other);
+    T('portrait: 행성 초상이 이미지로 나온다', typeof u==='string'&&u.indexOf('data:image/png')===0&&u.length>2000, (u||'').length+'자');
+    showNode(other);
+    T('portraitInPanel: 인물 패널 머리에 초상이 있다', !!pbody.querySelector('.phero .phero-img'), '');
+  }catch(e){T('homeView/portrait',false,'예외 '+e.message);}
+  try{
+    const g0=groups.find(g=>effectiveMembers(g).some(n=>!n.isMe));
+    if(g0&&innerWidth>0){
+      selectGroup(g0);
+      for(let i=0;i<60;i++){t+=1/60;simulate();camTick(1/60);}
+      camera.updateMatrixWorld(true);
+      const cr=canvas.getBoundingClientRect();
+      const miss=[];
+      effectiveMembers(g0).forEach(n=>{
+        const m=meshForMemberInGroup(n,g0),R=labelRectOnScreen(labelOfTarget(m),cr);
+        if(!R)return;
+        const h=labelHitOnScreen(effectiveMembers(g0).map(x=>meshForMemberInGroup(x,g0)),R.cx,(R.t+R.cy)/2,cr);
+        if(!h||h.object!==m)miss.push(n.name);});
+      T('labelPick: 그룹 화면에서 이름 글자를 누르면 그 사람이 잡힌다', miss.length===0, miss.length?'어긋남 '+miss.join(','):g0.name+' 전원');
+    }
+  }catch(e){T('labelPick',false,'예외 '+e.message);}
   return out;}
 function deselect(){if(selected){if(!selected.isMe&&selectedMesh)selectedMesh.scale.setScalar(V2_TUNABLES.PLANET_SCALE);selected=null;selectedMesh=null;}}
 /* [§7.4] groupContext/targetMesh 둘 다 선택 인자 — 안 넘기면 지금까지와 100% 동일하게 동작한다
@@ -10995,9 +11149,12 @@ function showNode(n,groupContext,targetMesh){
   const backTo=(ctx&&groups.indexOf(ctx)>=0)?ctx:null;
   const backHtml=navBackHtml(backTo?backTo.name:'은하 전체');
 
-  pbody.innerHTML=`${backHtml}${roleTag}<span class="tag">${EL_INFO[n.el].name}</span>
+  /* [2026-09-17] 머리를 **초상 + 이름**으로 — 사용자: "행성을 눌러도 프로필 이미지처럼 넉넉하게".
+     태그·제목·생년월일 줄은 그대로 오른쪽 칸으로 옮겼다(내용은 무변경). */
+  pbody.innerHTML=`${backHtml}<div class="phero" style="--pc:${EL_INFO[n.el].css}">${portraitImg(n,'phero-img')}
+    <div class="phero-t"><div class="phero-tags">${roleTag}<span class="tag">${EL_INFO[n.el].name}</span></div>
     <h2>${r?r.title:`${bkEsc(n.name)} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
-    ${birthLine}${relSec}${selfSec}
+    ${birthLine}</div></div>${relSec}${selfSec}
     <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">${bkEsc(n.name)}와 다른 사람의 관계 보기</button></div>
     <div class="panelbtns"><button class="pbtn" id="vstoggle">${virtualMembers.some(c=>c.ref===n)?'가상 성계에서 빼기':'가상 성계에 담기'}</button></div>`;
   /* 뒤로 가기 — 그룹이면 그 그룹으로, 아니면 은하 전체로. selectGroup이 카메라·패널·트리
@@ -11336,7 +11493,10 @@ document.getElementById('pfull').onclick=()=>setPanelFull(!document.body.classLi
   addEventListener('resize',()=>{const before=panelW;applyPanelW();
     if(panelW!==before&&typeof applyCanvasBox==='function'){applyCanvasBox();}});
 })();
-document.getElementById('panelopen').onclick=()=>panel.classList.add('open');
+/* [2026-09-17] 본문이 비어 있으면(첫 열기) 홈을 채워서 연다 — 그룹 목록만 있는 패널이 뜨지 않게 */
+document.getElementById('panelopen').onclick=()=>{
+  if(!pbody.firstElementChild||pbody.querySelector('.home'))showHome();
+  panel.classList.add('open');};
 /* [2026-08-30] ~~데스크톱은 트리 패널 기본 열림~~ → **닫힌 채로 시작한다.**
    패널이 은하를 가려, 처음 열었을 때 이 앱이 무엇인지 보여 주는 화면이 절반만 보였다.
    사람이나 그룹을 누르면 showNode/showGroup이 그때 연다(이미 그렇게 돼 있다).
