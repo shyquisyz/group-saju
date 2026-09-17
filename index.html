@@ -437,6 +437,10 @@
     color:#101018;font-size:var(--fs-sm);font-weight:700;margin-right:6px}
   .estnotebtn{background:none;border:1px solid var(--line);border-radius:6px;color:var(--ink);
     font-family:inherit;font-size:var(--fs-sm);padding:5px 10px;margin:6px 6px 0 0;cursor:pointer}
+  /* [2026-09-17 A7] 자정 일주 선택 — 지금 골라 둔 쪽을 .on으로 강조한다(두 버튼 다 안 켜지면
+     기본값도 아직 저장 전이라는 뜻이 아니라, 저장본에 explicit 'apparent'가 들어가 있다는 뜻이다 —
+     migrate()가 null을 넣고 sajuOf가 null을 'apparent'로 읽어 r.dayRule은 언제나 둘 중 하나다). */
+  .dayrulebtn.on{background:var(--ink);color:#101018;border-color:var(--ink);font-weight:700}
   .sijingrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
   /* [2026-08-24] 주/보조를 뒤집었다 — 사용자는 "몇 시에 태어났는지"로 기억하지 자시·축시로
      기억하지 않는다. 시간 표기가 주(13px/600), 지지가 보조(9.5px/--mut). 구 값은 지지 12.5px에
@@ -1799,7 +1803,7 @@
   <!-- [예시 은하] 첫 화면은 닫는 수단이 없다(나 없이는 은하가 성립하지 않는다).
        그 규칙을 깨지 않고 뒤를 보여주려면 **되돌아올 손잡이를 남긴 채 비켜 주는** 수밖에 없다. -->
 
-  <div class="sheetnote">일간은 실계산됩니다 · 시각·도시는 정밀 엔진(진태양시 보정) 연결 시 사용</div>
+  <div class="sheetnote">일간은 실계산됩니다 · 시각·도시는 진태양시 보정에 실제로 쓰입니다</div>
 </div></div>
 
 <!-- 사람 추가/수정 시트 -->
@@ -1886,7 +1890,7 @@
       maxlength="24" style="display:none;margin-top:7px"></div>
   <!-- [2026-08-28] 첫 화면과 **다른 말**을 쓴다. 거기서는 "내 정보가 어디 가나"가,
        여기서는 "남의 생년월일을 넣고 있다"가 맥락이다(사용자 지시: 맥락에 맞게 다르게). -->
-  <div class="sheetnote">일간은 실계산됩니다 · 시·도시는 정밀 엔진(진태양시 보정) 연결 시 사용 · 음력 변환은 엔진 연결 후 지원
+  <div class="sheetnote">일간은 실계산됩니다 · 시·도시는 진태양시 보정에 실제로 쓰입니다 · 음력 변환은 엔진 연결 후 지원
     <br>· 이분의 생년월일도 <b style="color:var(--ink)">이 브라우저 안에만</b> 남습니다 — 어디로도 전송되지 않습니다</div>
   <!-- [2026-08-28] "저장하고 계속"을 뺐다 — **표가 그 일을 대신한다.**
        이 폼은 이제 수정 전용이라(추가는 전부 #pt-mode로 간다) 연속으로 고칠 대상이 없다. -->
@@ -1950,7 +1954,7 @@
   <div class="pt-summary" id="pt-summary"></div>
   <div class="pt-confirm" id="pt-confirm" style="display:none"></div>
   <button class="primary" id="pt-save">저장</button>
-  <div class="sheetnote">일간은 실계산됩니다 · 시·도시는 정밀 엔진(진태양시 보정) 연결 시 사용
+  <div class="sheetnote">일간은 실계산됩니다 · 시·도시는 진태양시 보정에 실제로 쓰입니다
     <br>· 이분들의 생년월일도 <b style="color:var(--ink)">이 브라우저 안에만</b> 남습니다 — 어디로도 전송되지 않습니다</div>
 </div>
 </div>
@@ -2165,9 +2169,10 @@ const SIJIN=[['자','23-01','子'],['축','01-03','丑'],['인','03-05','寅'],[
    원칙이므로 칸을 쪼개지 않고 위치만 옮겼다. */
 const SIJIN_ORDER=[1,2,3,4,5,6,7,8,9,10,11,0];
 /* ═══ 출생지 [2026-08-27] ═══ 구 목록은 16개뿐이라 춘천·강릉 같은 곳이 없었다.
-   [경도를 함께 저장한다] 지금은 **표시만 하고 계산에 안 쓴다.** 만세력 엔진(L2)이 붙으면
-   진태양시 보정에 쓴다 — 한국은 동경 135°(일본 표준시)를 쓰는데 실제 위치가 서쪽이라
-   서울이 약 32분, 부산이 약 24분 늦다(HANDOFF §5.6 "L2 착수 시" 참고).
+   [경도를 함께 저장한다] ~~지금은 표시만 하고 계산에 안 쓴다. 만세력 엔진(L2)이 붙으면
+   진태양시 보정에 쓴다~~ → **[2026-09-17 A7 정정] L2가 이미 붙었다 — `sajuOf`가 이 값을
+   실제로 읽어 진태양시 보정을 한다(3097행 부근).** 한국은 동경 135°(일본 표준시)를 쓰는데
+   실제 위치가 서쪽이라 서울이 약 32분, 부산이 약 24분 늦다.
    나중에 좌표를 다시 모으는 일이 없도록 지금 넣어 둔다 — 도시 목록을 한 번 더 손대는 것보다
    지금 숫자 하나를 붙이는 편이 싸다.
    [값의 형식] 경도는 도(°) 단위 십진수, 동경이 양수. 소수 3자리는 약 100m 정밀도로
@@ -2469,7 +2474,8 @@ function stemThing(stemIdx){
 function cardPillar(p){
   let stem=((p.stemIdx%10)+10)%10, branch=null;
   try{const r=p.birth?sajuOf({y:p.birth.y,m:p.birth.m,d:p.birth.d,
-      hour:Number.isInteger(p.birth.hour)?p.birth.hour:null,min:p.birth.min,lon:p.birth.lon}):null;
+      hour:Number.isInteger(p.birth.hour)?p.birth.hour:null,min:p.birth.min,lon:p.birth.lon,
+      dayRule:p.birth.dayRule}):null;
     if(r){stem=r.day[0];branch=r.day[1];}}catch(e){}
   return stemThing(stem)+(branch===null?'':' '+BRANCHES[branch]);}
 /** 명패 맨 윗줄 — "누가 누구를 보는가". ~~"테오에게 아내는"~~ →
@@ -2967,7 +2973,7 @@ function hcPairIn(table,x,y){return table.some(a=>(a[0]===x&&a[1]===y)||(a[0]===
 function hcPillars(x){
   const b=x&&x.birth; if(!b)return null;
   try{return sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon});}catch(e){return null;}}
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});}catch(e){return null;}}
 /** 문장 한 줄. 조사는 **한자가 아니라 한글 음**에서 고른다 — particle이 마지막 글자를 보므로
     "午(오)"를 그대로 넘기면 ')'를 보고 고른다. */
 function hcWhy(kind,tbl,ko,x,y){
@@ -3084,7 +3090,7 @@ function sajuJieList(y){
       out.push({ms:t[i],branch:(i/2+1)%12,sajuYear:(i===0?yy-1:yy),term:i,termYear:yy});}
   return out.sort(function(a,b){return a.ms-b.ms;});}
 
-/** 사주 계산. birth = {y,m,d,hour,min,sijin,lon}.
+/** 사주 계산. birth = {y,m,d,hour,min,sijin,lon,dayRule}.
     [시각 두 모드 — 입력 UI와 같다]
       · 정확(hour가 정수) — 진태양시로 시지까지 계산한다
       · 모름              — 세 기둥만. **정오를 가정하지 않는다**
@@ -3093,7 +3099,13 @@ function sajuJieList(y){
     시지를 그대로 쓰면 "정확히 아는 사람"과 "대충 고른 사람"의 결과가 화면에서 똑같아 보인다.
     옛 "대략" 데이터는 계산에서 빼되 **저장값(birth.sijin)은 지우지 않는다**(사용자 입력이다).
     반환 기둥은 [천간index, 지지index]. 시각을 모르면 hour는 null.
-    `timeMode`는 'exact' | 'none'. */
+    `timeMode`는 'exact' | 'none'.
+    [★ 2026-09-17 A7] `dayRule` — 정확한 시각이 자정 근처(civil 0시대 등)라 진태양시 보정이
+    일주를 **달력 날짜와 다른 날**로 넘길 때만 뜻이 있다(`docs/reports/2026-09-17-R2-방향검토.md`
+    §3-2). 'civil'이면 일주를 진태양시가 아니라 **달력 날짜**로 고정한다. 그 외(null 포함)는
+    지금까지와 같은 진태양시 기준 — **기존 사용자는 아무것도 안 바뀐다.** 이 선택은 일주에만
+    적용되고 시주(조자시)는 안 건드린다 — "유파 선택지는 두지 않는다"는 옛 결정은 시주 쪽
+    이야기라 그대로 둔다. */
 function sajuOf(b){
   if(!b||!Number.isInteger(b.y)||!Number.isInteger(b.m)||!Number.isInteger(b.d))return null;
   const hasTime=Number.isInteger(b.hour);
@@ -3118,10 +3130,21 @@ function sajuOf(b){
 
   /* 일주 — 시각을 정확히 모르면 진태양시를 적용할 수 없으므로 날짜 그대로 본다.
      (자정을 되넘길지 판단할 근거가 없다. 추정으로 하루를 옮기지 않는다)
-     대략도 마찬가지다 — 두 시간 폭 안에서 자정이 어느 쪽인지 알 수 없다. */
-  const dayIdx=hasTime?Math.floor(apparentMs/86400000)
-                      :Math.floor(Date.UTC(b.y,b.m-1,b.d)/86400000);
+     대략도 마찬가지다 — 두 시간 폭 안에서 자정이 어느 쪽인지 알 수 없다.
+     [2026-09-17 A7] 시각을 정확히 아는 사람도 **civilDayIdx와 apparentDayIdx가 갈릴 수 있다** —
+     자정 근처(civil 0시대)에 태어나면 진태양시가 전날로 넘어간다. `dayRuleAmbiguous`가 그 경우를
+     표시하고, `dayRule:'civil'`을 고른 사람만 civilDayIdx를 쓴다. 갈리지 않는 절대다수는
+     두 값이 같아 어느 쪽을 써도 결과가 같다 — 기존 동작 그대로다. */
+  const civilDayIdx=Math.floor(Date.UTC(b.y,b.m-1,b.d)/86400000);
+  const apparentDayIdx=Math.floor(apparentMs/86400000);
+  const dayRuleAmbiguous=hasTime&&civilDayIdx!==apparentDayIdx;
+  const useCivilDay=hasTime&&b.dayRule==='civil';
+  const dayIdx=!hasTime?civilDayIdx:(useCivilDay?civilDayIdx:apparentDayIdx);
   const dStem=((dayIdx+7)%10+10)%10, dBranch=((dayIdx+5)%12+12)%12;
+  /* 선택 화면이 두 후보를 나란히 보여줄 수 있게 양쪽 다 계산해 둔다. hasTime일 때만 뜻이 있다 —
+     시각 모름은 civilDayIdx 하나뿐이라 애초에 dayRuleAmbiguous가 안 켜진다. */
+  const dayCivilStem=((civilDayIdx+7)%10+10)%10, dayCivilBranch=((civilDayIdx+5)%12+12)%12;
+  const dayApparentStem=((apparentDayIdx+7)%10+10)%10, dayApparentBranch=((apparentDayIdx+5)%12+12)%12;
 
   /* 시주 — 오서둔(五鼠遁). 子시 천간 = (일간%5)*2.
      조자시 방식: 23시대는 일주를 안 옮기고 **시주 천간만** 다음날 일간에서 뽑는다. */
@@ -3138,7 +3161,9 @@ function sajuOf(b){
     hasTime:hasTime,timeMode:timeMode,lon:lon,utcMs:utcMs,apparentMs:apparentMs,apparentHour:aHour,
     jieMs:cur.ms,jieTerm:cur.term,jieTermYear:cur.termYear,nextJieMs:nextMs,
     minSinceJie:(utcMs-cur.ms)/60000,
-    minToNextJie:nextMs==null?null:(nextMs-utcMs)/60000};}
+    minToNextJie:nextMs==null?null:(nextMs-utcMs)/60000,
+    /* [2026-09-17 A7] */ dayRule:useCivilDay?'civil':'apparent',dayRuleAmbiguous:dayRuleAmbiguous,
+    dayCivil:[dayCivilStem,dayCivilBranch],dayApparent:[dayApparentStem,dayApparentBranch]};}
 
 /** 기둥 -> "甲子". 시각 모름이면 null이 들어오므로 호출부가 '미상'을 붙인다 */
 function pillarStr(p){return p?STEMS[p[0]]+BRANCHES[p[1]]:null;}
@@ -3149,7 +3174,7 @@ function pillarStr(p){return p?STEMS[p[0]]+BRANCHES[p[1]]:null;}
 function stemOfBirth(b){
   if(!b)return 0;
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon});
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});
   return r?r.day[0]:dayStem(b.y,b.m,b.d);}
 
 /* ═════════════════════════════════════════════════════════════════════════
@@ -3596,7 +3621,7 @@ function personGangyak(x){
   const b=x&&x.birth; if(!b)return '';
   let r=null;
   try{r=sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon});}catch(e){return '';}
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});}catch(e){return '';}
   if(!r)return '';
   const g=gangyak(r); return g?g.verdict:'';}
 
@@ -3663,7 +3688,7 @@ function relGod(a,b){return tenGod(a.stemIdx,b.stemIdx);}
 function relSpread(a,b){
   const bb=b.birth; if(!bb)return null;
   const r=sajuOf({y:bb.y,m:bb.m,d:bb.d,
-    hour:Number.isInteger(bb.hour)?bb.hour:null,min:bb.min,lon:bb.lon});
+    hour:Number.isInteger(bb.hour)?bb.hour:null,min:bb.min,lon:bb.lon,dayRule:bb.dayRule});
   if(!r)return null;
   const det=sajuDetail(r);
   const cnt={비겁:0,식상:0,재성:0,관성:0,인성:0};
@@ -3834,7 +3859,7 @@ function cornerPower(sur,dayStem,verdict){
 function personReading(n){
   const b=n.birth; if(!b)return null;
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon});
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});
   if(!r)return null;
   const det=sajuDetail(r), gy=gangyak(r), d=r.day[0];
   const letters=r.hasTime?8:6;
@@ -7417,9 +7442,9 @@ function applySeed(seed){
         {lon:p.birth.lon!==undefined?p.birth.lon
           :(CITY_LON[p.birth.city]!==undefined?CITY_LON[p.birth.city]:null)})),
       pos:p.pos?new THREE.Vector3(p.pos[0],p.pos[1],p.pos[2]):undefined,
-      /* [2026-09-17 A5] est:null 기본값 — DEMO_SEED·my-data.js처럼 migrate()를 안 거치는 시드에도
-         explicit null을 준다(마이그레이션 '2'가 실제 저장본에는 이미 넣어 준다). */
-      birth:Object.assign({hour:null,min:null,est:null},p.birth,
+      /* [2026-09-17 A5·A7] est:null·dayRule:null 기본값 — DEMO_SEED·my-data.js처럼 migrate()를
+         안 거치는 시드에도 explicit null을 준다(마이그레이션이 실제 저장본에는 이미 넣어 준다). */
+      birth:Object.assign({hour:null,min:null,est:null,dayRule:null},p.birth,
         {lon:p.birth.lon!==undefined?p.birth.lon
           :(CITY_LON[p.birth.city]!==undefined?CITY_LON[p.birth.city]:null)})});
     byKey.set(p.key,n);});
@@ -8140,7 +8165,7 @@ const JUSTLOADED_KEY='groupsaju:justloaded';   /* 새로고침 너머로 넘기�
 const BACKUP_APP='group-saju';
 const BACKUP_MAX_CHARS=2*1024*1024; /* 실측 저장 한계 5,177,344바이트 대비 여유(30인=7,931바이트) */
 const BACKUP_MAX_PEOPLE=1000;       /* 폭주 방지. 30인 7.9KB이므로 1000인도 260KB 안팎이다 */
-const SAVE_VER=3;
+const SAVE_VER=4;
 /* ═════ 마이그레이션 [틀 정비 2026-08-28] ═════
    키 'N'이 **vN → v(N+1)** 변환이다. 구조를 바꾸는 사람이 함수를 더하고 SAVE_VER을 올린다.
    규칙 전문은 CLAUDE.md "저장 형식을 바꿀 때는 변환을 함께 넣는다".
@@ -8158,6 +8183,14 @@ const SAVE_VER=3;
    [입력을 고치지 않는다] 각 함수는 **새 객체를 돌려준다.** 체인 중간에서 실패했을 때
    원본이 성해야 loadSave가 'migfail'로 원본을 보존할 수 있다. */
 const MIGRATIONS={
+  /* [v3 → v4, 2026-09-17 A7] **자정 근처 일주 선택**을 신설한다(`docs/reports/2026-09-17-R2-방향검토.md` §3-2).
+     `birth.dayRule`을 신설한다 — 진태양시 보정 때문에 일주가 달력 날짜와 달라지는 사람(23~01시
+     정확 입력자 일부)에게 "달력 날짜 기준 / 진태양시 기준(기본)" 중 어느 쪽을 쓸지 저장한다.
+     null이 정상값이다(걸리는 사람 자체가 드물고, 안 걸리는 사람은 값을 고를 화면도 안 뜬다) —
+     null이면 `sajuOf`가 지금까지처럼 진태양시 기준으로 계산한다(**기존 사용자 결과는 안 바뀐다**). */
+  '3':d=>Object.assign({},d,{v:4,
+    people:(d.people||[]).map(p=>Object.assign({},p,{
+      birth:Object.assign({dayRule:null},p.birth)}))}),
   /* [v2 → v3, 2026-09-17 A5] **태어난 시각 추정 기능**을 신설한다(`docs/시간추정-설계.md`).
      `birth.est`를 신설한다 — 답변으로 좁힌 시각 후보 하나를 담는다({sijin,sub,hour,answers,at}).
      **`birth.sijin`·`birth.hour`는 그대로 둔다** — 추정은 "정확히 안다"가 아니므로 옛 필드를
@@ -8453,6 +8486,9 @@ function parseBackup(text){
           고른것:typeof(a&&a.고른것)==='string'?a.고른것.slice(0,300):''})),
         at:b.est.at}
       :null;
+    /* [2026-09-17 A7] birth.dayRule — 'civil'만 특별하고 그 외는 전부 기본(진태양시)으로 접는다.
+       모르는 값이 들어와도 파일을 거부할 이유가 아니다(계산에 안전한 기본값으로 떨어진다). */
+    const dayRule=b.dayRule==='civil'?'civil':null;
     people.push({key:p.key,name,isMe:!!p.isMe,
       createdAt:typeof p.createdAt==='string'?p.createdAt:null,
       updatedAt:typeof p.updatedAt==='string'?p.updatedAt:null,
@@ -8465,7 +8501,7 @@ function parseBackup(text){
         /* 목록에 있는 도시면 우리 경도를 쓴다 — 파일의 값을 그대로 믿지 않는다 */
         lon:CITY_LON[city]!==undefined?CITY_LON[city]
           :(typeof b.lon==='number'&&isFinite(b.lon)?b.lon:null),
-        sex:(b.sex==='남'||b.sex==='여')?b.sex:null,est}});}
+        sex:(b.sex==='남'||b.sex==='여')?b.sex:null,est,dayRule}});}
 
   /* **isMe 폴백을 쓰지 않는다.** applySeed에는 "없으면 첫 사람을 나로"가 있지만 그건 우리가
      만든 시드에 대한 관용이다. 외부 파일에 적용하면 **엉뚱한 사람이 나가 된다.** */
@@ -10206,8 +10242,12 @@ async function sajuSelfTest(){
       !!c1&&!!c2&&c1!==c2, (c1&&c2)?'다름 확인':'texts 생성 실패');
   }catch(e){T('estCandidateTexts: 자시 두 슬롯이 갈린다',false,'예외 '+e.message);}
   {
-    const m=migrate({v:2,people:[{key:'est_t1',name:'테스트',isMe:true,
-      birth:{y:2000,m:1,d:1,sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:null}}]});
+    /* [2026-09-17 A7] ~~migrate({v:2,...})~~ → 이 한 단계만 직접 부른다. SAVE_VER이 오른 뒤로는
+       migrate()가 체인을 계속 태워 v가 3이 아니게 되므로(지금은 4), 이 테스트가 검사하려는
+       것("이 한 단계가 est:null을 채우는가")과 무관한 이유로 실패한다 — 실제로 A7 착수 때
+       "v4 est=null"로 걸렸다(맞는 결과인데 낡은 기대값 때문에 틀린 것처럼 보였다). */
+    const m={ok:true,data:MIGRATIONS['2']({v:2,people:[{key:'est_t1',name:'테스트',isMe:true,
+      birth:{y:2000,m:1,d:1,sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:null}}]})};
     T('estMigrateV2toV3: birth.est가 explicit null로 채워진다',
       m.ok&&m.data.v===3&&m.data.people[0].birth.est===null,
       m.ok?('v'+m.data.v+' est='+JSON.stringify(m.data.people[0].birth.est)):('실패: '+m.why));
@@ -10229,6 +10269,66 @@ async function sajuSelfTest(){
     T('estBackupParse: 모양이 이상한 est는 파일을 거부하지 않고 null로',
       rBad.ok&&rBad.data.people[0].birth.est===null,
       rBad.ok?('est='+JSON.stringify(rBad.data.people[0].birth.est)):('실패: '+rBad.why));
+  }
+
+  /* ═══ [2026-09-17 A7] 자정 일주 선택 — 순수 함수·읽기 전용 호출만 시험한다.
+     setDayRule()은 saveState()를 부르므로 A5의 estSave()와 같은 이유로 여기 안 넣는다. */
+  try{
+    const base={y:1990,m:1,d:1,lon:126.978};
+    const r23=sajuOf(Object.assign({},base,{hour:23,min:0}));
+    const r00=sajuOf(Object.assign({},base,{hour:0,min:0}));
+    const rNoon=sajuOf(Object.assign({},base,{hour:12,min:0}));
+    T('dayRuleAmbiguous: 자정 근처(0시)만 켜지고 23시·정오는 안 켜진다(A4 실측과 일치)',
+      r00&&r00.dayRuleAmbiguous===true&&r23&&r23.dayRuleAmbiguous===false&&rNoon&&rNoon.dayRuleAmbiguous===false,
+      '0시='+(r00&&r00.dayRuleAmbiguous)+' · 23시='+(r23&&r23.dayRuleAmbiguous)+' · 정오='+(rNoon&&rNoon.dayRuleAmbiguous));
+    T('dayRule 기본값: dayRule을 안 주면(undefined) apparent와 완전히 같다(기존 사용자 무영향)',
+      r00&&r00.dayRule==='apparent'&&r00.day[0]===r00.dayApparent[0]&&r00.day[1]===r00.dayApparent[1],
+      r00?('dayRule='+r00.dayRule+' · day='+r00.day+' · apparent='+r00.dayApparent):'실패');
+    const r00civil=sajuOf(Object.assign({},base,{hour:0,min:0,dayRule:'civil'}));
+    T('dayRule=civil: 실제로 일주가 달력 날짜 쪽으로 바뀐다',
+      r00civil&&r00civil.day[0]===r00civil.dayCivil[0]&&r00civil.day[1]===r00civil.dayCivil[1]
+        &&(r00civil.day[0]!==r00.day[0]||r00civil.day[1]!==r00.day[1]),
+      r00civil?('civil 선택 시 day='+r00civil.day+' · 기본 day='+r00.day):'실패');
+    const rNoonCivil=sajuOf(Object.assign({},base,{hour:12,min:0,dayRule:'civil'}));
+    T('dayRule=civil: 안 걸리는 사람은 civil을 골라도 결과가 똑같다',
+      rNoonCivil&&rNoonCivil.day[0]===rNoon.day[0]&&rNoonCivil.day[1]===rNoon.day[1],
+      rNoonCivil?('civil day='+rNoonCivil.day+' · 기본 day='+rNoon.day):'실패');
+  }catch(e){T('dayRuleAmbiguous/civil: sajuOf 실측',false,'예외 '+e.message);}
+  {
+    /* [2026-09-17 A7] 이 단계만 직접 부른다 — 위 estMigrateV2toV3와 같은 이유(다음에 SAVE_VER이
+       또 오르면 migrate()의 체인 끝 버전이 4가 아니게 된다). */
+    const m={ok:true,data:MIGRATIONS['3']({v:3,people:[{key:'dr_t1',name:'테스트',isMe:true,
+      birth:{y:2000,m:1,d:1,sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:null,est:null}}]})};
+    T('dayRuleMigrateV3toV4: birth.dayRule이 explicit null로 채워진다',
+      m.ok&&m.data.v===4&&m.data.people[0].birth.dayRule===null,
+      m.ok?('v'+m.data.v+' dayRule='+JSON.stringify(m.data.people[0].birth.dayRule)):('실패: '+m.why));
+  }
+  {
+    const bkGood2=JSON.stringify({app:BACKUP_APP,v:SAVE_VER,people:[{key:'dr_bk1',name:'갑',isMe:true,
+      birth:{y:1999,m:5,d:5,sijin:0,hour:0,min:0,city:'서울',lon:126.978,sex:null,dayRule:'civil'}}],
+      links:[],groups:[]});
+    const rGood2=parseBackup(bkGood2);
+    T('dayRuleBackupParse: civil은 그대로 들여온다',
+      rGood2.ok&&rGood2.data.people[0].birth.dayRule==='civil',
+      rGood2.ok?('dayRule='+rGood2.data.people[0].birth.dayRule):('실패: '+rGood2.why));
+    const bkBad2=JSON.stringify({app:BACKUP_APP,v:SAVE_VER,people:[{key:'dr_bk2',name:'을',isMe:true,
+      birth:{y:1999,m:5,d:5,sijin:0,hour:0,min:0,city:'서울',lon:126.978,sex:null,dayRule:'엉뚱값'}}],
+      links:[],groups:[]});
+    const rBad2=parseBackup(bkBad2);
+    T('dayRuleBackupParse: 모르는 값은 파일을 거부하지 않고 null(=apparent)로',
+      rBad2.ok&&rBad2.data.people[0].birth.dayRule===null,
+      rBad2.ok?('dayRule='+JSON.stringify(rBad2.data.people[0].birth.dayRule)):('실패: '+rBad2.why));
+  }
+  /* [2026-09-17 A7 실측으로 잡은 사고의 재발 방지] 사람을 만드는 경로가 셋(ob-start·ptSave·
+     savePerson)인데, 그중 ob-start·ptSave는 birth 리터럴에 est/dayRule을 안 넣고 있었다 —
+     "나"를 만들고 정보를 한 번만 고쳐도(savePerson의 이어받기가 undefined를 그대로 옮겨서)
+     est/dayRule이 null이 아니라 undefined로 굳는 것을 브라우저 실측으로 봤다. 지금 로드된
+     사람들(데모 또는 실제 저장본)의 birth가 전부 explicit null(또는 값)을 갖는지, undefined인
+     칸이 하나도 없는지를 매번 훑는다 — 세 경로 중 하나가 다시 빠뜨리면 여기서 걸린다. */
+  {
+    const undef=nodes.filter(n=>n.birth&&(n.birth.est===undefined||n.birth.dayRule===undefined));
+    T('nodeBirthFieldsExplicit: 로드된 사람 전원의 birth.est·birth.dayRule이 undefined가 아니다',
+      undef.length===0, undef.length?('어긋남 '+undef.length+'명: '+undef.map(n=>n.name).join(',')):(nodes.length+'명 전원 통과'));
   }
   return out;}
 function deselect(){if(selected){if(!selected.isMe&&selectedMesh)selectedMesh.scale.setScalar(V2_TUNABLES.PLANET_SCALE);selected=null;selectedMesh=null;}}
@@ -10311,7 +10411,7 @@ function wireHelp(root){
 function sajuTableHtml(n){
   const b=n.birth; if(!b)return '';
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon});
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});
   if(!r)return '';
   /* [L3 4단계] 열 구조는 그대로 두고 **세로로 늘린다** — 외부 만세력 두 곳과 같은 배열이라
      사용자가 다른 만세력과 나란히 놓고 볼 수 있다. 순서만 년→시로 우리 방식을 유지한다. */
@@ -10383,6 +10483,18 @@ function sajuTableHtml(n){
       const other=BRANCHES[(bi+(off<=10?11:1))%12];
       notes.push('이 시각은 <b>시주 경계</b>에 가깝습니다 — '+BRANCHES[bi]+'시일 수도 '+
         other+'시일 수도 있습니다.');}
+    /* [2026-09-17 A7] 자정 근처(civil 0시대 등) 정확 입력자에게만 — 진태양시 보정이 일주를
+       달력 날짜와 다른 날로 넘길 때 두 후보를 나란히 보여주고 고르게 한다(R2 §3-2 가 안).
+       걸리지 않는 절대다수는 r.dayRuleAmbiguous가 false라 이 안내 자체가 안 뜬다. */
+    if(r.dayRuleAmbiguous){
+      const civilStr=STEMS[r.dayCivil[0]]+BRANCHES[r.dayCivil[1]];
+      const apparentStr=STEMS[r.dayApparent[0]]+BRANCHES[r.dayApparent[1]];
+      notes.push('자정 근처에 태어나셔서 기준에 따라 <b>일주</b>가 달라집니다 — '
+        +'<button type="button" class="estnotebtn dayrulebtn'+(r.dayRule==='civil'?' on':'')
+          +'" data-dayrule="civil" data-id="'+n.id+'">달력 날짜 기준 '+civilStr+'</button>'
+        +'<button type="button" class="estnotebtn dayrulebtn'+(r.dayRule==='apparent'?' on':'')
+          +'" data-dayrule="apparent" data-id="'+n.id+'">진태양시 기준 '+apparentStr
+          +(r.dayRule==='apparent'?' · 기본':'')+'</button>');}
   }
   const noteHtml=notes.map(t=>`<div class="sjnote">${t}</div>`).join('');
   /* ── 신강·신약 ── */
@@ -10644,6 +10756,11 @@ function showNode(n,groupContext,targetMesh){
   pbody.querySelectorAll('[data-estclear]').forEach(el=>el.onclick=()=>{
     const t=nodes.find(x=>x.id===el.dataset.estclear); if(!t)return;
     if(confirm('추정한 시각을 지울까요? 되돌릴 수 없습니다.'))estClear(t);});
+  /* [2026-09-17 A7] 자정 일주 선택 손잡이 — 즉시 저장한다(A5의 estClear와 같은 패턴).
+     되돌릴 수 있다(설계 원칙과 같은 정신) — 버튼을 다시 누르면 바로 바뀐다, 확인창 불필요
+     (지우기와 달리 원본 시각을 잃는 게 아니라 같은 사주 안에서 계산 기준만 바꾸는 것이다). */
+  pbody.querySelectorAll('[data-dayrule]').forEach(el=>el.onclick=()=>{
+    const t=nodes.find(x=>x.id===el.dataset.id); if(t)setDayRule(t,el.dataset.dayrule);});
   document.getElementById('vstoggle').onclick=()=>{
     if(virtualMembers.some(c=>c.ref===n))removeFromVirtualSlot(n);else addToVirtualSlot(n);
     showNode(n);};
@@ -11510,6 +11627,15 @@ function estClear(n){
   n.updatedAt=nowISO();
   saveState();
   showNode(n);}
+/** [2026-09-17 A7] 자정 일주 선택 저장 — 'civil'|'apparent'만 받는다. sajuOf가 그 외 값은
+    'apparent'로 접으므로 여기서 한 번 더 검사할 필요는 없지만, 오타로 엉뚱한 문자열이 들어가면
+    다음 사람이 grep했을 때 헷갈리므로 미리 막아 둔다. */
+function setDayRule(n,which){
+  if(which!=='civil'&&which!=='apparent')return;
+  n.birth=Object.assign({},n.birth,{dayRule:which});
+  n.updatedAt=nowISO();
+  saveState();
+  showNode(n);}
 function renderEstStep(){
   const f=estFlow,body=document.getElementById('est-body');
   if(!f||!body)return;
@@ -12300,7 +12426,8 @@ function ptSave(){
       stemIdx:stemOfBirth({y:v.y,m:v.m,d:v.d,hour:v.hour,min:v.min,lon:v.lon}),isMe:false,
       createdAt:t0,updatedAt:t0,
       birth:{y:v.y,m:v.m,d:v.d,sijin:v.sijin,hour:v.hour,min:v.min,city:v.city,lon:v.lon,
-        sex:v.sex===undefined?null:v.sex}});
+        /* [2026-09-17 A7] est:null,dayRule:null 명시 — ob-start와 같은 이유(§ 실측으로 잡음) */
+        sex:v.sex===undefined?null:v.sex,est:null,dayRule:null}});
     /* [2026-08-28] ~~기존 인물 전원과 관계선~~ — 아래 layoutGalaxy가 부르는 rebuildEdges가
        **그룹에서** 다시 만든다. 전원 연결이 곧 "그룹과 무관한 선"의 출처였다. */
     (v.gids||[]).forEach(gid=>{
@@ -12528,7 +12655,12 @@ document.getElementById('ob-start').onclick=()=>{
   const birth={y:+obY.value,m:+obM.value,d:+obD.value,
     sijin:obTime.sijin,hour:obTime.hour,min:obTime.min,
     city,lon:CITY_LON[city]!==undefined?CITY_LON[city]:null,
-    sex:obSex===undefined?null:obSex};
+    sex:obSex===undefined?null:obSex,
+    /* [2026-09-17 A7 실측으로 잡음] savePerson의 est/dayRule 이어받기가 `editTarget.birth.est`를
+       읽는데, 이 온보딩 경로가 만드는 첫 번째 birth에 그 키가 아예 없으면 undefined가 되어
+       그대로 이어진다 — "나"를 만들고 바로 정보를 한 번만 고쳐도 est가 null이 아니라
+       undefined로 굳는 것을 실측으로 봤다. 여기서부터 명시적으로 null을 준다. */
+    est:null,dayRule:null};
   /* [예시 은하, 2026-08-28] **예시를 먼저 걷어낸다.** 안 지우면 가짜 여덟 명이 자기
      은하에 그대로 남고, 그 순간부터 저장까지 된다. */
   clearDemo();
@@ -12656,8 +12788,12 @@ function savePerson(){
     sex:fSex===undefined?null:fSex,   /* [2026-08-28] null = 값 없음 — L2가 대운을 건너뛴다 */
     /* [2026-09-17 A5] est를 옮겨 온다 — 이 폼은 est 입력칸이 없어서, 안 옮기면 이름·생년월일만
        고쳐도 추정해 둔 시각이 조용히 사라진다(CLAUDE.md "빠진 필드를 없음으로 때우지 말 것"과
-       같은 함정). 새로 만드는 사람은 추정한 적이 없으니 null. */
-    est:editTarget?editTarget.birth.est:null};
+       같은 함정). 새로 만드는 사람은 추정한 적이 없으니 null.
+       [2026-09-17 A7] dayRule도 같은 이유로 옮긴다 — 이 폼에 선택 UI가 없다. 옮겨도 안전하다:
+       고친 뒤 그 사람이 더 이상 자정 근처가 아니게 되면 sajuOf의 dayRuleAmbiguous가 꺼져
+       civil/apparent 어느 쪽이든 같은 값을 낸다(아래 계산 참고, index.html의 sajuOf 함수). */
+    est:editTarget?editTarget.birth.est:null,
+    dayRule:editTarget?editTarget.birth.dayRule:null};
   let n;
   if(editTarget){
     n=editTarget;n.name=name;n.birth=birth;
