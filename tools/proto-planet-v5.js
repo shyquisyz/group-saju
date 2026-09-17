@@ -1,4 +1,4 @@
-/* [2026-09-17 U2] 시안 5판 — 앱이 읽지 않는다. renderPlanet5(개수, 씨앗, 관계계열, 세기1~3). 결과: docs/reports/img/2026-09-17-U2/6-*.jpg */
+/* [2026-09-17 U2] 시안 5판 — 앱이 읽지 않는다. renderPlanet5(개수, 씨앗, 관계계열, 세기1~3). 결과: docs/reports/img/2026-09-17-U2/6-*.jpg, 7-*.jpg(넓이 수정 뒤) */
 /* 시안 5: 표면을 큰 영역으로 나눈다(상위 3행, 많을수록 넓게). 영역마다 그 오행의 모습으로 —
    수=바다 / 목=나무 빽빽한 섬 / 화=불타는 땅(압도적이면 태양) / 토=겹겹 모래 언덕 / 금=각진 결정 지대.
    경계는 해안·그을림으로 잇는다. 관계 효과: 가는 꼬리(빛줄기+먼지), 두꺼운 금색 고리. */
@@ -35,10 +35,17 @@
     for(let i=0;i<3000;i++){const z=r0()*2-1,t=r0()*Math.PI*2,q=Math.sqrt(1-z*z);pts.push([q*Math.cos(t),z,q*Math.sin(t)]);}
     const wAt=(x,y,z)=>els.map((k,i)=>N[i](x*1.05,y*1.05,z*1.05,3)+bias[i]);
     const vals=pts.map(p=>els.map((k,i)=>N[i](p[0]*1.05,p[1]*1.05,p[2]*1.05,3)));
-    for(let it=0;it<40;it++){
+    /* [자기 검토 뒤 수정] 고정 보폭 .6·40회는 수렴하지 않았다(실측: 목표 46/46 → 80/12).
+       보폭을 줄여 가며 400회 — 넓이 오차를 매번 재고 가장 좋았던 치우침을 쓴다. */
+    let best=null,bestErr=9;
+    for(let it=0;it<400;it++){
       const f=els.map(()=>0);
       vals.forEach(v=>{let bi=0,bv=-9;v.forEach((w,i)=>{if(w+bias[i]>bv){bv=w+bias[i];bi=i;}});f[bi]++;});
-      els.forEach((k,i)=>{bias[i]+=.6*(target[i]-f[i]/pts.length);});}
+      const err=Math.max(...els.map((k,i)=>Math.abs(target[i]-f[i]/pts.length)));
+      if(err<bestErr){bestErr=err;best=bias.slice();}
+      const step=.25*Math.pow(.992,it);
+      els.forEach((k,i)=>{bias[i]+=step*(target[i]-f[i]/pts.length);});}
+    best.forEach((v,i)=>bias[i]=v);
     /* 한 점의 영역: 가장 큰 가중치의 원소, margin = 1등과 2등의 차(경계일수록 0) */
     function at(x,y,z){const w=wAt(x,y,z);let a=0,b=-1;for(let i=1;i<w.length;i++)if(w[i]>w[a])a=i;
       for(let i=0;i<w.length;i++)if(i!==a&&(b<0||w[i]>w[b]))b=i;
