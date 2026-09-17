@@ -1,4 +1,4 @@
-/* [2026-09-17 U2] 시안 3판 — 앱이 읽지 않는다. renderBiome3(개수, 씨앗, 관계계열, 세기1~3). 결과: docs/reports/img/2026-09-17-U2/4-*.jpg */
+/* [2026-09-17 U2] 시안 3판 — 앱이 읽지 않는다. renderBiome3(개수, 씨앗, 관계계열, 세기1~3). 관계 효과는 window.REL_FX로 4판에서도 쓴다. */
 /* 시안 3: 본체 = 상위 3행 이하, 가장 많은 행이 "행성 종류"를 정하고 나머지는 같은 색조 안의 포인트.
    효과 = 나와의 관계(종류: 장식 / 세기: 혜성 꼬리 3단계). 본체는 관계와 무관하게 늘 같다. */
 (function(){
@@ -131,4 +131,5 @@
     for(let y=0;y<W;y++)img.data.set(px.subarray((W-1-y)*W*4,(W-y)*W*4),y*W*4);bx.putImageData(img,0,0);
     const c=document.createElement('canvas');c.width=c.height=S;const cx=c.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(big,0,0,S,S);return c;};
   window.topThree=topThree;
+  window.REL_FX={KIND,addTail};
 })();
