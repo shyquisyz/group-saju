@@ -1,0 +1,59 @@
+<!doctype html><meta charset="utf-8"><title>map check</title>
+<body style="margin:0;background:#0b0c14;color:#fff;font:13px sans-serif">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const BUST=Date.now();const KO={mok:'목',hwa:'화',to:'토',geum:'금',su:'수'};
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setSize(512,512);
+renderer.outputEncoding=THREE.sRGBEncoding;
+const loadImg=u=>new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=u;});
+async function planet(key,rot,pitch){
+  const im=await loadImg('map/'+key+'.jpg?b='+BUST);
+  const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);
+  const d=x.getImageData(0,0,c.width,c.height).data;const hasHwa=key.includes('hwa');
+  const e=document.createElement('canvas');e.width=c.width;e.height=c.height;const ex=e.getContext('2d');const ed=ex.createImageData(c.width,c.height);
+  for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2];
+    const hot=hasHwa?Math.max(0,Math.min(1,(r-b-195)/25))*Math.max(0,Math.min(1,(24-b)/8)):0;
+    ed.data[i]=r*hot;ed.data[i+1]=g*hot*.8;ed.data[i+2]=b*hot*.5;ed.data[i+3]=255;}
+  ex.putImageData(ed,0,0);
+  const map=new THREE.CanvasTexture(c);map.encoding=THREE.sRGBEncoding;map.anisotropy=8;
+  const emi=new THREE.CanvasTexture(e);emi.encoding=THREE.sRGBEncoding;
+  const ps=new THREE.Scene();ps.add(new THREE.AmbientLight(0x9098b8,.55));
+  const k=new THREE.DirectionalLight(0xfff4e6,1.35);k.position.set(5,6,8);ps.add(k);
+  const rl=new THREE.DirectionalLight(0x9fc0ff,.5);rl.position.set(-6,3,-9);ps.add(rl);
+  const m=new THREE.Mesh(new THREE.SphereGeometry(1,128,96),new THREE.MeshStandardMaterial({map,bumpMap:map,bumpScale:.015,emissiveMap:emi,emissive:0xffffff,emissiveIntensity:hasHwa?1.4:0,roughness:key.startsWith('geum')?.45:.85,metalness:key.startsWith('geum')?.25:0}));
+  m.rotation.set(pitch,rot,.08);ps.add(m);
+  const cam=new THREE.PerspectiveCamera(30,1,.1,100);cam.position.set(0,.3,1).normalize().multiplyScalar(1.4/Math.tan(15*Math.PI/180));cam.lookAt(0,0,0);
+  renderer.setClearColor(0x0b0c14,1);renderer.render(ps,cam);
+  const o=document.createElement('canvas');o.width=o.height=200;o.getContext('2d').drawImage(renderer.domElement,0,0,200,200);
+  map.dispose();emi.dispose();m.geometry.dispose();return o;}
+
+async function pickYaw(key){
+  const im=await loadImg('cls/'+key+'.png?b='+BUST);const t=new THREE.Texture(im);t.needsUpdate=true;t.magFilter=t.minFilter=THREE.NearestFilter;t.generateMipmaps=false;
+  const ps=new THREE.Scene();const m=new THREE.Mesh(new THREE.SphereGeometry(1,96,64),new THREE.MeshBasicMaterial({map:t}));ps.add(m);
+  const cam=new THREE.PerspectiveCamera(30,1,.1,100);cam.position.set(0,.3,1).normalize().multiplyScalar(1.4/Math.tan(15*Math.PI/180));cam.lookAt(0,0,0);
+  const N=96,rt=new THREE.WebGLRenderTarget(N,N),px=new Uint8Array(N*N*4);const want=key.split('-');const EL=['mok','hwa','to','geum','su'];
+  let best=null;
+  for(const pt of [-.45,-.25,0,.2,.45])for(let d=0;d<360;d+=10){const y=d*Math.PI/180;m.rotation.set(pt,y,.08);
+    renderer.setRenderTarget(rt);renderer.setClearColor(0x808080,1);renderer.clear();renderer.render(ps,cam);renderer.readRenderTargetPixels(rt,0,0,N,N,px);
+    const cnt={mok:0,hwa:0,to:0,geum:0,su:0};let n=0;
+    for(let i=0;i<px.length;i+=4){const r=px[i],g=px[i+1],b=px[i+2];if(r===128&&g===128&&b===128)continue;n++;
+      const R=r>128,G=g>128,B=b>128;const e=R&&G&&B?'geum':R&&G?'to':R?'hwa':G?'mok':B?'su':null;if(e)cnt[e]++;}
+    const fr={};EL.forEach(e=>fr[e]=cnt[e]/n);
+    const main=fr[want[0]],oth=want.slice(1).map(e=>fr[e]);const ok=oth.every(o=>main>=o);
+    const sc=(ok?2:0)+(oth.length?3*Math.min(Math.min(...oth),.2)+1.5*Math.min(Math.max(...oth),.25):0)+.5*main;
+    if(!best||sc>best.sc)best={sc,yaw:y,pitch:pt,fr};}
+  renderer.setRenderTarget(null);rt.dispose();t.dispose();m.geometry.dispose();return best;}
+(async()=>{
+  const keys=await (await fetch('keys.json')).json();const FACE={};
+  const C=11,S=200,R=Math.ceil(keys.length/C);
+  const sh=document.createElement('canvas');sh.width=C*S;sh.height=R*(S+22);const sx=sh.getContext('2d');sx.fillStyle='#0b0c14';sx.fillRect(0,0,sh.width,sh.height);
+  sx.font='bold 15px sans-serif';sx.fillStyle='#fff';sx.textAlign='center';
+  for(let i=0;i<keys.length;i++){const k=keys[i];const p=k.split('-');
+    FACE[k]=await pickYaw(k);const cv=await planet(k,FACE[k].yaw,FACE[k].pitch);const x=i%C*S,y=Math.floor(i/C)*(S+22);sx.drawImage(cv,x,y);
+    sx.fillText(KO[p[0]]+(p.length>1?' + '+p.slice(1).map(q=>KO[q]).join('·'):' 압도'),x+S/2,y+S+16);}
+  document.body.appendChild(sh);
+  const FJ={};for(const k in FACE)FJ[k]={yaw:+FACE[k].yaw.toFixed(4),pitch:FACE[k].pitch,vis:Object.fromEntries(Object.entries(FACE[k].fr).map(([e,f])=>[e,Math.round(f*100)]))};
+  await fetch('/facing.json',{method:'POST',body:'data:,'+btoa(JSON.stringify(FJ))});const r=await fetch('/sheet3.jpg',{method:'POST',body:sh.toDataURL('image/jpeg',.88)});
+  document.title='done '+(await r.text());
+})();
+</script>
