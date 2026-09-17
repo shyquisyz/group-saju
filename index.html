@@ -7779,7 +7779,9 @@ function pairClauses(A,kind){
     senders.push(pool.splice(i,1)[0]);}
   const one=s=>s.rec.length===1
     ?pairPhrase(s.giver,s.rec[0],kind,'short')
-    :`${josa(s.giver.name,'이가')} ${josa(s.rec.map(r=>r.name).join('·'),'을를')}(${EL_KO[s.giver.el]}→${[...new Set(s.rec.map(r=>EL_KO[r.el]))].join('·')})`;
+    /* [2026-09-17 A6-5] ~~josa(s.giver.name,'이가')~~ → subjKo — 발신자가 "나"일 때 "나가 아버지·동료를"로 나왔다(A6-4 실측).
+       대상이 하나인 조각은 pairPhrase가 subjKo를 이미 쓴다 — 여러 대상 조각만 빠져 있었다. */
+    :`${subjKo(s.giver.name)} ${josa(s.rec.map(r=>r.name).join('·'),'을를')}(${EL_KO[s.giver.el]}→${[...new Set(s.rec.map(r=>EL_KO[r.el]))].join('·')})`;
   let cut=0,acc=0;
   while(cut<senders.length&&cut<PAIR_SENDER_CAP&&(cut===0||acc+senders[cut].rec.length<=PAIR_COUNT_CAP)){
     acc+=senders[cut].rec.length;cut++;}
