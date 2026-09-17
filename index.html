@@ -2042,6 +2042,15 @@
   <div id="est-body"></div>
 </div>
 
+<!-- ═══ 스스로 본 모습 [2026-09-17 A8-2] ═══
+     설계: docs/reports/2026-09-17-A8-1-설계원고.md. estsheet와 같은 패턴 —
+     본문은 renderSelfStep()이 단계마다 다시 그린다. -->
+<div class="sheet" id="selfsheet">
+  <button type="button" class="sheetclose" aria-label="닫기" title="닫기">✕</button>
+  <h3 id="selfsheet-h">스스로 본 모습</h3>
+  <div id="self-body"></div>
+</div>
+
 <!-- ═══ 내보내기 · 불러오기 [2026-08-28] ═══
      z-index가 다른 시트(8)보다 높은 13이다 — **첫 화면(12) 위에 떠야** 하기 때문이다.
      기기를 옮긴 사람은 첫 화면에서 곧바로 불러와야 하고, 거기서 온보딩을 다시 시키면
@@ -3700,6 +3709,24 @@ function relSpread(a,b){
   const ks=Object.keys(cnt), mx=Math.max.apply(null,ks.map(k=>cnt[k]));
   return {cnt:cnt,tops:ks.filter(k=>cnt[k]===mx),max:mx,letters:letters,hasTime:r.hasTime};}
 
+/** 사람 한 명 자신의 사주에서 십신 다섯 갈래(계열) 분포를 센다 — 자기 자신 기준(relSpread는
+    "남이 나를" 기준이라 다른 함수다). [2026-09-17 A8-2] "스스로 본 모습" 테스트가 사주 쪽
+    1순위를 알아야 해서 새로 뽑았다 — personReading의 cnt 계산과 같은 식이라 여기 하나로
+    모은다(따로 두면 언젠가 어긋난다). birth가 없거나 사주를 못 내면 null. */
+function personGroupCounts(n){
+  const b=n.birth; if(!b)return null;
+  const r=sajuOf({y:b.y,m:b.m,d:b.d,
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});
+  if(!r)return null;
+  const det=sajuDetail(r), d=r.day[0];
+  const cnt10=[0,0,0,0,0,0,0,0,0,0];
+  det.forEach((p,i)=>{ if(!p)return;
+    if(i!==2)cnt10[tenGod(d,p.stem)]++;
+    cnt10[p.branchGod]++; });
+  const cnt={비겁:0,식상:0,재성:0,관성:0,인성:0};
+  cnt10.forEach((v,g)=>{cnt[TEN_GOD_GROUP[g]]+=v;});
+  return {cnt:cnt,cnt10:cnt10};}
+
 /** 인물 한 명의 해석 문단들. [{h:소제목, t:본문}] */
 /* ═══════════════════════════════════════════════════════════════════════
    개인 해석 코너 넷 [2026-08-31] — 어울리는 일 · 돈 스타일 · 관계 스타일 · 힘이 되는 기운
@@ -3856,6 +3883,138 @@ function cornerPower(sur,dayStem,verdict){
     else fact+=' 어느 쪽 사람과 만나도 무리가 없습니다.';}
   return {h:'힘이 되는 기운',t:cornerBlk(fact,take),raw:true};}
 
+/* ═══════════════════════════════════════════════════════════════════════
+   심리·상황 테스트 "스스로 본 모습" 원고 [A8-2, 2026-09-17]
+   설계: docs/reports/2026-09-17-A8-1-설계원고.md §3. 규칙은 A6 코너 원고와 같다 —
+   공백 제외 45자 이내, 사주 용어는 계열 이름 괄호 병기만, 주어는 비운다.
+   ═══════════════════════════════════════════════════════════════════════ */
+const GROUP5=['비겁','식상','재성','관성','인성'];
+/** 10문항 — 다섯 계열을 두 개씩 짝지은 10쌍을 한 번씩(§3-A). pair[0]=보기A가 얻는 계열,
+    pair[1]=보기B가 얻는 계열. "둘 다 아니에요"는 화면에서 고정으로 붙인다(원고에 안 둔다). */
+const SELF_Q=[
+  {pair:['비겁','식상'],q:'새 모임에 처음 나가면',a:'누가 뭐래도 제 방식대로 어울립니다.',b:'먼저 말을 꺼내 분위기를 띄웁니다.'},
+  {pair:['재성','비겁'],q:'일이 한꺼번에 몰리면',a:'무엇이 남는 일인지부터 따져 순서를 정합니다.',b:'남에게 넘기지 않고 끝까지 제 손으로 합니다.'},
+  {pair:['비겁','관성'],q:'정해진 방식이 마음에 안 들면',a:'더 낫다고 보는 제 방식대로 합니다.',b:'일단 정해진 대로 하고 나중에 고치자고 합니다.'},
+  {pair:['인성','비겁'],q:'처음 해 보는 일을 맡으면',a:'먼저 찾아보고 배운 다음 시작합니다.',b:'일단 부딪히며 제 식대로 익힙니다.'},
+  {pair:['식상','재성'],q:'여윳돈이 생기면',a:'하고 싶던 것을 해 보는 데 씁니다.',b:'불릴 곳이나 아낄 곳부터 찾습니다.'},
+  {pair:['관성','식상'],q:'회의 자리에서는',a:'정해진 안건과 시간을 지키려 합니다.',b:'엉뚱해도 떠오른 생각을 꺼냅니다.'},
+  {pair:['식상','인성'],q:'쉬는 날에는',a:'뭔가 만들거나 사람들과 떠들며 보냅니다.',b:'읽고 보고 생각하며 조용히 보냅니다.'},
+  {pair:['재성','관성'],q:'친구와 여행을 짤 때는',a:'예산과 가성비를 챙기는 쪽입니다.',b:'일정과 약속 시간을 챙기는 쪽입니다.'},
+  {pair:['인성','재성'],q:'고민이 생기면',a:'믿는 사람에게 묻고 조언을 듣습니다.',b:'얻을 것과 잃을 것을 적어 봅니다.'},
+  {pair:['관성','인성'],q:'칭찬 중에 더 기쁜 말은',a:'믿고 맡길 수 있다는 말입니다.',b:'생각이 깊다는 말입니다.'}];
+/** 답으로 본 결(SELF, §3-B 왼쪽) — 계열별로 답이 그쪽으로 기운다는 한 문단. */
+const SELF_LINE={
+  비겁:'답을 보면 스스로 버티는 기운(비겁) 쪽으로 기웁니다. 남에게 기대기보다 제 발로 섭니다.',
+  식상:'답을 보면 만들어 내고 표현하는 기운(식상) 쪽입니다. 생각을 밖으로 꺼낼 때 힘이 납니다.',
+  재성:'답을 보면 돈과 실속을 다루는 기운(재성) 쪽입니다. 남는 것을 먼저 따집니다.',
+  관성:'답을 보면 규칙과 책임을 지는 기운(관성) 쪽입니다. 약속과 순서를 먼저 챙깁니다.',
+  인성:'답을 보면 배우고 받아들이는 기운(인성) 쪽입니다. 움직이기 전에 생각부터 정리합니다.'};
+/** 사주와 답이 같을 때(MATCH, §3-B 오른쪽) — SELF_LINE 뒤에 이어 붙인다. */
+const SELF_MATCH={
+  비겁:'사주에도 이 기운이 가장 많습니다. 제 힘으로 서는 것이 타고난 결 그대로입니다.',
+  식상:'사주에도 이 기운이 가장 많습니다. 꺼내 보이는 쪽이 타고난 결 그대로입니다.',
+  재성:'사주에도 이 기운이 가장 많습니다. 실속을 챙기는 감각이 타고난 몫입니다.',
+  관성:'사주에도 이 기운이 가장 많습니다. 책임을 지는 자리가 몸에 맞습니다.',
+  인성:'사주에도 이 기운이 가장 많습니다. 배우며 깊어지는 쪽이 타고난 결입니다.'};
+/** 사주와 답이 다를 때(GAP, §3-C) — [사주 계열][답 계열] 한 문장. 대각선(같은 계열)은 MATCH
+    쪽이 쓰이므로 여기서는 null(=쓰지 않음). 앞에 "사주에서 가장 많은 것은 …" 틀 문장이 붙는다. */
+const SELF_GAP={
+  비겁:{비겁:null,
+    식상:'혼자 버티던 힘 위에 요즘은 표현하는 일을 더 쓰고 있습니다.',
+    재성:'제 힘으로 서는 결이 지금은 실속을 챙기는 데 쓰입니다.',
+    관성:'제 방식이 강한 결인데 지금은 정해진 틀에 맞추고 있습니다.',
+    인성:'혼자 해내던 결인데 지금은 배우고 묻는 쪽을 고르고 있습니다.'},
+  식상:{비겁:'표현하는 재주가 있는데 지금은 혼자 버티는 데 힘을 씁니다.',
+    식상:null,
+    재성:'만들어 내는 재주를 지금은 실속으로 바꾸려 하고 있습니다.',
+    관성:'하고 싶은 말이 많은데 지금은 규칙 안에서 아끼고 있습니다.',
+    인성:'꺼내는 재주가 있는데 지금은 안으로 쌓는 시기를 보냅니다.'},
+  재성:{비겁:'실속을 챙기는 감각이 있는데 지금은 제 힘으로 버티고 있습니다.',
+    식상:'계산이 빠른 결인데 지금은 하고 싶은 것을 먼저 고릅니다.',
+    재성:null,
+    관성:'판을 벌이는 감각이 있는데 지금은 맡은 책임부터 챙깁니다.',
+    인성:'벌이는 감각이 있는데 지금은 배우며 기다리는 쪽을 골랐습니다.'},
+  관성:{비겁:'책임을 지는 결인데 지금은 제 방식대로 가고 싶어 합니다.',
+    식상:'틀을 지키는 결인데 지금은 틀 밖으로 말을 꺼내고 싶어 합니다.',
+    재성:'기준을 세우는 결인데 지금은 남는 것을 먼저 따지고 있습니다.',
+    관성:null,
+    인성:'책임을 지는 결인데 지금은 한발 물러나 배우는 중입니다.'},
+  인성:{비겁:'받아들이는 결인데 지금은 제 힘으로 서 보려 하고 있습니다.',
+    식상:'안으로 쌓는 결인데 지금은 밖으로 꺼내 보이고 싶어 합니다.',
+    재성:'생각이 깊은 결인데 지금은 실속을 먼저 챙기고 있습니다.',
+    관성:'배우는 결인데 지금은 맡은 자리와 책임을 챙기고 있습니다.',
+    인성:null}};
+/** GAP 뒤에 고정으로 붙는 두 문장(§3-C 끝). */
+const SELF_GAP_TAIL='타고난 결과 지금의 답이 달라도 틀린 게 아닙니다. 그 차이가 지금 서 있는 자리입니다.';
+/** 공통·시각 검증 문구(§3-D). */
+const SELF_COMMON={
+  tie:'답을 보면 여러 기운이 고르게 나옵니다. 한쪽으로 치우치지 않은 답입니다.',
+  allUnsure:'고른 답이 없어 결을 읽지 못했습니다. 다시 해 보시면 나란히 보여 드립니다.',
+  introMe:'열 가지 장면에서 더 가까운 쪽을 고르면, 사주와 나란히 놓아 보여 드립니다.',
+  introOther:'이 사람을 떠올리며 답해 주세요. 답은 사주 계산을 바꾸지 않습니다.',
+  verifySame:'답으로 좁힌 시각도 {칸}입니다. 알고 계신 시각과 같은 쪽입니다.',
+  verifyDiff:'답으로는 {칸1} 쪽이 나왔습니다. 알고 계신 시각은 {칸2}입니다.',
+  verifyDiffTail:'시각이 확실하다면, 답이 요즘 모습 쪽에 더 가깝다는 뜻일 수 있습니다.',
+  verifyIntro:'알고 계신 시각이 맞는지 답으로 한번 짚어 볼 수 있습니다. 결과는 저장하지 않습니다.'};
+/** 상황 문항 보기(§3-E 머리말) — "딱히 없음"은 situation:null로 저장한다. */
+const SITU_OPTS=['일','연애','돈','가족'];
+/** 상황 × 사주 1순위 20(§3-E). [상황][사주계열] 한 문장. */
+const SITU_LINE={
+  일:{비겁:'일에서는 혼자 맡아 끝까지 가는 자리가 힘이 됩니다.',
+    식상:'일에서는 생각을 꺼내 보이는 자리가 힘이 됩니다.',
+    재성:'일에서는 결과가 숫자로 보이는 자리가 힘이 됩니다.',
+    관성:'일에서는 책임과 권한이 분명한 자리가 힘이 됩니다.',
+    인성:'일에서는 배우며 깊어지는 자리가 힘이 됩니다.'},
+  연애:{비겁:'연애에서는 나란히 걷는 사이가 오래 갑니다. 기대기보다 함께 서세요.',
+    식상:'연애에서는 마음을 말로 꺼내야 풀립니다. 아끼지 마세요.',
+    재성:'연애에서도 챙기는 손이 먼저 갑니다. 받는 연습도 해 보세요.',
+    관성:'연애에서도 약속을 지키는 것이 마음입니다. 틀을 강요하지는 마세요.',
+    인성:'연애에서는 기대고 싶은 마음이 큽니다. 기대는 만큼 들어 주세요.'},
+  돈:{비겁:'돈은 남과 나누는 판에서 새기 쉽습니다. 몫을 먼저 정하세요.',
+    식상:'돈은 하고 싶은 일에 먼저 나갑니다. 쓰기 전에 하루만 미뤄 보세요.',
+    재성:'돈을 굴리는 감각이 있습니다. 벌인 판을 하나씩 정리하면 남습니다.',
+    관성:'돈은 정해 둔 규칙대로 모일 때 불어납니다. 저절로 모이게 해 두세요.',
+    인성:'돈 결정은 믿는 사람의 말에 기대기 쉽습니다. 한 번 더 따져 보세요.'},
+  가족:{비겁:'가족 안에서도 혼자 짊어지기 쉽습니다. 나눠 들어 달라고 말하세요.',
+    식상:'가족 안에서 분위기를 만드는 쪽입니다. 지칠 때는 쉬어도 됩니다.',
+    재성:'가족 살림을 챙기는 손입니다. 챙긴 만큼 고맙다는 말을 들어도 됩니다.',
+    관성:'가족 안에서 기준을 세우는 쪽입니다. 가끔은 예외를 허락하세요.',
+    인성:'가족에게서 힘을 얻는 쪽입니다. 받은 만큼 먼저 연락하세요.'}};
+/** 상황이 정해지면 펼칠 코너 — personReading이 매기는 key('n:'+h, 4006행)와 같은 문자열이어야
+    showNode의 접힘 목록에서 뺄 수 있다(§1-ⓒ 효과①). */
+const SITU_CORNER={일:'n:어울리는 일',연애:'n:관계 스타일',돈:'n:돈 스타일',가족:'n:힘이 되는 기운'};
+
+/** 답변 계열 점수에서 1순위(들)를 뽑는다. total=0이면 전부 "둘 다 아니에요"(§3-D-2). 순수 함수. */
+function selfAnswerTops(counts){
+  const total=GROUP5.reduce((s,k)=>s+counts[k],0);
+  if(!total)return {total:0,tops:[]};
+  const mx=Math.max.apply(null,GROUP5.map(k=>counts[k]));
+  return {total:total,tops:GROUP5.filter(k=>counts[k]===mx)};}
+/** 사주 계열 분포(personGroupCounts의 cnt)에서 1순위(들)를 뽑는다. 순수 함수. */
+function sajuTopGroups(cnt){
+  const mx=Math.max.apply(null,GROUP5.map(k=>cnt[k]));
+  return GROUP5.filter(k=>cnt[k]===mx);}
+/** "스스로 본 모습" 비교 판정 — 순수 함수(설계 §4-7). self.counts와 사주 계열 분포(cnt)를 받아
+    {kind:'allUnsure'|'match'|'gap', ...}를 돌려준다. 겹치면(교집합 있으면) match다(§1-ⓑ).
+    사주·답이 각각 동점이어도 겹침 여부로만 가른다 — 문장에 쓸 대표 계열 하나가 필요할 때만
+    CNR_GRP5 순서(§3-E 권장, cornerJob과 같은 순서)로 하나를 고른다. */
+function selfCompare(counts,cnt){
+  const A=selfAnswerTops(counts), S=sajuTopGroups(cnt);
+  if(!A.total)return {kind:'allUnsure',aTie:false,sTops:S};
+  const aTie=A.tops.length>1;
+  const overlap=A.tops.some(k=>S.indexOf(k)>=0);
+  if(overlap)return {kind:'match',aTie:aTie,aTops:A.tops,sTops:S,
+    group:CNR_GRP5.find(k=>A.tops.indexOf(k)>=0&&S.indexOf(k)>=0)};
+  return {kind:'gap',aTie:aTie,aTops:A.tops,sTops:S,
+    selfGroup:CNR_GRP5.find(k=>A.tops.indexOf(k)>=0),
+    sajuGroup:CNR_GRP5.find(k=>S.indexOf(k)>=0)};}
+/** 상황(§1-ⓒ) 한 줄 — sTops는 sajuTopGroups(cnt)의 결과(또는 selfCompare가 이미 낸 것을
+    재사용). 사주 1순위가 동점이면 CNR_GRP5 순서에서 먼저 나오는 쪽[권장](§3-E). */
+function situLine(situation,sTops){
+  if(!situation||!SITU_LINE[situation]||!sTops||!sTops.length)return null;
+  const g=CNR_GRP5.find(k=>sTops.indexOf(k)>=0);
+  return SITU_LINE[situation][g];}
+
 function personReading(n){
   const b=n.birth; if(!b)return null;
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
@@ -3866,13 +4025,11 @@ function personReading(n){
 
   /* 십신 낱개 개수 — 일간은 뺀다(자기 자신은 셈에서 제외).
      [2026-08-31] 계열 개수(cnt)를 여기서 **파생**시킨다. 따로 세면 언젠가 어긋난다 —
-     "돈 스타일"이 쓰는 정재·편재 낱개와 위 문단이 쓰는 계열이 같은 셈에서 나와야 한다. */
-  const cnt10=[0,0,0,0,0,0,0,0,0,0];
-  det.forEach((p,i)=>{ if(!p)return;
-    if(i!==2)cnt10[tenGod(d,p.stem)]++;
-    cnt10[p.branchGod]++; });
-  const cnt={비겁:0,식상:0,재성:0,관성:0,인성:0};
-  cnt10.forEach((v,g)=>{cnt[TEN_GOD_GROUP[g]]+=v;});
+     "돈 스타일"이 쓰는 정재·편재 낱개와 위 문단이 쓰는 계열이 같은 셈에서 나와야 한다.
+     [2026-09-17 A8-2] personGroupCounts(n)로 뽑아 쓴다 — "스스로 본 모습" 테스트도 같은
+     계열 분포가 필요해서 뗐다. sajuOf를 한 번 더 부르지만(위 r과 별개 계산) 이 앱 규모에서
+     부담이 아니고, 계산 로직 자체를 두 벌로 두는 것보다 안전하다. */
+  const pg=personGroupCounts(n), cnt10=pg.cnt10, cnt=pg.cnt;
 
   const out=[];
 
@@ -6596,7 +6753,7 @@ const sphereGeo=new THREE.SphereGeometry(1.0,42,42);
    경도(`lon`)와 성별을 미리 받아 둔 것과 같은 논리다.
    값이 없으면 `null`로 둔다. **지어낸 시각을 채워 넣지 않는다** — "없다"와 "모른다"를
    구분해 둬야 나중에 토큰·수정 정책을 붙일 때 쓸 수 있다. */
-function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt}){
+function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt,self}){
   const el=STEM_EL[stemIdx],info=EL_INFO[el];
   /* [A] map/bumpMap/roughness/metalness를 stemSurface가 한 번에 준다 — 오행별 재질 분리
      (금 매끄럽고 반사 강하게 / 토 거칠고 무광)와 음양 요철이 전부 그 안에 들어 있다. */
@@ -6624,6 +6781,12 @@ function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updat
     innerTree:mesh.children.find(c=>c.type==='Group')||null, /* [F-5 甲] 일간 교체 때 떼어내려면 참조가 필요하다 */
     vel:new THREE.Vector3(),spin:.003+Math.random()*.004,
     orbit:null,rings:[],birth:birth||null,isMe:!!isMe,
+    /* [A8-2, 2026-09-17] self는 여기서만 기본값을 정한다 — addNode가 사람을 만드는 유일한
+       자리라, 온보딩·표 붙여넣기·새 사람 폼 세 경로를 따로 안 고쳐도 전부 null로 시작한다.
+       A5(est)·A7(dayRule) 때 세 경로 중 두 곳을 놓쳐 undefined로 굳었던 사고(§ 각 회차
+       보고 참고)를 birth 대신 node 레벨에 둬서 구조적으로 막는다. 복원(applySeed)만
+       예외로 self:p.self를 명시해 넘긴다. */
+    self:self===undefined?null:self,
     createdAt:createdAt===undefined?null:createdAt,
     updatedAt:updatedAt===undefined?null:updatedAt};
   mesh.userData.node=node;nodes.push(node);
@@ -7446,7 +7609,11 @@ function applySeed(seed){
          안 거치는 시드에도 explicit null을 준다(마이그레이션이 실제 저장본에는 이미 넣어 준다). */
       birth:Object.assign({hour:null,min:null,est:null,dayRule:null},p.birth,
         {lon:p.birth.lon!==undefined?p.birth.lon
-          :(CITY_LON[p.birth.city]!==undefined?CITY_LON[p.birth.city]:null)})});
+          :(CITY_LON[p.birth.city]!==undefined?CITY_LON[p.birth.city]:null)}),
+      /* [2026-09-17 A8-2] self는 저장본을 복원하는 이 자리에서만 명시적으로 넘긴다 —
+         addNode 자체 기본값(null)은 새로 만드는 경로용이고, 여기는 이미 있던 값을 이어받는
+         자리라 다르다. p.self가 아예 없는 시드(DEMO_SEED·my-data.js)는 null로 접는다. */
+      self:p.self===undefined?null:p.self});
     byKey.set(p.key,n);});
 
   (seed.links||[]).forEach(([a,b])=>{
@@ -8165,7 +8332,7 @@ const JUSTLOADED_KEY='groupsaju:justloaded';   /* 새로고침 너머로 넘기�
 const BACKUP_APP='group-saju';
 const BACKUP_MAX_CHARS=2*1024*1024; /* 실측 저장 한계 5,177,344바이트 대비 여유(30인=7,931바이트) */
 const BACKUP_MAX_PEOPLE=1000;       /* 폭주 방지. 30인 7.9KB이므로 1000인도 260KB 안팎이다 */
-const SAVE_VER=4;
+const SAVE_VER=5;
 /* ═════ 마이그레이션 [틀 정비 2026-08-28] ═════
    키 'N'이 **vN → v(N+1)** 변환이다. 구조를 바꾸는 사람이 함수를 더하고 SAVE_VER을 올린다.
    규칙 전문은 CLAUDE.md "저장 형식을 바꿀 때는 변환을 함께 넣는다".
@@ -8183,6 +8350,13 @@ const SAVE_VER=4;
    [입력을 고치지 않는다] 각 함수는 **새 객체를 돌려준다.** 체인 중간에서 실패했을 때
    원본이 성해야 loadSave가 'migfail'로 원본을 보존할 수 있다. */
 const MIGRATIONS={
+  /* [v4 → v5, 2026-09-17 A8-2] **심리·상황 테스트("스스로 본 모습")**를 신설한다
+     (`docs/reports/2026-09-17-A8-1-설계원고.md`). **사람 레벨**에 `self`를 신설한다 —
+     `birth` 안이 아니다. 테스트는 태어난 시각과 무관하게 "지금의 나(또는 상대)를 어떻게
+     보는가"를 묻는 것이라, 출생 정보(`birth`)와 성격이 다르다고 판단해 따로 뒀다.
+     null이 정상값이다(해 본 적 없는 사람이 압도적으로 많다). */
+  '4':d=>Object.assign({},d,{v:5,
+    people:(d.people||[]).map(p=>Object.assign({self:null},p))}),
   /* [v3 → v4, 2026-09-17 A7] **자정 근처 일주 선택**을 신설한다(`docs/reports/2026-09-17-R2-방향검토.md` §3-2).
      `birth.dayRule`을 신설한다 — 진태양시 보정 때문에 일주가 달력 날짜와 달라지는 사람(23~01시
      정확 입력자 일부)에게 "달력 날짜 기준 / 진태양시 기준(기본)" 중 어느 쪽을 쓸지 저장한다.
@@ -8323,7 +8497,7 @@ function clearDemo(){
    0,1,2…로 다시 매기므로 배치가 그대로 재현된다. */
 function serializeState(){
   return {v:SAVE_VER,savedAt:nowISO(),
-    people:nodes.map(x=>({key:x.id,name:x.name,isMe:!!x.isMe,birth:x.birth,
+    people:nodes.map(x=>({key:x.id,name:x.name,isMe:!!x.isMe,birth:x.birth,self:x.self,
       createdAt:x.createdAt||null,updatedAt:x.updatedAt||null})),
     /* [2026-08-28] 성계마다 선을 긋게 되면서 같은 쌍이 여러 번 나온다. 저장본에는 한 번만
        담는다 — 어차피 불러온 뒤 그룹에서 다시 만든다(rebuildEdges). */
@@ -8489,7 +8663,23 @@ function parseBackup(text){
     /* [2026-09-17 A7] birth.dayRule — 'civil'만 특별하고 그 외는 전부 기본(진태양시)으로 접는다.
        모르는 값이 들어와도 파일을 거부할 이유가 아니다(계산에 안전한 기본값으로 떨어진다). */
     const dayRule=b.dayRule==='civil'?'civil':null;
-    people.push({key:p.key,name,isMe:!!p.isMe,
+    /* [2026-09-17 A8-2] self — 「스스로 본 모습」 테스트 결과 하나. birth 안이 아니라 **사람
+       레벨**이다(위 est·dayRule과 자리가 다른 이유는 addNode 주석 참고). 모양이 안 맞으면
+       est와 같은 이유로 조용히 null로 접는다 — 계산에 안 쓰이는 부가 정보다.
+       GROUP5는 전역(personGroupCounts 옆) — 여기서 새로 만들지 않는다. */
+    const self=(p.self&&typeof p.self==='object'
+        &&Array.isArray(p.self.answers)&&p.self.answers.length<=10
+        &&p.self.answers.every(a=>a&&Number.isInteger(a.q)&&a.q>=0&&a.q<=9
+          &&(a.pick==='A'||a.pick==='B'||a.pick==='U'))
+        &&p.self.counts&&typeof p.self.counts==='object'
+        &&GROUP5.every(g=>Number.isInteger(p.self.counts[g])&&p.self.counts[g]>=0)
+        &&(p.self.situation===null||['일','연애','돈','가족'].indexOf(p.self.situation)>=0)
+        &&typeof p.self.at==='string')
+      ?{answers:p.self.answers.map(a=>({q:a.q,pick:a.pick})),
+        counts:Object.assign({},...GROUP5.map(g=>({[g]:p.self.counts[g]}))),
+        situation:p.self.situation,at:p.self.at}
+      :null;
+    people.push({key:p.key,name,isMe:!!p.isMe,self,
       createdAt:typeof p.createdAt==='string'?p.createdAt:null,
       updatedAt:typeof p.updatedAt==='string'?p.updatedAt:null,
       birth:{y:b.y,m:b.m,d:b.d,
@@ -10330,6 +10520,73 @@ async function sajuSelfTest(){
     T('nodeBirthFieldsExplicit: 로드된 사람 전원의 birth.est·birth.dayRule이 undefined가 아니다',
       undef.length===0, undef.length?('어긋남 '+undef.length+'명: '+undef.map(n=>n.name).join(',')):(nodes.length+'명 전원 통과'));
   }
+
+  /* ═══ [2026-09-17 A8-2] 「스스로 본 모습」 — 원고 완전성·균형, 저장·이동, 판정 순수 함수. ═══ */
+  {
+    T('selfQ: 문항이 10개다', SELF_Q.length===10, 'length='+SELF_Q.length);
+    const need5=GROUP5.every(g=>typeof SELF_LINE[g]==='string'&&typeof SELF_MATCH[g]==='string');
+    T('selfLine/selfMatch: 다섯 계열 모두 있다', need5,
+      GROUP5.map(g=>g+':'+(!!SELF_LINE[g])+'/'+(!!SELF_MATCH[g])).join(' '));
+    let gapCnt=0; GROUP5.forEach(a=>GROUP5.forEach(b=>{ if(a!==b&&typeof SELF_GAP[a][b]==='string')gapCnt++; }));
+    T('selfGap: 20칸(5×5에서 대각선 제외) 모두 있다', gapCnt===20, 'count='+gapCnt);
+    let situCnt=0; SITU_OPTS.forEach(s=>GROUP5.forEach(g=>{ if(typeof SITU_LINE[s][g]==='string')situCnt++; }));
+    T('situLine: 20칸(4상황×5계열) 모두 있다', situCnt===20, 'count='+situCnt);
+    const apCount={},first={}; GROUP5.forEach(g=>{apCount[g]=0;first[g]=0;});
+    SELF_Q.forEach(q=>{apCount[q.pair[0]]++;apCount[q.pair[1]]++;first[q.pair[0]]++;});
+    T('selfQ: 계열별 등장이 각 4회다', GROUP5.every(g=>apCount[g]===4),
+      GROUP5.map(g=>g+':'+apCount[g]).join(' '));
+    T('selfQ: 앞자리(보기 A) 계열이 각 2회다', GROUP5.every(g=>first[g]===2),
+      GROUP5.map(g=>g+':'+first[g]).join(' '));
+  }
+  try{
+    const zero=Object.assign({},...GROUP5.map(g=>({[g]:0})));
+    const mk=over=>Object.assign({},zero,over);
+    const rMatch=selfCompare(mk({비겁:3}),mk({비겁:5}));
+    T('selfCompare: 사주·답 1순위가 겹치면 match',
+      rMatch.kind==='match'&&rMatch.group==='비겁', JSON.stringify(rMatch));
+    const rGap=selfCompare(mk({비겁:3}),mk({재성:5}));
+    T('selfCompare: 안 겹치면 gap(사주·답 계열을 각각 낸다)',
+      rGap.kind==='gap'&&rGap.sajuGroup==='재성'&&rGap.selfGroup==='비겁', JSON.stringify(rGap));
+    const rTie=selfCompare(mk({비겁:2,식상:2}),mk({비겁:5}));
+    T('selfCompare: 답이 동점이어도 그중 하나가 사주 1순위와 겹치면 match(집합 겹침)',
+      rTie.kind==='match'&&rTie.aTie===true, JSON.stringify(rTie));
+    const rAllU=selfCompare(zero,mk({비겁:5}));
+    T('selfCompare: 전부 "둘 다 아니에요"면 allUnsure', rAllU.kind==='allUnsure', JSON.stringify(rAllU));
+  }catch(e){T('selfCompare: 판정 순수 함수',false,'예외 '+e.message);}
+  {
+    const m={ok:true,data:MIGRATIONS['4']({v:4,people:[{key:'self_t1',name:'테스트',isMe:true,
+      birth:{y:2000,m:1,d:1,sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:null,est:null,dayRule:null}}]})};
+    T('selfMigrateV4toV5: 사람 레벨 self가 explicit null로 채워진다',
+      m.ok&&m.data.v===5&&m.data.people[0].self===null,
+      m.ok?('v'+m.data.v+' self='+JSON.stringify(m.data.people[0].self)):('실패: '+m.why));
+  }
+  {
+    const goodSelf={answers:[{q:0,pick:'A'},{q:1,pick:'U'}],
+      counts:Object.assign({},...GROUP5.map(g=>({[g]:0})),{비겁:1}),situation:'일',at:nowISO()};
+    const bkGood=JSON.stringify({app:BACKUP_APP,v:SAVE_VER,people:[{key:'self_bk1',name:'갑',isMe:true,self:goodSelf,
+      birth:{y:1999,m:5,d:5,sijin:2,hour:null,min:null,city:'서울',lon:126.978,sex:null,est:null,dayRule:null}}],
+      links:[],groups:[]});
+    const rGood=parseBackup(bkGood);
+    T('selfBackupParse: 모양이 맞는 self는 그대로 들여온다',
+      rGood.ok&&!!rGood.data.people[0].self&&rGood.data.people[0].self.situation==='일',
+      rGood.ok?JSON.stringify(rGood.data.people[0].self):('실패: '+rGood.why));
+    const bkBad=JSON.stringify({app:BACKUP_APP,v:SAVE_VER,people:[{key:'self_bk2',name:'을',isMe:true,
+      self:{answers:'엉뚱',counts:{},situation:'모름',at:1},
+      birth:{y:1999,m:5,d:5,sijin:2,hour:null,min:null,city:'서울',lon:126.978,sex:null,est:null,dayRule:null}}],
+      links:[],groups:[]});
+    const rBad=parseBackup(bkBad);
+    T('selfBackupParse: 모양이 이상한 self는 파일을 거부하지 않고 null로',
+      rBad.ok&&rBad.data.people[0].self===null,
+      rBad.ok?('self='+JSON.stringify(rBad.data.people[0].self)):('실패: '+rBad.why));
+  }
+  /* [2026-09-17 A8-2, A5·A7과 같은 재발 방지] self는 addNode가 기본값을 정하는 구조라(§3-A8-2
+     설계 참고) A5·A7의 "생성 경로 셋 중 하나가 빠뜨림" 사고가 구조적으로 안 나야 하지만,
+     같은 이름의 안전망을 그대로 남긴다 — 로드된 사람 전원의 self가 undefined가 아닌지 훑는다. */
+  {
+    const undef=nodes.filter(n=>n.self===undefined);
+    T('nodeSelfExplicit: 로드된 사람 전원의 self가 undefined가 아니다(null 또는 값)',
+      undef.length===0, undef.length?('어긋남 '+undef.length+'명: '+undef.map(n=>n.name).join(',')):(nodes.length+'명 전원 통과'));
+  }
   return out;}
 function deselect(){if(selected){if(!selected.isMe&&selectedMesh)selectedMesh.scale.setScalar(V2_TUNABLES.PLANET_SCALE);selected=null;selectedMesh=null;}}
 /* [§7.4] groupContext/targetMesh 둘 다 선택 인자 — 안 넘기면 지금까지와 100% 동일하게 동작한다
@@ -10495,6 +10752,11 @@ function sajuTableHtml(n){
         +'<button type="button" class="estnotebtn dayrulebtn'+(r.dayRule==='apparent'?' on':'')
           +'" data-dayrule="apparent" data-id="'+n.id+'">진태양시 기준 '+apparentStr
           +(r.dayRule==='apparent'?' · 기본':'')+'</button>');}
+    /* [2026-09-17 A8-2] §1-ⓐ 시각 검증 — 시각을 정확히 아는 사람에게만. estsheet를
+       mode:'verify'로 열어 A5와 같은 질문 엔진으로 좁힌 뒤(§3-D8), 결과만 다르게 보여준다.
+       birth.est는 안 건드린다. */
+    notes.push(SELF_COMMON.verifyIntro
+      +' <button type="button" class="estnotebtn" data-estverify="'+n.id+'">확인해 보기 →</button>');
   }
   const noteHtml=notes.map(t=>`<div class="sjnote">${t}</div>`).join('');
   /* ── 신강·신약 ── */
@@ -10693,9 +10955,13 @@ function showNode(n,groupContext,targetMesh){
      정해지는 309자였다(R2 §2-2 ⑤). 해상도 높은 덩이를 앞에 둔다. ③ 여덟 글자·나머지 코너는 계속 접는다. */
   const PAIR_FOLD=['p:여덟 글자로 보면'];
   const SELF_OPEN=new Set(['n:어떤 사람인가','n:관심이 향하는 곳','n:넘치는 것과 비어 있는 것']);
-  const selfFold=rd?rd.map(x=>x.key).filter(k=>!SELF_OPEN.has(k)):[];
+  /* [2026-09-17 A8-2] §1-ⓒ 효과① — 상황을 골랐으면 그 코너를 펼친다. SITU_CORNER의 값이
+     personReading이 매기는 key(4006행 'n:'+h)와 같은 문자열이라 접힘 목록에서 빼기만 하면 된다. */
+  const situOpenKey=n.self&&n.self.situation?SITU_CORNER[n.self.situation]:null;
+  const selfFold=rd?rd.map(x=>x.key).filter(k=>!SELF_OPEN.has(k)&&k!==situOpenKey):[];
   const rdHtml=rd?readingHtml(rd,selfFold):'';
-  const main=(r?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')+rdHtml;
+  const main=(r?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')+rdHtml
+    +selfSectionHtml(n);   /* [2026-09-17 A8-2] 「스스로 본 모습」 — personReading 뒤 */
   const PB=isMe?null:pairBlock(meNode,n,PAIR_FOLD);
   /* 관계 구역 — 근거·고리 → 서로에게 무엇인가(펼침) → 카드로 저장 → 접힌 둘 */
   const relSec=isMe
@@ -10761,6 +11027,16 @@ function showNode(n,groupContext,targetMesh){
      (지우기와 달리 원본 시각을 잃는 게 아니라 같은 사주 안에서 계산 기준만 바꾸는 것이다). */
   pbody.querySelectorAll('[data-dayrule]').forEach(el=>el.onclick=()=>{
     const t=nodes.find(x=>x.id===el.dataset.id); if(t)setDayRule(t,el.dataset.dayrule);});
+  /* [2026-09-17 A8-2] 「스스로 본 모습」 손잡이 — selfSectionHtml이 낸 버튼을 연결한다 */
+  pbody.querySelectorAll('[data-selfstart]').forEach(el=>el.onclick=()=>{
+    const t=nodes.find(x=>x.id===el.dataset.selfstart); if(t)selfStart(t);});
+  pbody.querySelectorAll('[data-selfclear]').forEach(el=>el.onclick=()=>{
+    const t=nodes.find(x=>x.id===el.dataset.selfclear); if(!t)return;
+    if(confirm('테스트 결과를 지울까요? 되돌릴 수 없습니다.'))selfClear(t);});
+  /* [2026-09-17 A8-2] 시각 검증 손잡이 — sajuTableHtml이 낸 버튼(data-estverify)을 연결한다.
+     estStart를 verify 모드로 연다(§1-ⓐ) — birth.est는 안 건드린다. */
+  pbody.querySelectorAll('[data-estverify]').forEach(el=>el.onclick=()=>{
+    const t=nodes.find(x=>x.id===el.dataset.estverify); if(t)estStart(t,{mode:'verify'});});
   document.getElementById('vstoggle').onclick=()=>{
     if(virtualMembers.some(c=>c.ref===n))removeFromVirtualSlot(n);else addToVirtualSlot(n);
     showNode(n);};
@@ -11307,6 +11583,8 @@ function closeSheets(){createsheet.classList.remove('open');relsheet.classList.r
   if(cs)cs.classList.remove('open');   /* [2026-08-30] 카드 시트도 같은 통로로 닫는다 */
   const es=document.getElementById('estsheet');
   if(es)es.classList.remove('open');   /* [2026-09-17 A5] 시각 추정 시트도 같은 통로로 닫는다 */
+  const sfs=document.getElementById('selfsheet');
+  if(sfs)sfs.classList.remove('open'); /* [2026-09-17 A8-2] 스스로 본 모습 시트도 같은 통로로 닫는다 */
   dim.classList.remove('on');
   /* [2026-08-28] 창을 닫으면 세 탭 모두 "준비 안 됨"으로 되돌린다 — 다시 열 때 지난 입력이
      남아 있으면 "왜 옛날 표가 나오지?"가 된다. 입력 유지는 **창을 연 동안**의 약속이다. */
@@ -11586,13 +11864,19 @@ function estSlotLabel(i){
    들고 있는다"). 계정이 없어 지금은 저장하지 않고, 저장하는 순간(estSave)에만 answers를
    birth.est에 함께 담아 둔다 — 나중에 계정이 생기면 그 배열을 그대로 옮기면 된다. */
 let estFlow=null;
-function estStart(n){
+/** [2026-09-17 A8-2] opts.mode==='verify'면 §1-ⓐ 시각 검증 — 질문 엔진·가점·종료조건은
+    전부 그대로 쓰고(설계 문서 "흐름" 절), 결과 화면만 estFinish 뒤 renderEstVerifyResult로
+    갈라진다. birth.est를 안 건드린다(§2 "저장 안 함" — 시각을 아는 사람에게 추정값이 생기면
+    A5 안내와 섞인다). */
+function estStart(n,opts){
   const b=n.birth;
   if(!b||!validYMD(b.y,b.m,b.d)){alert('생년월일을 먼저 입력해 주세요.');return;}
+  const verify=!!(opts&&opts.mode==='verify');
   const texts=estCandidateTexts(b);
   estFlow={node:n,texts,scores:new Array(EST_SLOTS.length).fill(0),used:new Set(),
-    qCount:0,phase:'band',cur:null,winners:null,picked:null,answers:[]};
-  const h=document.getElementById('estsheet-h'); if(h)h.textContent=n.name+'의 태어난 시각 추정';
+    qCount:0,phase:'band',cur:null,winners:null,picked:null,answers:[],mode:verify?'verify':'normal'};
+  const h=document.getElementById('estsheet-h');
+  if(h)h.textContent=verify?n.name+'의 시각이 맞는지 확인':n.name+'의 태어난 시각 추정';
   closeSheets();
   document.getElementById('estsheet').classList.add('open');dim.classList.add('on');
   renderEstStep();}
@@ -11627,6 +11911,13 @@ function estClear(n){
   n.updatedAt=nowISO();
   saveState();
   showNode(n);}
+/** [2026-09-17 A8-2] birth.hour(정확히 아는 시각)를 EST_SLOTS 인덱스로 — 시각 검증이
+    "알고 계신 시각"을 답이 좁힌 칸과 비교하려면 같은 13칸 좌표가 필요하다. 자시만
+    23시/0시로 갈린다(estSave가 birth.est를 채울 때 쓰는 것과 같은 규칙). 모르면 -1. */
+function birthEstSlotIdx(b){
+  if(!b||!Number.isInteger(b.hour))return -1;
+  const sijin=hourToSijin(b.hour),sub=b.hour===23?'23':(b.hour===0?'00':null);
+  return EST_SLOTS.findIndex(s=>s.sijin===sijin&&s.sub===sub);}
 /** [2026-09-17 A7] 자정 일주 선택 저장 — 'civil'|'apparent'만 받는다. sajuOf가 그 외 값은
     'apparent'로 접으므로 여기서 한 번 더 검사할 필요는 없지만, 오타로 엉뚱한 문자열이 들어가면
     다음 사람이 grep했을 때 헷갈리므로 미리 막아 둔다. */
@@ -11671,7 +11962,27 @@ function renderEstStep(){
       f.qCount++;
       estAdvance();});
     return;}
-  if(f.phase==='result'){renderEstResult();return;}}
+  if(f.phase==='result'){
+    if(f.mode==='verify')renderEstVerifyResult();else renderEstResult();
+    return;}}
+/** [2026-09-17 A8-2] 시각 검증 결과 — §3-D5~D7. 저장 버튼이 없다(검증은 한 번 보고 끝나는
+    기능, §2). 동점이면(§3-4 종료조건 4) 고르게 하지 않고 후보 전체를 "같음" 판정에 쓴다 —
+    검증은 값을 하나로 확정할 필요가 없다, 알고 있는 시각이 그 후보들 중에 있는지만 보면 된다. */
+function renderEstVerifyResult(){
+  const f=estFlow,body=document.getElementById('est-body'),b=f.node.birth;
+  const actualIdx=birthEstSlotIdx(b),guessIdx=f.winners[0];
+  const same=actualIdx>=0&&f.winners.indexOf(actualIdx)>=0;
+  let html=`<p class="tnote">${f.qCount}문항으로 답을 좁혔습니다.</p>`;
+  if(actualIdx<0)
+    html+=`<p>답으로는 <b>${bkEsc(estSlotLabel(guessIdx))}</b>쯤으로 나왔습니다.</p>`;
+  else if(same)
+    html+=`<p>${bkEsc(SELF_COMMON.verifySame.replace('{칸}',estSlotLabel(actualIdx)))}</p>`;
+  else
+    html+=`<p>${bkEsc(SELF_COMMON.verifyDiff.replace('{칸1}',estSlotLabel(guessIdx)).replace('{칸2}',estSlotLabel(actualIdx)))}</p>`
+      +`<p class="tnote">${bkEsc(SELF_COMMON.verifyDiffTail)}</p>`;
+  html+=`<button class="pbtn" id="est-restart" style="margin-top:8px">처음부터 다시 하기</button>`;
+  body.innerHTML=html;
+  const rs=document.getElementById('est-restart'); if(rs)rs.onclick=()=>estStart(f.node,{mode:'verify'});}
 function renderEstResult(){
   const f=estFlow,body=document.getElementById('est-body');
   if(f.winners.length>1&&f.picked==null){
@@ -11690,6 +12001,109 @@ function renderEstResult(){
     +`<button class="pbtn" id="est-restart" style="margin-top:8px">처음부터 다시 하기</button>`;
   const sv=document.getElementById('est-save'); if(sv)sv.onclick=estSave;
   const rs=document.getElementById('est-restart'); if(rs)rs.onclick=()=>estStart(f.node);}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   스스로 본 모습 — 화면 흐름 [2026-09-17 A8-2]
+   설계: docs/reports/2026-09-17-A8-1-설계원고.md. estFlow와 같은 패턴 —
+   안내 → 10문항 → 상황 → 결과 → 저장(estSave처럼 결과 화면에서만 실제로 쓴다). */
+let selfFlow=null;
+function selfStart(n){
+  selfFlow={node:n,qIdx:0,answers:[],
+    scores:Object.assign({},...GROUP5.map(g=>({[g]:0}))),
+    situation:null,phase:'intro'};
+  const h=document.getElementById('selfsheet-h');
+  if(h)h.textContent=n.isMe?'스스로 본 모습':n.name+' — 스스로 본 모습';
+  closeSheets();
+  document.getElementById('selfsheet').classList.add('open');dim.classList.add('on');
+  renderSelfStep();}
+function selfPickAnswer(pick){
+  const f=selfFlow,q=SELF_Q[f.qIdx];
+  if(pick==='A')f.scores[q.pair[0]]++;
+  else if(pick==='B')f.scores[q.pair[1]]++;
+  f.answers.push({q:f.qIdx,pick:pick});
+  f.qIdx++;
+  f.phase=f.qIdx<SELF_Q.length?'q':'situ';
+  renderSelfStep();}
+function selfPickSitu(s){
+  selfFlow.situation=s;selfFlow.phase='result';renderSelfStep();}
+/** birth는 안 건드린다 — self는 birth 밖 노드 필드다(설계 §2, addNode 주석 참고). */
+function selfSave(){
+  const f=selfFlow,n=f.node;
+  n.self={answers:f.answers,counts:f.scores,situation:f.situation,at:nowISO()};
+  n.updatedAt=nowISO();
+  saveState();
+  closeSheets();
+  showNode(n);}
+function selfClear(n){
+  n.self=null;
+  n.updatedAt=nowISO();
+  saveState();
+  showNode(n);}
+function renderSelfStep(){
+  const f=selfFlow,body=document.getElementById('self-body');
+  if(!f||!body)return;
+  if(f.phase==='intro'){
+    body.innerHTML=`<p class="tnote">${bkEsc(f.node.isMe?SELF_COMMON.introMe:SELF_COMMON.introOther)}</p>`
+      +`<button type="button" class="primary" id="self-go">시작하기</button>`;
+    const go=document.getElementById('self-go'); if(go)go.onclick=()=>{f.phase='q';renderSelfStep();};
+    return;}
+  if(f.phase==='q'){
+    const q=SELF_Q[f.qIdx],head=f.node.isMe?'나라면 — ':'이 사람이라면 — ';
+    body.innerHTML=`<div class="estprog">${f.qIdx+1} / ${SELF_Q.length}문항</div>`
+      +`<div class="field"><label>${bkEsc(head+q.q)}</label>`
+      +`<button type="button" class="estopt" data-selfpick="A">${bkEsc(q.a)}</button>`
+      +`<button type="button" class="estopt" data-selfpick="B">${bkEsc(q.b)}</button>`
+      +`<button type="button" class="estopt unsure" data-selfpick="U">둘 다 아니에요</button></div>`;
+    body.querySelectorAll('[data-selfpick]').forEach(btn=>btn.onclick=()=>selfPickAnswer(btn.dataset.selfpick));
+    return;}
+  if(f.phase==='situ'){
+    body.innerHTML=`<div class="field"><label>요즘 가장 마음이 쓰이는 일은</label>`
+      +SITU_OPTS.map(s=>`<button type="button" class="estopt" data-situ="${s}">${s}</button>`).join('')
+      +`<button type="button" class="estopt unsure" data-situ="">딱히 없음</button></div>`;
+    body.querySelectorAll('[data-situ]').forEach(btn=>btn.onclick=()=>selfPickSitu(btn.dataset.situ||null));
+    return;}
+  if(f.phase==='result'){renderSelfResult();return;}}
+function renderSelfResult(){
+  const f=selfFlow,body=document.getElementById('self-body');
+  const pg=personGroupCounts(f.node),cmp=pg?selfCompare(f.scores,pg.cnt):null;
+  body.innerHTML=`<p class="tnote">답을 다 골랐습니다 — 저장하면 사주와 나란히 보여 드립니다.</p>`
+    +selfBlocksHtml(f.scores,f.situation,cmp)
+    +`<button class="primary" id="self-save">저장하기</button>`
+    +`<button class="pbtn" id="self-restart" style="margin-top:8px">처음부터 다시 하기</button>`;
+  const sv=document.getElementById('self-save'); if(sv)sv.onclick=selfSave;
+  const rs=document.getElementById('self-restart'); if(rs)rs.onclick=()=>selfStart(f.node);}
+/** "스스로 본 모습" 결과 문단 — 시트 미리보기와 인물 패널(selfSectionHtml)이 함께 쓴다
+    (두 벌로 갈리면 A5·A7에서 겪은 것과 같은 어긋남이 생긴다). cmp=selfCompare()의 결과.
+    situation이 있으면 상황 줄(§3-E)을 끝에 붙인다(사주 top이 필요해 cmp.sTops를 쓴다). */
+function selfBlocksHtml(counts,situation,cmp){
+  if(!cmp)return '';
+  const parts=[];
+  if(cmp.kind==='allUnsure'){
+    parts.push(`<p>${SELF_COMMON.allUnsure}</p>`);
+  } else if(cmp.kind==='match'){
+    parts.push(`<p>${cmp.aTie?SELF_COMMON.tie:SELF_LINE[cmp.group]}</p>`);
+    parts.push(`<p>${SELF_MATCH[cmp.group]}</p>`);
+  } else {
+    parts.push(`<p>${cmp.aTie?SELF_COMMON.tie:SELF_LINE[cmp.selfGroup]}</p>`);
+    parts.push(`<p>사주에서 가장 많은 것은 ${GROUP_POWER[cmp.sajuGroup]}(${cmp.sajuGroup})인데, 답은 `
+      +`${GROUP_POWER[cmp.selfGroup]}(${cmp.selfGroup}) 쪽을 골랐습니다. `
+      +`${SELF_GAP[cmp.sajuGroup][cmp.selfGroup]}</p>`);
+    parts.push(`<p>${SELF_GAP_TAIL}</p>`);}
+  if(situation){
+    const sl=situLine(situation,cmp.sTops);
+    if(sl)parts.push(`<p>${sl}</p>`);}
+  return parts.join('');}
+/** 인물 패널 「스스로 본 모습」 덩이 — personReading 뒤, 기본 펼침(설계 §1-ⓑ "표시"). */
+function selfSectionHtml(n){
+  if(!n.self)
+    return `<div class="psec">스스로 본 모습</div><div class="selfsec">`
+      +`<p class="tnote">${bkEsc(n.isMe?SELF_COMMON.introMe:SELF_COMMON.introOther)}</p>`
+      +`<button type="button" class="pbtn" data-selfstart="${n.id}">스스로 본 모습 테스트 하기</button></div>`;
+  const pg=personGroupCounts(n),cmp=pg?selfCompare(n.self.counts,pg.cnt):null;
+  return `<div class="psec">스스로 본 모습</div><div class="selfsec">`
+    +selfBlocksHtml(n.self.counts,n.self.situation,cmp)
+    +`<div class="panelbtns"><button class="pbtn" data-selfstart="${n.id}">다시 하기</button>`
+    +`<button class="pbtn" data-selfclear="${n.id}">지우기</button></div></div>`;}
 
 /* [2026-08-28 제거] ~~updMoreSummary~~ — 접힘(#f-more) 헤더에 시각·도시 값을 요약해 주던
    함수다. **접힘을 없애 칸이 상시 보이므로 요약할 것이 없다.** 값이 화면에 그대로 있는데
