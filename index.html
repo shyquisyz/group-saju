@@ -421,6 +421,22 @@
   /* 고른 시각이 어느 시진인지 되비춘다 — 12칸을 안 보고도 결과를 확인할 수 있어야 한다 */
   .tcalc{font-size:var(--fs-sm);color:var(--gold);margin-left:4px}
   .tnote{font-size:var(--fs-sm);color:var(--mut);line-height:1.55;margin-top:7px}
+  /* [2026-09-17 A5] 태어난 시각 추정 — 첫 질문 버튼 그리드는 .tmode button과 같은 규격(44px),
+     성향 질문 보기는 위아래로 쌓는다(문장이 길어 옆으로 붙이면 44px 안에 안 들어간다). */
+  .estband{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:9px}
+  .estband button{min-height:44px;padding:9px 4px;border-radius:6px;border:1px solid var(--line);
+    background:transparent;color:var(--ink);font-family:inherit;font-size:var(--fs-sm);cursor:pointer}
+  .estband button.wide{grid-column:1/-1}
+  .estband button:active,.estopt:active{opacity:.8}
+  .estopt{display:block;width:100%;text-align:left;padding:12px 14px;margin-bottom:9px;
+    border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--ink);
+    font-family:inherit;font-size:var(--fs-base);line-height:1.5;cursor:pointer}
+  .estopt.unsure{text-align:center;color:var(--mut);font-size:var(--fs-sm)}
+  .estprog{font-size:var(--fs-sm);color:var(--mut);margin-bottom:9px}
+  .estbadge{display:inline-block;padding:2px 8px;border-radius:99px;background:var(--gold);
+    color:#101018;font-size:var(--fs-sm);font-weight:700;margin-right:6px}
+  .estnotebtn{background:none;border:1px solid var(--line);border-radius:6px;color:var(--ink);
+    font-family:inherit;font-size:var(--fs-sm);padding:5px 10px;margin:6px 6px 0 0;cursor:pointer}
   .sijingrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
   /* [2026-08-24] 주/보조를 뒤집었다 — 사용자는 "몇 시에 태어났는지"로 기억하지 자시·축시로
      기억하지 않는다. 시간 표기가 주(13px/600), 지지가 보조(9.5px/--mut). 구 값은 지지 12.5px에
@@ -2011,6 +2027,15 @@
       아래 그림을 꾹 누르면 «이미지 저장»이 뜹니다.</div>
     <img id="card-img" alt="관계 카드 이미지">
   </div>
+</div>
+
+<!-- ═══ 태어난 시각 추정 [2026-09-17 A5] ═══
+     설계: docs/시간추정-설계.md. 맞히지 않고 좁힌다 — 점수만 쌓고 탈락은 없다.
+     본문은 renderEstStep()이 단계마다 다시 그린다(카드 시트의 #card-prev와 같은 패턴). -->
+<div class="sheet" id="estsheet">
+  <button type="button" class="sheetclose" aria-label="닫기" title="닫기">✕</button>
+  <h3 id="estsheet-h">태어난 시각 추정</h3>
+  <div id="est-body"></div>
 </div>
 
 <!-- ═══ 내보내기 · 불러오기 [2026-08-28] ═══
@@ -7392,7 +7417,9 @@ function applySeed(seed){
         {lon:p.birth.lon!==undefined?p.birth.lon
           :(CITY_LON[p.birth.city]!==undefined?CITY_LON[p.birth.city]:null)})),
       pos:p.pos?new THREE.Vector3(p.pos[0],p.pos[1],p.pos[2]):undefined,
-      birth:Object.assign({hour:null,min:null},p.birth,
+      /* [2026-09-17 A5] est:null 기본값 — DEMO_SEED·my-data.js처럼 migrate()를 안 거치는 시드에도
+         explicit null을 준다(마이그레이션 '2'가 실제 저장본에는 이미 넣어 준다). */
+      birth:Object.assign({hour:null,min:null,est:null},p.birth,
         {lon:p.birth.lon!==undefined?p.birth.lon
           :(CITY_LON[p.birth.city]!==undefined?CITY_LON[p.birth.city]:null)})});
     byKey.set(p.key,n);});
@@ -8113,7 +8140,7 @@ const JUSTLOADED_KEY='groupsaju:justloaded';   /* 새로고침 너머로 넘기�
 const BACKUP_APP='group-saju';
 const BACKUP_MAX_CHARS=2*1024*1024; /* 실측 저장 한계 5,177,344바이트 대비 여유(30인=7,931바이트) */
 const BACKUP_MAX_PEOPLE=1000;       /* 폭주 방지. 30인 7.9KB이므로 1000인도 260KB 안팎이다 */
-const SAVE_VER=2;
+const SAVE_VER=3;
 /* ═════ 마이그레이션 [틀 정비 2026-08-28] ═════
    키 'N'이 **vN → v(N+1)** 변환이다. 구조를 바꾸는 사람이 함수를 더하고 SAVE_VER을 올린다.
    규칙 전문은 CLAUDE.md "저장 형식을 바꿀 때는 변환을 함께 넣는다".
@@ -8131,6 +8158,15 @@ const SAVE_VER=2;
    [입력을 고치지 않는다] 각 함수는 **새 객체를 돌려준다.** 체인 중간에서 실패했을 때
    원본이 성해야 loadSave가 'migfail'로 원본을 보존할 수 있다. */
 const MIGRATIONS={
+  /* [v2 → v3, 2026-09-17 A5] **태어난 시각 추정 기능**을 신설한다(`docs/시간추정-설계.md`).
+     `birth.est`를 신설한다 — 답변으로 좁힌 시각 후보 하나를 담는다({sijin,sub,hour,answers,at}).
+     **`birth.sijin`·`birth.hour`는 그대로 둔다** — 추정은 "정확히 안다"가 아니므로 옛 필드를
+     밀어 쓰면 안 된다(설계 §1 원칙(2) "정확한 척을 하지 않는다"). null이 정상값이다
+     (추정한 적 없는 사람이 압도적으로 많다 — CLAUDE.md "없다"와 "모른다" 구분과 같은 이유,
+     다만 여기서는 "아직 안 함"이 곧 null이다). */
+  '2':d=>Object.assign({},d,{v:3,
+    people:(d.people||[]).map(p=>Object.assign({},p,{
+      birth:Object.assign({est:null},p.birth)}))}),
   /* [v1 → v2, 2026-08-28] **시각을 시·분으로 받기 시작했다**(§5.6 문제 2의 (가) 안 채택).
      `birth.hour`/`birth.min`을 신설한다 — 둘 다 **null이 정상값**이다:
      시간대만 고른 사람(sijin만 있음)과 모르는 사람(sijin 12)은 시·분이 없다.
@@ -8403,6 +8439,20 @@ function parseBackup(text){
     if(!validYMD(b.y,b.m,b.d))
       return bkBad('"'+bkEsc(name)+'"의 생년월일이 실제 날짜가 아닙니다 ('+bkEsc(b.y+'-'+b.m+'-'+b.d)+').');
     const city=typeof b.city==='string'&&b.city?b.city:CITY_UNKNOWN;
+    /* [2026-09-17 A5] birth.est — 추정한 시각 하나. 모양이 안 맞으면 조용히 null로(계산에 안 쓰이는
+       부가 정보라 파일을 거부할 이유는 아니다). answers는 기록용 문자열 배열이라 길이·글자 수만 자른다
+       (다른 화면에 그대로 꽂을 때는 여전히 bkEsc를 거쳐야 한다 — 여기서는 값만 좁힌다). */
+    const est=(b.est&&typeof b.est==='object'
+        &&Number.isInteger(b.est.sijin)&&b.est.sijin>=0&&b.est.sijin<=11
+        &&(b.est.sub===null||b.est.sub===undefined||b.est.sub==='23'||b.est.sub==='00')
+        &&Number.isInteger(b.est.hour)&&b.est.hour>=0&&b.est.hour<=23
+        &&typeof b.est.at==='string')
+      ?{sijin:b.est.sijin,sub:(b.est.sub==='23'||b.est.sub==='00')?b.est.sub:null,hour:b.est.hour,
+        answers:(Array.isArray(b.est.answers)?b.est.answers.slice(0,20):[]).map(a=>({
+          항목:typeof(a&&a.항목)==='string'?a.항목.slice(0,60):'',
+          고른것:typeof(a&&a.고른것)==='string'?a.고른것.slice(0,300):''})),
+        at:b.est.at}
+      :null;
     people.push({key:p.key,name,isMe:!!p.isMe,
       createdAt:typeof p.createdAt==='string'?p.createdAt:null,
       updatedAt:typeof p.updatedAt==='string'?p.updatedAt:null,
@@ -8415,7 +8465,7 @@ function parseBackup(text){
         /* 목록에 있는 도시면 우리 경도를 쓴다 — 파일의 값을 그대로 믿지 않는다 */
         lon:CITY_LON[city]!==undefined?CITY_LON[city]
           :(typeof b.lon==='number'&&isFinite(b.lon)?b.lon:null),
-        sex:(b.sex==='남'||b.sex==='여')?b.sex:null}});}
+        sex:(b.sex==='남'||b.sex==='여')?b.sex:null,est}});}
 
   /* **isMe 폴백을 쓰지 않는다.** applySeed에는 "없으면 첫 사람을 나로"가 있지만 그건 우리가
      만든 시드에 대한 관용이다. 외부 파일에 적용하면 **엉뚱한 사람이 나가 된다.** */
@@ -10096,6 +10146,90 @@ async function sajuSelfTest(){
     }
     T('cardNoSeamLine: 그림 경계에 옛 액자선(col.bg) 없음(5장, 느림)', seamBad.length===0, seamBad.join(',')||'0건');
   }catch(e){T('cardNoSeamLine: 그림 경계에 옛 액자선 없음',false,'예외 '+e.message);}
+
+  /* ═══ [2026-09-17 A5] 태어난 시각 추정 — 여기부터는 순수 함수·읽기 전용 호출만 시험한다.
+     estSave()는 saveState()를 불러 localStorage에 쓰므로, 사용자의 실제 저장본을 돌리다
+     이 테스트가 실행되면 안 되는 부작용이 생긴다 — 그래서 저장·지우기 왕복은 여기 안 넣고
+     회차 보고서에 브라우저 실측으로 남긴다. */
+  try{
+    /* [★ 이 테스트가 지키는 실제 사고] PERSON_ITEM_NAMES는 personReading()의 .h 순서를 손으로
+       옮겨 적은 배열이다 — A6-3이 항목을 하나 끼워 넣었는데 A5 착수 시점에 그걸 모르고 옛
+       여덟 항목 그대로 썼다가 실제로 어긋났다(브라우저 실측으로 발견, 위 EST_ITEM_PRIORITY
+       주석 참고). personReading을 부를 수 있는 사람이 하나라도 있어야 이 테스트가 뜻이 있다. */
+    const who=nodes.find(x=>x.birth)||DEMO_SEED.people[0];
+    const rd=personReading(who.birth?who:{birth:who.birth||who});
+    const names=rd?rd.map(x=>x.h):null;
+    const match=names&&names.length===PERSON_ITEM_NAMES.length
+      &&names.every((h,i)=>h===PERSON_ITEM_NAMES[i]);
+    T('personItemAlign: PERSON_ITEM_NAMES가 personReading() 순서와 정확히 같다',
+      match, names?(names.length+'개 — '+names.join(' / ')):'personReading 실패');
+  }catch(e){T('personItemAlign: PERSON_ITEM_NAMES가 personReading() 순서와 같다',false,'예외 '+e.message);}
+  {
+    const okShape=EST_SLOTS.length===13&&EST_SLOTS.every(s=>Number.isInteger(s.sijin)&&s.sijin>=0&&s.sijin<=11
+      &&(s.sub===null||s.sub==='23'||s.sub==='00')&&Number.isInteger(s.hour)&&s.hour>=0&&s.hour<=23);
+    const cnt={};EST_SLOTS.forEach(s=>{cnt[s.sijin]=(cnt[s.sijin]||0)+1;});
+    const zeroTwice=cnt[0]===2, othersOnce=[1,2,3,4,5,6,7,8,9,10,11].every(k=>cnt[k]===1);
+    T('estSlots13: 13개 슬롯 · 자시만 둘 · 나머지 열한 칸은 하나씩', okShape&&zeroTwice&&othersOnce,
+      '슬롯 '+EST_SLOTS.length+'개 · 자시 '+(cnt[0]||0)+'개');
+  }
+  {
+    const all=Object.values(EST_BAND).flat();
+    const uniq=new Set(all);
+    const covers=uniq.size===13&&all.length===13&&EST_SLOTS.every((_,i)=>uniq.has(i));
+    T('estBandCoverage: 다섯 구간이 13칸을 정확히 한 번씩 덮는다', covers, all.length+'개 · 고유 '+uniq.size+'개');
+  }
+  {
+    /* 합성 텍스트 — item 3(넘치는 것)이 5/4/4로 갈리게, item 4는 더 약하게(6/7) 갈리게 만든다.
+       우선순위(EST_ITEM_PRIORITY)상 3이 4보다 앞이라 동률이어도 3을 먼저 보되, 지금은 3의
+       갈래 수(3)가 4의 갈래 수(2)보다 많아 어차피 3이 이긴다 — "가장 많이 갈리는 항목"을
+       실제로 고르는지가 이 시험의 핵심이다. */
+    const texts=EST_SLOTS.map((_,i)=>{
+      const arr=new Array(8).fill('same');
+      arr[3]=i<5?'A':(i<9?'B':'C');
+      arr[4]=i%2===0?'X':'Y';
+      return arr;});
+    const q=nextEstQuestion(texts,new Array(13).fill(0),new Set());
+    T('estNextQuestion: 경쟁 후보 안에서 가장 많이 갈리는 항목을 고른다',
+      !!q&&q.item===3&&q.optA.idxs.length===5&&q.optB&&q.optB.idxs.length===4,
+      q?('item '+q.item+' · A '+q.optA.idxs.length+' · B '+(q.optB?q.optB.idxs.length:0)):'null');
+    const scores2=new Array(13).fill(0);scores2[0]=10;
+    const q2=nextEstQuestion(texts,scores2,new Set());
+    T('estNextQuestion: 경쟁 후보가 하나면 더 안 묻는다(종료조건 1)', q2===null, String(q2));
+    const texts3=EST_SLOTS.map(()=>new Array(8).fill('same'));
+    const q3=nextEstQuestion(texts3,new Array(13).fill(0),new Set());
+    T('estNextQuestion: 남은 항목이 전부 같은 말이면 안 묻는다(종료조건 2)', q3===null, String(q3));
+  }
+  try{
+    const texts4=estCandidateTexts({y:1990,m:1,d:1,lon:126.978});
+    const c1=texts4[0]&&texts4[0][0], c2=texts4[12]&&texts4[12][0];
+    T('estCandidateTexts: 자시 23시대·0시대가 일간 문장에서 갈린다(A4 실측과 일치)',
+      !!c1&&!!c2&&c1!==c2, (c1&&c2)?'다름 확인':'texts 생성 실패');
+  }catch(e){T('estCandidateTexts: 자시 두 슬롯이 갈린다',false,'예외 '+e.message);}
+  {
+    const m=migrate({v:2,people:[{key:'est_t1',name:'테스트',isMe:true,
+      birth:{y:2000,m:1,d:1,sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:null}}]});
+    T('estMigrateV2toV3: birth.est가 explicit null로 채워진다',
+      m.ok&&m.data.v===3&&m.data.people[0].birth.est===null,
+      m.ok?('v'+m.data.v+' est='+JSON.stringify(m.data.people[0].birth.est)):('실패: '+m.why));
+  }
+  {
+    const goodEst={sijin:2,sub:null,hour:4,answers:[{항목:'a',고른것:'b'}],at:nowISO()};
+    const bkGood=JSON.stringify({app:BACKUP_APP,v:SAVE_VER,people:[{key:'est_bk1',name:'갑',isMe:true,
+      birth:{y:1999,m:5,d:5,sijin:2,hour:null,min:null,city:'서울',lon:126.978,sex:null,est:goodEst}}],
+      links:[],groups:[]});
+    const rGood=parseBackup(bkGood);
+    const gotEst=rGood.ok&&rGood.data.people[0].birth.est;
+    T('estBackupParse: 모양이 맞는 est는 그대로 들여온다',
+      rGood.ok&&!!gotEst&&gotEst.sijin===2&&gotEst.hour===4,
+      rGood.ok?JSON.stringify(gotEst):('실패: '+rGood.why));
+    const bkBadFile=JSON.stringify({app:BACKUP_APP,v:SAVE_VER,people:[{key:'est_bk2',name:'을',isMe:true,
+      birth:{y:1999,m:5,d:5,sijin:2,hour:null,min:null,city:'서울',lon:126.978,sex:null,
+        est:{sijin:99,hour:'x'}}}],links:[],groups:[]});
+    const rBad=parseBackup(bkBadFile);
+    T('estBackupParse: 모양이 이상한 est는 파일을 거부하지 않고 null로',
+      rBad.ok&&rBad.data.people[0].birth.est===null,
+      rBad.ok?('est='+JSON.stringify(rBad.data.people[0].birth.est)):('실패: '+rBad.why));
+  }
   return out;}
 function deselect(){if(selected){if(!selected.isMe&&selectedMesh)selectedMesh.scale.setScalar(V2_TUNABLES.PLANET_SCALE);selected=null;selectedMesh=null;}}
 /* [§7.4] groupContext/targetMesh 둘 다 선택 인자 — 안 넘기면 지금까지와 100% 동일하게 동작한다
@@ -10224,6 +10358,16 @@ function sajuTableHtml(n){
     notes.push('출생 시각을 몰라 <b>세 기둥</b>만 나옵니다 — 이것만으로도 충분히 의미 있는 결과가 나옵니다. 시주는 보조입니다.'+
       (legacy?' 예전에 넣으신 시간대(<b>'+legacy[1].replace('-','–')+'시</b>)는 그대로 남아 있습니다 — 정확한 시각을 알게 되면 채워 주세요.'
             :' 나중에 알게 되면 언제든 채울 수 있습니다.'));
+    /* [2026-09-17 A5] 시각 추정 상태 — birth.est는 birth.hour/sijin과 별개 필드다(설계 §7,
+       옛 "대략" 데이터와 안 섞이게 새 필드로 뒀다). 여기서는 있는지 없는지만 알리고, 여닫는
+       손잡이는 showNode가 wire한다(data-est/data-estclear). 계산에는 아직 반영하지 않는다 —
+       "정확한 척"을 하지 않는다는 원칙이라(설계 §1(2)), 표는 계속 세 기둥만 보여준다. */
+    notes.push(b.est
+      ?'<span class="estbadge">추정</span>답변으로 좁혀 둔 시각이 있습니다 — <b>'+estSlotLabel(EST_SLOTS.findIndex(s=>s.sijin===b.est.sijin&&s.sub===b.est.sub))
+        +'</b>쯤. 이 표에는 아직 반영하지 않았습니다.'
+        +' <button type="button" class="estnotebtn" data-est="'+n.id+'">다시 추정하기</button>'
+        +' <button type="button" class="estnotebtn" data-estclear="'+n.id+'">추정 지우기</button>'
+      :'<button type="button" class="estnotebtn" data-est="'+n.id+'">태어난 시각 추정해 보기 →</button>');
   } else {
     /* 절입 경계 — 앞뒤 10분 */
     const toPrev=r.minSinceJie, toNext=r.minToNextJie;
@@ -10494,6 +10638,12 @@ function showNode(n,groupContext,targetMesh){
   if(eb)eb.onclick=()=>openAddSheet(n);
   const rb=pbody.querySelector('[data-rel]');
   if(rb)rb.onclick=()=>openRelSheet(n);
+  /* [2026-09-17 A5] 시각 추정 손잡이 — sajuTableHtml이 낸 버튼(data-est/data-estclear)을 연결한다 */
+  pbody.querySelectorAll('[data-est]').forEach(el=>el.onclick=()=>{
+    const t=nodes.find(x=>x.id===el.dataset.est); if(t)estStart(t);});
+  pbody.querySelectorAll('[data-estclear]').forEach(el=>el.onclick=()=>{
+    const t=nodes.find(x=>x.id===el.dataset.estclear); if(!t)return;
+    if(confirm('추정한 시각을 지울까요? 되돌릴 수 없습니다.'))estClear(t);});
   document.getElementById('vstoggle').onclick=()=>{
     if(virtualMembers.some(c=>c.ref===n))removeFromVirtualSlot(n);else addToVirtualSlot(n);
     showNode(n);};
@@ -11038,6 +11188,8 @@ function closeSheets(){createsheet.classList.remove('open');relsheet.classList.r
   if(ss)ss.classList.remove('open');
   const cs=document.getElementById('cardsheet');
   if(cs)cs.classList.remove('open');   /* [2026-08-30] 카드 시트도 같은 통로로 닫는다 */
+  const es=document.getElementById('estsheet');
+  if(es)es.classList.remove('open');   /* [2026-09-17 A5] 시각 추정 시트도 같은 통로로 닫는다 */
   dim.classList.remove('on');
   /* [2026-08-28] 창을 닫으면 세 탭 모두 "준비 안 됨"으로 되돌린다 — 다시 열 때 지난 입력이
      남아 있으면 "왜 옛날 표가 나오지?"가 된다. 입력 유지는 **창을 연 동안**의 약속이다. */
@@ -11227,6 +11379,192 @@ function timeFromBirth(b){
   return {mode:'none',sijin:12,hour:null,min:null};}
 /* 옛 호출부 호환 — 이름만 남기고 새 컨트롤러로 넘긴다 */
 function renderSijin(){renderTime('f');}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   태어난 시각 추정 [2026-09-17 A5]
+
+   설계 정본: docs/시간추정-설계.md (2026-09-09 A4). 원칙 넷 —
+   (1) 탈락시키지 않는다, 점수만 쌓는다 — 후보 13개는 끝까지 전부 살아 있다.
+   (2) "정확한 척"을 하지 않는다 — 결과에 항상 "추정" 표시를 붙이고, birth.hour/sijin은
+       건드리지 않는다(별도 필드 birth.est에만 쓴다 — 예전 "대략" 데이터와 안 섞는다).
+   (3) 문항을 미리 지어 두지 않는다 — 남은 후보가 실제로 다른 말을 하는 지점을 그때그때 찾는다.
+   (4) 되돌릴 수 있다 — 추정은 지우거나 다시 할 수 있다.
+
+   [13칸] A4 실측 — 자시(23–01)는 진태양시 보정으로 일주가 갈려 다른 11칸과 성질이 다르다
+   (23시대·0시대가 8항목 중 평균 6.47개에서 다른 답을 낸다). 자시를 둘로 쪼갠다
+   (사용자 결정 2026-09-17 — ⓐ 13칸으로 나눈다). EST_SLOTS의 순서는 화면에 보여줄 때만
+   쓰는 내부 순서이고, 저장은 sijin(=SIJIN 인덱스)+sub로 한다 — SIJIN_ORDER를 다시 안 건드린다.
+
+   [대표 시각] 각 칸의 한가운데 civil 시각을 personReading에 넘긴다. sajuOf가 그 시각을
+   내부에서 진태양시로 환산해 계산한다 — A4 실측 스크립트(tools/a4-time-estimate-sim.js)의
+   SIJIN_HOUR와 같은 값이고, 자시만 23시/0시 둘로 나눴다. */
+const EST_SLOTS=[
+  {sijin:0, sub:'23', hour:23}, {sijin:1, sub:null, hour:2},  {sijin:2, sub:null, hour:4},
+  {sijin:3, sub:null, hour:6},  {sijin:4, sub:null, hour:8},  {sijin:5, sub:null, hour:10},
+  {sijin:6, sub:null, hour:12}, {sijin:7, sub:null, hour:14}, {sijin:8, sub:null, hour:16},
+  {sijin:9, sub:null, hour:18}, {sijin:10,sub:null, hour:20}, {sijin:11,sub:null, hour:22},
+  {sijin:0, sub:'00', hour:0}];
+/* 첫 질문(다섯 구간) ↔ EST_SLOTS 인덱스(설계 §3-1 대응표). 자시는 두 슬롯(23시대·0시대)을
+   모두 "밤"에 넣는다 — 갈라졌다고 배정을 바꿀 이유가 없다(가점만 주고 탈락이 없어서 틀려도
+   무해하다). 인덱스: 0=자(23시대) 1=축 2=인 3=묘 4=진 5=사 6=오 7=미 8=신 9=유 10=술 11=해 12=자(0시대). */
+const EST_BAND={'새벽':[1,2],'아침':[3,4,5],'낮':[6,7,8],'저녁':[9,10],'밤':[11,0,12]};
+/* personReading()이 돌려주는 항목의 이름 — 배열 인덱스가 그대로 아래 우선순위 목록의 값이다.
+   [★ 2026-09-17 실측으로 잡은 함정] A4 설계 문서(2026-09-09)는 personReading이 **여덟 항목**이던
+   시절에 썼다. A6-3(2026-09-17, 이 회차 바로 앞)이 "자리마다 놓인 기운"을 ④와 ⑤(어울리는 일) 사이에
+   끼워 넣어 **아홉 항목**이 됐다 — 손 안 댄 이 파일을 그대로 옮겼으면 인덱스 4 이후가 전부 한 칸씩
+   밀려서 "어울리는 일" 질문이라고 적어 놓고 "자리마다 놓인 기운" 문장을 보여줄 뻔했다(브라우저
+   실측으로 발견, sajuSelfTest의 personItemAlign이 이제 이 어긋남을 지킨다 — personReading의 .h를
+   실제로 읽어 이 배열과 대조한다). 항목 수가 다시 바뀌면 그 테스트가 실패로 알려준다. */
+const PERSON_ITEM_NAMES=['어떤 사람인가','관심이 향하는 곳','기운의 세기','넘치는 것과 비어 있는 것',
+  '자리마다 놓인 기운','어울리는 일','돈 스타일','관계 스타일','힘이 되는 기운'];
+/* 질문 우선순위 — A4 실측 갈래 평균(설계 §3-2 표)이 큰 항목이 앞. 다만 맨 앞 셋(0·4·7 = 어떤
+   사람인가·자리마다 놓인 기운·관계 스타일)은 예외다 — 셋 다 **일간(=자시 여부)에 직접 걸려
+   있다**(0·7은 일간 하나로 정해지고, 4는 자리마다 놓인 기운의 "가까운 사람 앞"·"기세" 두 칸이
+   일주 자체 — 일간과 일지 — 로 정해진다). 갈래가 적어 보통은 약한 재료지만, 자시 두 슬롯이
+   아직 경쟁에 남아 있을 때는 가장 날카로운 질문이 된다(A4 실측: 옛 두 항목이 자시 갈림에서
+   96.3% 갈렸다). nextEstQuestion이 "가장 많이 갈리는 항목"을 고르므로 이 순서는 **동점일 때의
+   결정적 타이브레이크**로만 쓰인다. */
+const EST_ITEM_PRIORITY=[0,4,7, 3,5,6,8, 1,2];
+const EST_W_FIRST=2, EST_W_TRAIT=1, EST_MAX_Q=6;
+
+/** 13개 후보 각각의 personReading 여덟 항목을 문자열 배열로. b는 {y,m,d,lon}만 있으면 된다 —
+    hour/min은 슬롯 값으로 덮어써 넘기고 원본 birth는 건드리지 않는다(새 객체를 만들어 넘긴다). */
+function estCandidateTexts(b){
+  return EST_SLOTS.map(s=>{
+    const rd=personReading({birth:Object.assign({},b,{hour:s.hour,min:0})});
+    return rd?rd.map(x=>x.t):null;});}
+
+/** 경쟁 후보(최고점과 1점 차 이내) 안에서 다음 질문을 고른다 — **순수 함수**, 화면·저장과
+    안 얽는다(설계 §6-가). texts=estCandidateTexts()의 결과, scores=13개 점수 배열,
+    used=이미 쓴 항목 인덱스 집합. 돌려주는 것: {item,itemName,optA:{text,idxs},optB:{...}|null}
+    또는 더 물을 게 없으면 null(설계 §3-4 종료조건 1·2). */
+function nextEstQuestion(texts,scores,used){
+  const idxs=EST_SLOTS.map((_,i)=>i);
+  const mx=Math.max.apply(null,idxs.map(i=>scores[i]));
+  const C=idxs.filter(i=>scores[i]>=mx-1);
+  if(C.length<=1)return null;                 /* 종료조건 1 — 경쟁 후보가 하나뿐 */
+  let best=-1,bestN=1;
+  EST_ITEM_PRIORITY.forEach(j=>{
+    if(used.has(j))return;
+    const set=new Set(C.map(i=>texts[i][j]));
+    if(set.size>bestN){bestN=set.size;best=j;}});
+  if(best<0)return null;                       /* 종료조건 2 — 남은 항목이 전부 같은 말을 함 */
+  const groups=new Map();
+  C.forEach(i=>{const k=texts[i][best];if(!groups.has(k))groups.set(k,[]);groups.get(k).push(i);});
+  const sorted=[...groups.entries()].sort((a,b)=>b[1].length-a[1].length);
+  return {item:best,itemName:PERSON_ITEM_NAMES[best],
+    optA:{text:sorted[0][0],idxs:sorted[0][1]},
+    optB:sorted[1]?{text:sorted[1][0],idxs:sorted[1][1]}:null};}
+
+/** HTML 조각에서 태그를 걷어낸 읽기용 문장(질문 보기로 쓴다). 우리 자신이 만든 문구뿐이라
+   위험한 입력은 안 섞이지만, <p>/<div>가 <button> 안에 그대로 들어가면 레이아웃이 깨져서 뗀다. */
+function estPlainText(html){return String(html).replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();}
+/** 슬롯 하나를 사람이 읽을 문구로 — "인시(03–05시)" 또는 자시면 "자시(23–01시) · 밤 11시대". */
+function estSlotLabel(i){
+  const s=EST_SLOTS[i],sj=SIJIN[s.sijin];
+  return sj[0]+'시('+sj[1].replace('-','–')+'시)'
+    +(s.sub?(s.sub==='23'?' · 밤 11시대':' · 자정 넘어서'):'');}
+
+/* ── 화면 흐름 ── estFlow 하나가 진행 상태를 들고 있는다(설계 §6-나 "답한 내용을 배열로
+   들고 있는다"). 계정이 없어 지금은 저장하지 않고, 저장하는 순간(estSave)에만 answers를
+   birth.est에 함께 담아 둔다 — 나중에 계정이 생기면 그 배열을 그대로 옮기면 된다. */
+let estFlow=null;
+function estStart(n){
+  const b=n.birth;
+  if(!b||!validYMD(b.y,b.m,b.d)){alert('생년월일을 먼저 입력해 주세요.');return;}
+  const texts=estCandidateTexts(b);
+  estFlow={node:n,texts,scores:new Array(EST_SLOTS.length).fill(0),used:new Set(),
+    qCount:0,phase:'band',cur:null,winners:null,picked:null,answers:[]};
+  const h=document.getElementById('estsheet-h'); if(h)h.textContent=n.name+'의 태어난 시각 추정';
+  closeSheets();
+  document.getElementById('estsheet').classList.add('open');dim.classList.add('on');
+  renderEstStep();}
+function estCompeting(){
+  const f=estFlow,idxs=EST_SLOTS.map((_,i)=>i);
+  const sorted=idxs.slice().sort((a,b)=>f.scores[b]-f.scores[a]);
+  return {top:sorted[0],gap:f.scores[sorted[0]]-f.scores[sorted[1]]};}
+function estAdvance(){
+  const f=estFlow;
+  if(f.qCount>=EST_MAX_Q){estFinish();return;}                 /* 종료조건 4 — 6문항 소진 */
+  if(estCompeting().gap>=2){estFinish();return;}                /* 종료조건 3 — 2점 차(거의 안 걸림, 안전장치) */
+  const q=nextEstQuestion(f.texts,f.scores,f.used);
+  if(!q){estFinish();return;}                                   /* 종료조건 1·2 */
+  f.cur=q;f.phase='trait';
+  renderEstStep();}
+function estFinish(){
+  const f=estFlow,mx=Math.max.apply(null,f.scores);
+  f.winners=EST_SLOTS.map((_,i)=>i).filter(i=>f.scores[i]===mx);
+  f.phase='result';
+  renderEstStep();}
+function estSave(){
+  const f=estFlow,win=f.picked!=null?f.picked:f.winners[0],s=EST_SLOTS[win];
+  const n=f.node;
+  n.birth=Object.assign({},n.birth,{est:{sijin:s.sijin,sub:s.sub,hour:s.hour,
+    answers:f.answers,at:nowISO()}});
+  n.updatedAt=nowISO();
+  saveState();
+  closeSheets();
+  showNode(n);}
+function estClear(n){
+  n.birth=Object.assign({},n.birth,{est:null});
+  n.updatedAt=nowISO();
+  saveState();
+  showNode(n);}
+function renderEstStep(){
+  const f=estFlow,body=document.getElementById('est-body');
+  if(!f||!body)return;
+  if(f.phase==='band'){
+    body.innerHTML=
+      `<p class="tnote">몇 가지를 물어서 태어난 시각을 <b>좁혀</b> 드립니다 — 맞히는 것이 아니라 `
+      +`<b>추정</b>입니다. 답을 틀려도 진짜 시각이 사라지지 않으니 편하게 답해 주세요.</p>`
+      +`<div class="field"><label>태어난 때가 대략 언제쯤이라고 들으셨나요?</label>`
+      +`<div class="estband">`
+      +Object.keys(EST_BAND).map(k=>`<button type="button" data-band="${k}">${k}</button>`).join('')
+      +`<button type="button" class="wide" data-band="">전혀 못 들었어요</button></div></div>`;
+    body.querySelectorAll('[data-band]').forEach(btn=>btn.onclick=()=>{
+      const k=btn.dataset.band;
+      if(k)EST_BAND[k].forEach(i=>{f.scores[i]+=EST_W_FIRST;});
+      f.answers.push({항목:'대략 언제쯤',고른것:k||'전혀 못 들었어요'});
+      f.qCount++;
+      estAdvance();});
+    return;}
+  if(f.phase==='trait'){
+    const q=f.cur,optAText=estPlainText(q.optA.text),optBText=q.optB?estPlainText(q.optB.text):null;
+    body.innerHTML=`<div class="estprog">${f.qCount+1} / 최대 ${EST_MAX_Q}문항</div>`
+      +`<div class="field"><label>${bkEsc(q.itemName)} — 어느 쪽이 더 가까운가요?</label>`
+      +`<button type="button" class="estopt" data-pick="A">${bkEsc(optAText)}</button>`
+      +(optBText?`<button type="button" class="estopt" data-pick="B">${bkEsc(optBText)}</button>`:'')
+      +`<button type="button" class="estopt unsure" data-pick="U">잘 모르겠어요</button></div>`;
+    body.querySelectorAll('[data-pick]').forEach(btn=>btn.onclick=()=>{
+      const pick=btn.dataset.pick;
+      f.used.add(q.item);
+      if(pick==='A')q.optA.idxs.forEach(i=>{f.scores[i]+=EST_W_TRAIT;});
+      else if(pick==='B')q.optB.idxs.forEach(i=>{f.scores[i]+=EST_W_TRAIT;});
+      f.answers.push({항목:q.itemName,보기:[optAText,optBText],
+        고른것:pick==='A'?optAText:(pick==='B'?optBText:'잘 모르겠어요')});
+      f.qCount++;
+      estAdvance();});
+    return;}
+  if(f.phase==='result'){renderEstResult();return;}}
+function renderEstResult(){
+  const f=estFlow,body=document.getElementById('est-body');
+  if(f.winners.length>1&&f.picked==null){
+    /* 종료조건 4의 마지막 폴백 — 동점을 사람이 직접 고른다(설계 §3-4). 최대 4개까지만 보여준다 */
+    body.innerHTML=`<p class="tnote">${f.qCount}문항으로는 아래 후보들이 동점입니다 — 더 가깝다고 `
+      +`느끼는 쪽을 직접 골라 주세요.</p>`
+      +f.winners.slice(0,4).map(i=>`<button type="button" class="estopt" data-final="${i}">${estSlotLabel(i)}</button>`).join('');
+    body.querySelectorAll('[data-final]').forEach(btn=>btn.onclick=()=>{
+      f.picked=parseInt(btn.dataset.final,10);renderEstResult();});
+    return;}
+  const win=f.picked!=null?f.picked:f.winners[0];
+  body.innerHTML=`<p><span class="estbadge">추정</span>${bkEsc(estSlotLabel(win))}쯤으로 나왔습니다.</p>`
+    +`<p class="tnote">태어난 시각을 알아내 드린 게 아니라, 답하신 내용으로 가장 가까운 쪽을 채웠습니다. `
+    +`진짜 시각을 알게 되면 언제든 바꿀 수 있습니다.</p>`
+    +`<button class="primary" id="est-save">이 추정 저장하기</button>`
+    +`<button class="pbtn" id="est-restart" style="margin-top:8px">처음부터 다시 하기</button>`;
+  const sv=document.getElementById('est-save'); if(sv)sv.onclick=estSave;
+  const rs=document.getElementById('est-restart'); if(rs)rs.onclick=()=>estStart(f.node);}
+
 /* [2026-08-28 제거] ~~updMoreSummary~~ — 접힘(#f-more) 헤더에 시각·도시 값을 요약해 주던
    함수다. **접힘을 없애 칸이 상시 보이므로 요약할 것이 없다.** 값이 화면에 그대로 있는데
    위에 또 적으면 같은 것이 두 곳에 뜬다. */
@@ -12315,7 +12653,11 @@ function savePerson(){
   const birth={y:+selY.value,m:+selM.value,d:+selD.value,
     sijin:fTime.sijin,hour:fTime.hour,min:fTime.min,
     city:cityName,lon:CITY_LON[cityName]!==undefined?CITY_LON[cityName]:null,
-    sex:fSex===undefined?null:fSex};   /* [2026-08-28] null = 값 없음 — L2가 대운을 건너뛴다 */
+    sex:fSex===undefined?null:fSex,   /* [2026-08-28] null = 값 없음 — L2가 대운을 건너뛴다 */
+    /* [2026-09-17 A5] est를 옮겨 온다 — 이 폼은 est 입력칸이 없어서, 안 옮기면 이름·생년월일만
+       고쳐도 추정해 둔 시각이 조용히 사라진다(CLAUDE.md "빠진 필드를 없음으로 때우지 말 것"과
+       같은 함정). 새로 만드는 사람은 추정한 적이 없으니 null. */
+    est:editTarget?editTarget.birth.est:null};
   let n;
   if(editTarget){
     n=editTarget;n.name=name;n.birth=birth;
