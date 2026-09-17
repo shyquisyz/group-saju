@@ -2965,6 +2965,28 @@ function hapChung(a,b){
   const ra=hcPillars(a), rb=hcPillars(b);
   if(!ra||!rb||!ra.day||!rb.day)return null;
   return hapChungOf(ra.day[0],rb.day[0],ra.day[1],rb.day[1]);}
+/* [2026-09-17 A6-3] 년·월·시 기둥의 합충 — 위 hapChung(일주)은 카드·케미·a줄이 그대로 쓴다. 이건 관계 패널
+   "둘이 붙으면" 첫머리에 **자리별 한 문장**을 붙이는 용도다. 기둥마다 hapChungOf를 같은 우선순위(충 > 천간합 >
+   육합)로 돌려 하나만 남기고, 시주는 둘 다 시각을 알 때만 본다. 대칭은 hapChungOf가 정렬로 보장한다.
+   실측 근거: 60갑자 일주쌍 3,600조합 중 75%가 합충 없음(R2 §2-2 ①) — 세 기둥을 더 보면 걸리는 쌍이 는다.
+   자리 뜻: 년 = 뿌리·집안 / 월 = 일·바깥 / 시 = 속셈·뒤. 원고: A6-1 §3-D. */
+const HC_POS_LINE={
+  year: {chung:'태어난 해의 글자가 서로 부딪혀, 집안이나 뿌리 이야기에서 자주 갈립니다.',
+         ganhap:'태어난 해의 글자가 서로 끌려, 처음 만난 날부터 오래 안 사이 같습니다.',
+         yukhap:'태어난 해의 글자가 서로 붙어, 가족 자리에 데려가도 어색하지 않습니다.'},
+  month:{chung:'태어난 달의 글자가 부딪혀, 일하는 방식에서 부딪히기 쉽습니다.',
+         ganhap:'태어난 달의 글자가 끌려, 같이 일할 때 유독 손이 맞습니다.',
+         yukhap:'태어난 달의 글자가 붙어, 바깥일을 같이 벌이면 편합니다.'},
+  hour: {chung:'태어난 시각의 글자가 부딪혀, 속마음을 꺼낼 때 어긋나기 쉽습니다.',
+         ganhap:'태어난 시각의 글자가 끌려, 말 안 해도 속셈이 통할 때가 있습니다.',
+         yukhap:'태어난 시각의 글자가 붙어, 오래 볼수록 편해지는 사이입니다.'}};
+function hapChungPos(a,b){
+  const ra=hcPillars(a), rb=hcPillars(b); if(!ra||!rb)return [];
+  const out=[];
+  [['year',ra.year,rb.year],['month',ra.month,rb.month],['hour',ra.hour,rb.hour]].forEach(([pos,pa,pb])=>{
+    if(!pa||!pb)return;
+    const hc=hapChungOf(pa[0],pb[0],pa[1],pb[1]); if(hc)out.push({pos,kind:hc.kind});});
+  return out;}
 /* 딱지 만들기(hcChipHtml)와 일련번호(hcSeq)는 **삭제됨 [2026-09-08 C7]** — C4에서 호출부를 뺀 뒤
    참조가 0곳이었다. 합충은 이제 relLead()가 본문 첫 문장으로 쓴다.
    hapChungOf()·hapChung()은 카드와 그룹 케미가 계속 쓰므로 그대로 둔다.
@@ -3649,17 +3671,68 @@ const JOB_LINE={
   인성:'받아들이고 깊어지는 일 — 배우고, 파고들고, 다듬는 일이 어울립니다. 다만 빠른 결정을 재촉받는 자리에서는 힘이 빠지기 쉽습니다.',
   비겁:'제 힘으로 서는 일 — 혼자 정하고 혼자 책임지는 일이 어울립니다. 다만 시키는 대로만 해야 하는 자리에서는 오래 버티기 어렵습니다.'};
 const JOB_TIE='여러 기운이 골고루 있어 한 길로 좁혀지지 않습니다 — 어느 쪽으로도 열려 있습니다.';
+/* [2026-09-17 A6-3] 세기 꼬리 — 같은 갈래라도 기운이 세면 혼자 끝까지, 약하면 팀·자리를 빌려야 한다.
+   강 = 신강·극왕, 약 = 신약·극약. verdict가 없으면(자가진단 합성 입력) 꼬리를 안 붙인다. 원고: A6-1 §3-F-다. */
+const JOB_TAIL={
+  식상:{강:'기운이 세서 혼자 만들어 내도 끝까지 갑니다.',약:'기운이 넉넉하진 않아, 만드는 일은 팀 안에서 할 때 오래 갑니다.'},
+  재성:{강:'기운이 세서 벌인 판을 제 손으로 굴립니다.',약:'기운이 넉넉하진 않아, 벌이는 쪽보다 고르는 쪽에 서는 게 낫습니다.'},
+  관성:{강:'기운이 세서 책임을 지는 자리가 오히려 편합니다.',약:'기운이 넉넉하진 않아, 책임은 나눠 지는 자리가 맞습니다.'},
+  인성:{강:'기운이 세서 파고든 것을 밖으로 내놓는 데까지 갑니다.',약:'기운이 넉넉하진 않아, 배우는 자리는 좋아도 앞에 서는 자리는 지칩니다.'},
+  비겁:{강:'기운이 세서 혼자 정하고 혼자 책임지는 자리가 잘 맞습니다.',약:'기운이 넉넉하진 않아, 혼자 서려면 뒤에 받쳐 줄 사람이 필요합니다.'}};
+const STRONG_SET=new Set(['신강','극왕']);
 const MONEY_LINE={
   jeong:'한 푼씩 모아 지키는 쪽입니다. 다만 큰 기회 앞에서 몸을 사리기 쉽습니다.',
   pyeon:'한 번에 크게 키우는 쪽입니다. 다만 씀씀이 단속이 느슨해지기 쉽습니다.',
   even:'지킬 때와 벌일 때를 오가는 쪽입니다. 다만 두 마음이 부딪혀 결정이 늦어지기 쉽습니다.',
   none:'돈 자체보다 하고 싶은 일이 먼저인 쪽입니다. 다만 돈 관리는 손이 덜 가는 장치에 맡겨 두는 편이 낫습니다.'};
+/* [2026-09-17 A6-3] 기운이 센 사람(신강·극왕)용 4문장. 위 MONEY_LINE은 약한 쪽(신약·극약)과 verdict 없는
+   호출(자가진단)이 그대로 쓴다 — 4종이 8종이 된다. 원고: A6-1 §3-F-나. */
+const MONEY_LINE_STRONG={
+  jeong:'한 푼씩 모아 지키는 쪽입니다. 기운이 세서 모은 것을 스스로 굴릴 힘도 있습니다.',
+  pyeon:'한 번에 크게 키우는 쪽이고, 그걸 감당할 힘도 있습니다. 다만 씀씀이 단속이 느슨해지기 쉽습니다.',
+  even:'지킬 때와 벌일 때를 오가는 쪽이고, 양쪽 다 밀어붙일 힘이 있습니다. 다만 결정이 늦어지기 쉽습니다.',
+  none:'돈보다 하고 싶은 일이 먼저인 쪽입니다. 힘이 세니 일이 돈을 따라오게 하는 편이 낫습니다.'};
 const TIE_LINE={
   mok:'먼저 다가가 이끄는 쪽입니다. 다만 상대의 속도를 기다리는 게 어렵습니다.',
   hwa:'마음을 드러내고 주변을 데우는 쪽입니다. 다만 식을 때도 빨라 오해를 사기 쉽습니다.',
   to:'받아주고 품어서 곁을 지키는 쪽입니다. 다만 속마음을 꺼내기까지 시간이 걸립니다.',
   geum:'거리를 지키면서 깊게 사귀는 쪽입니다. 다만 차갑다는 첫인상을 주기 쉽습니다.',
   su:'상대 마음을 조용히 헤아리는 쪽입니다. 다만 마음을 정하기까지 재는 시간이 길기 쉽습니다.'};
+/* [2026-09-17 A6-3] 관계 스타일을 오행 5 → 일간 10으로. 양간(甲丙戊庚壬)은 위 TIE_LINE 다섯 문장을 그대로 쓰고
+   음간 다섯 문장을 새로 썼다 — 甲과 乙이 같은 문장이던 것을 가른다(R2 §2-2 ④). 인덱스 = STEMS 순서.
+   TIE_LINE 객체는 자가진단·문서가 참조하므로 지우지 않고 여기서 잇는다. 원고: A6-1 §3-F-가. */
+const TIE_STEM=[
+  TIE_LINE.mok,  '상대에게 맞춰 감기는 쪽입니다. 다만 맞추다 보면 제 뜻이 어디 갔는지 모르게 됩니다.',
+  TIE_LINE.hwa,  '조용히 곁을 밝혀 주는 쪽입니다. 다만 그 온기를 알아주는 사람이 드물어 서운해집니다.',
+  TIE_LINE.to,   '잔정으로 곁을 챙기는 쪽입니다. 다만 다 받아 주다 제 자리를 놓칩니다.',
+  TIE_LINE.geum, '사람을 가려 사귀고 한번 사귀면 오래 가는 쪽입니다. 다만 한마디 말에 오래 상합니다.',
+  TIE_LINE.su,   '스며들듯 가까워지는 쪽입니다. 다만 먼저 연락하는 게 어색해 멀어지기도 쉽습니다.'];
+/* [2026-09-17 A6-3] 자리마다 놓인 기운 — 년간(출발점) · 일지(가까운 사람 앞) · 시간(뒤로 갈수록)의 십신 30문장
+   + 일지 십이운성 12문장. 인덱스는 TEN_GODS / UNSEONG 순서. 출발점 문장은 어릴 적 사실을 단정하지 않고
+   타고난 성향으로만 말한다(사용자 결정 2026-09-17). 12운성은 ~~"표에만, 문장에서는 뺀다"(3288 부근 옛 결정)~~
+   → 단계 이름 없이 "기세"로만 부르고 제왕을 "꺾이면 크게 꺾인다"로 균형 잡아 오독을 막는 조건으로 쓴다
+   (사용자 승인 2026-09-17). 원고: A6-1 §3-E·§3-G. */
+const POS_YEAR=['일찍부터 제 몫은 제가 챙기는 쪽으로 출발했습니다.','나눠 갖고 겨루는 것이 몸에 밴 채로 출발했습니다.',
+  '먹고 노는 여유를 타고난 채로 출발했습니다.','눈치보다 재주가 먼저 크는 쪽으로 출발했습니다.',
+  '크게 벌이고 크게 쓰는 감각을 갖고 출발했습니다.','아끼고 모으는 감각을 갖고 출발했습니다.',
+  '일찍부터 짊어지는 게 있어, 또래보다 먼저 철이 드는 쪽입니다.','선 안에서 움직이는 것이 몸에 밴 채로 출발했습니다.',
+  '남과 다른 방식으로 배우는 것을 일찍 익혔습니다.','배우고 받아들이는 것이 쉬운 쪽으로 출발했습니다.'];
+const POS_DAY=['가까운 사람에게는 친구처럼 나란히 서려 합니다.','가까운 사람과도 몫을 따지는 순간이 옵니다.',
+  '가까운 사람 앞에서는 느긋하고 잘 먹고 잘 웃습니다.','가까운 사람에게는 말이 거침없어집니다.',
+  '가까운 사람에게 통이 크고, 아끼지 않습니다.','가까운 사람 살림을 제 것처럼 챙깁니다.',
+  '가까운 사람에게 오히려 더 엄합니다.','가까운 사이에도 선을 지키고 약속을 먼저 지킵니다.',
+  '가까운 사람에게도 속을 다 보이진 않습니다.','가까운 사람에게 기대고, 또 챙깁니다.'];
+const POS_HOUR=['나이 들수록 제 힘으로 서는 쪽이 편해집니다.','뒤로 갈수록 곁에 같이 뛰는 사람이 늘어납니다.',
+  '뒤로 갈수록 여유가 생기고, 아랫사람에게 너그럽습니다.','뒤로 갈수록 하고 싶은 말이 늘고, 아랫사람이 따릅니다.',
+  '뒤로 갈수록 판이 커지고, 씀씀이도 같이 커집니다.','뒤로 갈수록 살림이 단단해지는 쪽입니다.',
+  '뒤로 갈수록 짊어지는 게 늘고, 아랫사람에게 엄한 어른이 됩니다.','뒤로 갈수록 자리가 잡히고, 아랫사람이 기준으로 삼습니다.',
+  '뒤로 갈수록 혼자 궁리하는 시간이 늘어납니다.','뒤로 갈수록 배우고 가르치는 자리가 늘어납니다.'];
+const UNSEONG_LINE=['이제 막 돋아나는 기세라, 시작하는 일에 힘이 붙습니다.','물기 머금은 새싹 같은 기세라, 흔들리기 쉽지만 눈길을 끕니다.',
+  '옷을 갖춰 입은 기세라, 자기를 드러내는 자리가 어울립니다.','제 힘으로 벌어먹는 기세라, 스스로 서는 데 부족함이 없습니다.',
+  '한창때의 기세라, 밀어붙이는 힘은 세되 꺾이면 크게 꺾입니다.','한창때를 막 지난 기세라, 힘보다 노련함으로 갑니다.',
+  '힘이 빠지는 기세라, 몸보다 머리를 쓰는 쪽이 낫습니다.','멈춰 선 기세라, 새로 벌이기보다 정리하는 데 강합니다.',
+  '갈무리하는 기세라, 모으고 쌓는 일에 맞습니다.','끊어졌다 다시 잇는 기세라, 바닥에서 다시 서는 힘이 있습니다.',
+  '새로 배는 기세라, 아직 안 드러난 가능성이 큽니다.','길러지는 기세라, 받쳐 주는 사람이 있을 때 자랍니다.'];
 const HELP_CLOSER='그런 기운을 가진 사람이 곁에 있으면 숨통이 트입니다. 주변에 떠오르는 사람이 있다면 은하에 등록해 보세요.';
 /** 나를 낳는 오행(인성 쪽) — GEN의 역방향 */
 function elBorn(me){for(const k in GEN)if(GEN[k]===me)return k;return null;}
@@ -3676,7 +3749,7 @@ function cornerBlk(fact,take){
    극왕극약)는 실제 인물에 없을 수 있어, 합성 입력으로 시험할 길이 있어야 한다.
    sajuSelfTest가 이 넷을 직접 부른다. */
 const CNR_GRP5=['식상','재성','관성','인성','비겁'];
-function cornerJob(cnt){
+function cornerJob(cnt,verdict){   /* [2026-09-17 A6-3] verdict(선택) — 있으면 세기 꼬리를 붙인다 */
   const mx=Math.max.apply(null,CNR_GRP5.map(k=>cnt[k]));
   const top=CNR_GRP5.filter(k=>cnt[k]===mx);
   const counts=CNR_GRP5.map(k=>`${k} ${cnt[k]}`).join(' · ');
@@ -3693,18 +3766,20 @@ function cornerJob(cnt){
     :top.length>1
     ?`${counts} — 가장 많은 갈래가 <b>${top.join('·')}</b>${ro(top[top.length-1])} 갈립니다.`
     :`${counts} — 가장 많은 갈래는 <b>${top[0]}</b>입니다.`;
-  return {h:'어울리는 일',t:cornerBlk(fact,top.length>1?JOB_TIE:JOB_LINE[top[0]]),raw:true};}
-function cornerMoney(cnt10){
+  const tail=(top.length===1&&verdict)?(' '+JOB_TAIL[top[0]][STRONG_SET.has(verdict)?'강':'약']):'';
+  return {h:'어울리는 일',t:cornerBlk(fact,top.length>1?JOB_TIE:JOB_LINE[top[0]]+tail),raw:true};}
+function cornerMoney(cnt10,verdict){   /* [2026-09-17 A6-3] verdict(선택) — 신강·극왕이면 STRONG 표 */
   const jj=cnt10[5], pp=cnt10[4];   /* TEN_GODS: 4=편재 5=정재 */
   const key=(jj===0&&pp===0)?'none':(jj>pp?'jeong':(pp>jj?'pyeon':'even'));
+  const MONEY=(verdict&&STRONG_SET.has(verdict))?MONEY_LINE_STRONG:MONEY_LINE;
   /* [2026-09-09 C10] ~~`정재 ${jj} · 편재 ${pp}.`~~ — 여덟 코너에 마지막까지 남아 있던 십신 이름이었다.
      계열 이름 괄호 (재성)은 어휘 기준표라 그대로 두고, 낱개 두 갈래만 일상어로 부른다(C9 승인). */
-  return {h:'돈 스타일',t:cornerBlk(`돈과 실속을 다루는 기운(재성)은 모아 지키는 쪽 ${jj} · 크게 키우는 쪽 ${pp}입니다.`,MONEY_LINE[key]),raw:true};}
+  return {h:'돈 스타일',t:cornerBlk(`돈과 실속을 다루는 기운(재성)은 모아 지키는 쪽 ${jj} · 크게 키우는 쪽 ${pp}입니다.`,MONEY[key]),raw:true};}
 function cornerTie(dayStem){
   const el=STEM_EL[dayStem];
   return {h:'관계 스타일',
     t:cornerBlk(`태어난 날 윗글자는 <b>${STEMS[dayStem]}</b>, 오행은 <b>${EL_KO[el]}</b>입니다.`,
-      TIE_LINE[el]),raw:true};}
+      TIE_STEM[dayStem]),raw:true};}   /* [2026-09-17 A6-3] ~~TIE_LINE[el]~~ → 일간별 */
 function cornerPower(sur,dayStem,verdict){
   const miss=EL_ORDER.filter(k=>!sur[k]);
   const nmEl=a=>a.map(k=>EL_KO[k]).join('·');
@@ -3846,9 +3921,16 @@ function personReading(n){
   }
   if(sents.length)out.push({h:'넘치는 것과 비어 있는 것',t:sents.join(' ')});
 
+  /* ── ④-2 자리마다 놓인 기운 [2026-09-17 A6-3] ── 년주·시주·일지의 십신은 지금까지 개수(cnt)로만
+     소비됐다(R2 §2-2 ③). 년간(출발점) → 일지(가까운 사람 앞) → 일지 운성(기세) → 시간(뒤로 갈수록).
+     시각을 모르면 시간 문장은 뺀다. 년간이 일간과 같은 글자면 tenGod이 비견을 돌려주므로 빈칸이 없다. */
+  { const s=[POS_YEAR[det[0].stemGod], POS_DAY[det[2].branchGod], UNSEONG_LINE[det[2].unseong]];
+    if(det[3])s.push(POS_HOUR[det[3].stemGod]);
+    out.push({h:'자리마다 놓인 기운',t:s.join(' ')}); }
+
   /* ══ 코너 넷 [2026-08-31] ══ 전부 이층식(해설 + 해석 층). 계산은 순수 함수가 한다 */
-  out.push(cornerJob(cnt));
-  out.push(cornerMoney(cnt10));
+  out.push(cornerJob(cnt,gy.verdict));      /* [2026-09-17 A6-3] 세기 꼬리 */
+  out.push(cornerMoney(cnt10,gy.verdict));  /* [2026-09-17 A6-3] 강/약 표 */
   out.push(cornerTie(d));
   out.push(cornerPower(sajuElements(r),d,gy.verdict));
   /* [2026-08-30] key 는 제목 문자열 — 인물 패널이 일곱을 접을 때 쓴다.
@@ -9726,8 +9808,20 @@ async function sajuSelfTest(){
    T('cnrMoneyEven: 동수', txt(cornerMoney(ez)).indexOf(MONEY_LINE.even)>=0, '정재1·편재1');
    /* 21. 관계 스타일 — 열 일간이 다섯 오행으로 정확히 갈린다 */
    let tieOk=true;
-   for(let i=0;i<10;i++) if(txt(cornerTie(i)).indexOf(TIE_LINE[STEM_EL[i]])<0)tieOk=false;
-   T('cnrTieMap: 일간 열 개 → 오행 문장', tieOk, '10/10');
+   /* [2026-09-17 A6-3] ~~오행 문장(TIE_LINE[STEM_EL[i]])~~ → 일간별 문장(TIE_STEM[i]). 양간은 옛 오행 문장과 같아야 하고
+      음간은 달라야 한다(甲≠乙) — 둘 다 검사한다. */
+   let tieDistinct=true;
+   for(let i=0;i<10;i++){ if(txt(cornerTie(i)).indexOf(TIE_STEM[i])<0)tieOk=false;
+     if(i%2===0&&TIE_STEM[i]!==TIE_LINE[STEM_EL[i]])tieOk=false;
+     if(i%2===1&&TIE_STEM[i]===TIE_STEM[i-1])tieDistinct=false; }
+   T('cnrTieMap: 일간 열 개 → 일간별 문장(양간=옛 오행 문장)', tieOk, '10/10');
+   T('cnrTieDistinct: 음간 다섯이 양간과 다른 문장', tieDistinct, tieDistinct?'5/5':'같은 문장 있음');
+   /* [2026-09-17 A6-3] 세기 분기 — verdict가 있으면 돈 스타일이 강/약 표를 가르고 직업에 꼬리가 붙는다 */
+   T('cnrMoneyStrong: 신강이면 STRONG 표', txt(cornerMoney(jz,'신강')).indexOf(MONEY_LINE_STRONG.jeong)>=0
+     && txt(cornerMoney(jz,'신약')).indexOf(MONEY_LINE.jeong)>=0, '정재 우세 · 신강/신약');
+   { const c=mk({}); c['재성']=3; const s=txt(cornerJob(c,'극왕')), w=txt(cornerJob(c,'극약')), n=txt(cornerJob(c));
+     T('cnrJobTail: 세기 꼬리(강/약/없음)', s.indexOf(JOB_TAIL.재성.강)>=0&&w.indexOf(JOB_TAIL.재성.약)>=0
+       &&n.indexOf(JOB_TAIL.재성.강)<0&&n.indexOf(JOB_TAIL.재성.약)<0, '재성 3 · 극왕/극약/없음'); }
    /* 22. 모서리 ③ 오행 고루 + 모서리 ④ 극왕·극약은 억부 생략 */
    const all={mok:1,hwa:1,to:1,geum:1,su:1}, noTo={mok:1,hwa:1,to:0,geum:1,su:1};
    const evenWeak=cornerPower(all,0,'신약');
@@ -10383,8 +10477,10 @@ function pairReading(a,b,giver,receiver,rel,collapse,withStrength){
      십신이므로 A=b, 6~9면 gBA가 2~5라 A=a. 비견·겁재(0·1)는 이름을 안 써서 순서가 무관하다. */
   const pk=PAIR_KEY[gAB], ps=PAIR_STORY[pk];
   const front=(gAB>=2&&gAB<=5)?[b,a]:[a,b];
+  /* [2026-09-17 A6-3] 년·월·시 기둥 합충을 첫머리에(최대 3문장). 일주 합충은 a줄이 이미 말한다. */
+  const posLines=hapChungPos(a,b).map(x=>HC_POS_LINE[x.pos][x.kind]);
   out.push({key:'p:둘이 붙으면',h:'둘이 붙으면',
-    t:[ps.t,ps.g,ps.c].map(x=>fillPair(x,front[0].name,front[1].name)).join(' ')});
+    t:posLines.concat([ps.t,ps.g,ps.c].map(x=>fillPair(x,front[0].name,front[1].name))).join(' ')});
   /* ② 기운의 방향 — 기존 오행 카피를 그대로 */
   out.push({key:'p:기운의 방향',h:'기운의 방향',t:pairPhrase(giver,receiver,rel.kind,'long')});
   /* ③ 여덟 글자로 보면 — 관계를 일간 하나로만 보던 것을 푸는 자리 */
