@@ -59,7 +59,10 @@ group-saju-backup-*.json
 # [2026-09-05] 타로풍 카드 그림(B 회차) 원본. candidates/와 같은 성격 — **고를 대상**이라 남긴다.
 # alt/는 합격 기준에 못 미쳐 물린 시안. 사용자가 2/2에서 고르라고 함께 둔다(용량 각 ~6MB).
 !assets/card-b/
-!assets/card-b/*.png
+# ~~!assets/card-b/*.png~~ [2026-09-17 A6-1 정정] png 원본 29장(약 180MB)은 저장소 밖
+# `D:\work\web service\사주은하\_보관\card-b-원본\`으로 옮겼다. 코드는 B23 이후 webp만 읽는다.
+# 옛 커밋에 그대로 남아 있으므로 필요하면 git에서도 꺼낼 수 있다.
+!assets/card-b/*.webp
 # ~~!assets/card-b/alt/~~ ~~!assets/card-b/alt/*.png~~ [2026-09-05 B 3/3 정정] 물린 시안 28장은 합성 확정 후 일괄 삭제했다(사용자 지시). 다시 만들면 이 두 줄을 되살린다.
 # [2026-09-05 B 3/3] 카드 렌더용 축소본(WebP). 앱이 카드 생성 시에만 지연 로드한다 — 배포에 실려야 한다.
 !assets/card-b/web/
