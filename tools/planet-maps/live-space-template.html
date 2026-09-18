@@ -7,16 +7,16 @@ h1{font-size:18px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 4px;color:#e8c6
 <div id="root"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-const MAPS=__MAPS__;
+const MAPS=__MAPS__;const RINGPROF='__RINGPROF__';
 const loadImg=u=>new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=u;});
 const LPOS=new THREE.Vector3(5,6,8),LDIR=LPOS.clone().normalize();
 function lights(s){s.add(new THREE.AmbientLight(0x9098b8,.5));const k=new THREE.DirectionalLight(0xfff4e6,1.35);k.position.copy(LPOS);s.add(k);const r=new THREE.DirectionalLight(0x9fc0ff,.45);r.position.set(-6,3,-9);s.add(r);}
 const TEX={};async function tex(key){if(TEX[key])return TEX[key];const im=await loadImg(MAPS[key]);const t=new THREE.Texture(im);t.needsUpdate=true;t.encoding=THREE.sRGBEncoding;t.anisotropy=8;TEX[key]=t;return t;}
 async function planetMesh(key){const map=await tex(key);return new THREE.Mesh(new THREE.SphereGeometry(1,128,96),new THREE.MeshStandardMaterial({map,bumpMap:map,bumpScale:.015,roughness:.8,metalness:0}));}
 // ── 반짝이는 고리(토성형): 반지름 방향 결(밝고 어두운 띠 + 틈), 행성 그림자가 고리에 드리움, 작은 반짝임이 돈다 ──
-function ringMat(inner,outer,tint,op){return new THREE.ShaderMaterial({uniforms:{L:{value:LDIR},time:{value:0},tint:{value:new THREE.Color(tint)},op:{value:op},ri:{value:inner},ro:{value:outer}},
+function ringMat(inner,outer,tint,op,prof){return new THREE.ShaderMaterial({uniforms:{L:{value:LDIR},time:{value:0},tint:{value:new THREE.Color(tint)},op:{value:op},ri:{value:inner},ro:{value:outer},prof:{value:prof||null},useP:{value:prof?1:0}},
   vertexShader:'varying vec3 vW;varying vec3 vL;void main(){vL=position;vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
-  fragmentShader:'uniform vec3 L,tint;uniform float time,op,ri,ro;varying vec3 vW;varying vec3 vL;'+
+  fragmentShader:'uniform vec3 L,tint;uniform float time,op,ri,ro,useP;uniform sampler2D prof;varying vec3 vW;varying vec3 vL;'+
    'float h(float x){return fract(sin(x*91.7)*43758.5);}float n1(float x){float i=floor(x),f=fract(x);return mix(h(i),h(i+1.),f*f*(3.-2.*f));}'+
    'void main(){float r=length(vL.xy);float t=(r-ri)/(ro-ri);if(t<0.||t>1.)discard;'+
    'float bands=.35+.4*n1(t*11.+2.)+.25*n1(t*27.)*n1(t*5.+7.);float gap=smoothstep(.02,.0,abs(t-.62))*.85+smoothstep(.015,.0,abs(t-.3))*.5;'+
@@ -24,9 +24,9 @@ function ringMat(inner,outer,tint,op){return new THREE.ShaderMaterial({uniforms:
    // 행성 그림자: 이 점에서 빛 쪽으로 쏜 선이 반지름 1 구와 만나면 그늘
    'vec3 c0=vec3(0.);vec3 p=vW-c0;float b=dot(p,L);float d2=dot(p,p)-b*b;float shade=(b<0.&&d2<1.)?.18:1.;'+
    'float ang=atan(vL.y,vL.x);float sp=pow(max(0.,sin(ang*40.+time*.6+t*60.)),40.)*.6;'+
-   'vec3 col=tint*(.8+.25*n1(t*17.))*shade+vec3(sp)*shade;gl_FragColor=vec4(col,a);}',
+   'vec3 col=tint*(.8+.25*n1(t*17.))*shade+vec3(sp)*shade;if(useP>.5){vec4 pc=texture2D(prof,vec2(t,.5));col=pc.rgb*1.1*shade+vec3(sp)*.6*shade;a=pc.a*op*edge;}gl_FragColor=vec4(col,a);}',
   transparent:true,side:THREE.DoubleSide,depthWrite:false});}
-function ring(inner,outer,tilt,tint,op){const g=new THREE.RingGeometry(inner,outer,256,1);const m=new THREE.Mesh(g,ringMat(inner,outer,tint,op));m.rotation.set(-Math.PI/2+tilt[0],0,tilt[1]);return m;}
+function ring(inner,outer,tilt,tint,op,prof){const g=new THREE.RingGeometry(inner,outer,256,1);const m=new THREE.Mesh(g,ringMat(inner,outer,tint,op,prof));m.rotation.set(-Math.PI/2+tilt[0],0,tilt[1]);return m;}
 // ── 위성: 작은 달(구덩이 지도 흑백) ──
 async function moon(r,key,gray){const map=await tex(key);const m=new THREE.Mesh(new THREE.SphereGeometry(r,48,32),new THREE.MeshStandardMaterial({map,color:gray,roughness:.95,metalness:0}));return m;}
 // ── 혜성 꼬리: 햇빛 반대쪽으로. 가는 이온 꼬리(청백, 곧음) + 먼지 꼬리(따뜻한 흰색, 살짝 휨), 아주 부드럽게 ──
@@ -39,7 +39,7 @@ function tailMesh(len,w0,w1,col,op,bend){const SEG=40,geo=new THREE.BufferGeomet
       'void main(){float side=exp(-pow((vU.x-.5)*2.4,2.));float along=pow(1.-vU.y,.85)*smoothstep(0.,.04,vU.y);'+
       'float st=.8+.2*sin(vU.x*30.+vU.y*14.-time*1.5);gl_FragColor=vec4(c*1.2,op*side*along*st);}',
     transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));}
-function tail(level){const L=[0,1.3,2.3,3.4][level];const g=new THREE.Group();
+function tail(level){const L=[0,1.8,2.7,3.6][level];const g=new THREE.Group();
   const ion=tailMesh(L,.2,.3+.06*level,0xa8d6ff,1.25,0);const dust=tailMesh(L*.85,.38,.75+.16*level,0xfff1dc,.8,.12);
   ion.position.y=.75;dust.position.y=.7;g.add(dust);g.add(ion);return g;}
 // ── 무지개 (A 확정, 빨강·주황 보강) ──
@@ -64,7 +64,7 @@ const SPECS=[
   {title:'무지개 A (색 보정)',key:'su-mok',fx:'rainbow'}];
 async function build(spec,portrait){const S=new THREE.Scene();lights(S);const g=new THREE.Group();g.add(await planetMesh(spec.key));g.rotation.x=.25;S.add(g);const upd=[];
   const fx=spec.fx;
-  if(fx==='ring'){const r=ring(1.3,2.1,[.42,.12],0xf2e3c6,.7);S.add(r);upd.push(t=>r.material.uniforms.time.value=t);}
+  if(fx==='ring'){const r=ring(1.28,2.25,[.42,.12],0xf2e3c6,1.,RINGP);S.add(r);upd.push(t=>r.material.uniforms.time.value=t);}
   if(fx==='ring2'){const a=ring(1.45,1.56,[.55,.35],0xd9e4ff,.9),b=ring(1.7,1.78,[.35,-.55],0xffe2c4,.8);S.add(a);S.add(b);upd.push(t=>{a.material.uniforms.time.value=t;b.material.uniforms.time.value=t;});}
   if(fx==='moons'){const m1=await moon(.33,'geum',0xd8d8d8),m2=await moon(.23,'to',0xc8beb4);S.add(m1);S.add(m2);
     upd.push(t=>{const a=t*.45,b=t*.45+Math.PI;m1.position.set(Math.cos(a)*1.75,Math.sin(a)*.3,Math.sin(a)*1.6);m2.position.set(Math.cos(b)*1.75,Math.sin(b)*.3,Math.sin(b)*1.6);m1.rotation.y=t*.3;m2.rotation.y=t*.3;});}
@@ -74,7 +74,7 @@ async function build(spec,portrait){const S=new THREE.Scene();lights(S);const g=
   const cam=new THREE.PerspectiveCamera(30,1,.1,100);cam.position.set(0,.3,1).normalize().multiplyScalar(zoom/Math.tan(15*Math.PI/180));
   const look=fx.startsWith('tail')?new THREE.Vector3(-.8,-.8,0):new THREE.Vector3(0,0,0);cam.lookAt(look);
   return {S,g,cam,upd};}
-(async()=>{const root=document.getElementById('root');const items=[];
+let RINGP=null;(async()=>{const pim=await loadImg(RINGPROF);RINGP=new THREE.Texture(pim);RINGP.needsUpdate=true;RINGP.encoding=THREE.sRGBEncoding;RINGP.wrapS=RINGP.wrapT=THREE.ClampToEdgeWrapping;const root=document.getElementById('root');const items=[];
   const sec=(h)=>{const d=document.createElement('div');d.innerHTML='<h2>'+h+'</h2>';root.appendChild(d);const gr=document.createElement('div');gr.className='grid';d.appendChild(gr);return gr;};
   const gBig=sec('크게 보기');const gSmall=sec('실제 초상 크기 132px');
   for(const sp of SPECS){for(const [box,px,por] of [[gBig,260,false],[gSmall,132,true]]){
