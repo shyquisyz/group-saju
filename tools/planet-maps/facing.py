@@ -2,20 +2,23 @@
 import numpy as np, json
 from PIL import Image
 EL=['mok','hwa','to','geum','su']
-def classify(a):
+def classify(a,geum=True):
+    # [2026-09-18 G3] 금 = 백랍색(채도 <.2, 밝기 중간). 이전 흰 금속 규칙(채도<.18·밝기>=110)은 새 금을 못 잡는다.
+    # 금이 없는 지도에서는 금 규칙을 끈다 — 화의 회색빛 지각이 금으로 잡히지 않게.
     r,g,b=a[...,0],a[...,1],a[...,2]; mx=a.max(-1); mn=a.min(-1); sat=(mx-mn)/(mx+1)
     lava=(r-b>195)&(b<24)
     c=np.full(r.shape,-1)
     c[(b>r+15)&(b>=g-10)]=4                      # 수
     c[(g>r+5)&(g>b+5)]=0                          # 목
     c[(r>140)&(r>g+30)&(b<120)&~lava&(mx>150)]=2  # 토(밝은 주황)
-    c[((mx<95)|lava)&(c!=4)&(c!=0)]=1             # 화(어두운 지각·용암)
-    c[(sat<.18)&(mx>=110)]=3                      # 금(무채색 밝음)
+    metal=(sat<.3)&(mx>=55)&((r-b)<50)&(c!=4)&(c!=0)&~lava if geum else np.zeros(r.shape,bool)
+    c[((mx<95)|lava)&(c!=4)&(c!=0)&~metal]=1      # 화(어두운 지각·용암)
+    c[metal]=3                                    # 금(백랍색)
     return c
 res={};rep=[]
 for k in [k for k,_ in json.load(open('jobs.json'))]:
     a=np.asarray(Image.open(f'serve/map/{k}.jpg').convert('RGB').resize((256,128))).astype(int)
-    c=classify(a); H,W=c.shape
+    c=classify(a,'geum' in k.split('-')); H,W=c.shape
     lat=(np.arange(H)+.5)/H*np.pi-np.pi/2; lon=(np.arange(W)+.5)/W*2*np.pi
     tot={e:float(((c==i)*np.cos(lat)[:,None]).sum()) for i,e in enumerate(EL)}
     s=sum(tot.values()) or 1

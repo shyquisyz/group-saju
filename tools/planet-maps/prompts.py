@@ -4,17 +4,17 @@ D={'mok':'lush land densely covered with fluffy rounded green forest canopy',
    'su':'deep blue ocean with turquoise shallows along the coasts',
    'hwa':'dark volcanic crust with glowing orange lava pools and thin glowing fissures',
    'to':'warm orange desert with broad terraced sand mesas and round craters',
-   'geum':'polished silver chrome metal mountains made of sharp angular facets (metal, not snow)'}
+   'geum':'brushed pewter silver-gray faceted crystal rock, medium gray with warm-neutral steel tones and subtle metallic sheen on facet edges, like raw platinum ore'}
 DOM={'mok':'The entire planet is covered with dense fluffy rounded green forest canopy, with a few small winding rivers and clearings',
    'su':'The entire planet is deep blue ocean with turquoise shallows, a few tiny scattered islets and small white polar ice caps',
    'hwa':'The entire planet is a burning molten surface like a small sun: bright glowing lava seas, flame-like swirls and dark cooling crust plates',
    'to':'The entire planet is warm orange desert with large terraced sand mesas, dunes and round craters',
-   'geum':'The entire planet is polished chrome steel shaped into countless sharp low-poly geometric facets, like a giant cut metal gemstone, with bright reflective edges and dark reflections; clearly metal, not snow or ice'}
+   'geum':'The entire planet is brushed pewter silver-gray faceted crystal rock, medium gray with warm-neutral steel tones and subtle metallic sheen on facet edges, like a planet of raw platinum ore'}
 BASE=('Equirectangular 2:1 texture map for wrapping a sphere (full planet surface, longitude across, latitude down, '
  'left and right edges continuous). Stylized miniature diorama planet. {c} Natural organic region shapes with soft believable '
  'transitions between terrains. Top-down albedo only, even soft lighting, no stars, no text, no border, no grid.')
 NEG={'mok':'no trees or vegetation','su':'no water or ocean','hwa':'no lava or fire','to':'no desert sand','geum':'no metal or silver mountains'}
-neg=lambda have:' Strictly only these terrains: '+'; '.join(NEG[k] for k in ORDER if k not in have)+'.'
+neg=lambda have:' Strictly only these terrains: '+'; '.join([NEG[k] for k in ORDER if k not in have]+(['absolutely no white, no snow, no ice'] if 'geum' in have else []))+'.'
 jobs=[]
 for a in ORDER:
     rest=[k for k in ORDER if k!=a]

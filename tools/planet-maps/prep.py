@@ -9,6 +9,6 @@ def prep(k,dst='serve/map/'):
     for i in range(B):
         t=.5*(1-i/B);a[:,i]=L[:,i]*(1-t)+R[:,B-1-i]*t;a[:,-1-i]=R[:,B-1-i]*(1-t)+L[:,i]*t
     im=Image.fromarray(a.clip(0,255).astype('uint8')).resize((1024,512),Image.LANCZOS);im.save(dst+k+'.jpg',quality=84,optimize=True)
-    c=classify(np.asarray(im.resize((512,256))).astype(int));c[c<0]=5;Image.fromarray(PAL[c]).save('serve/cls/'+k+'.png')
+    c=classify(np.asarray(im.resize((512,256))).astype(int),'geum' in k.split('~')[0].split('-'));c[c<0]=5;Image.fromarray(PAL[c]).save('serve/cls/'+k+'.png')
 if __name__=='__main__':
     for k in sys.argv[1:]: prep(k)
