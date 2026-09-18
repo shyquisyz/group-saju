@@ -1,0 +1,54 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>무지개 시안</title>
+<style>:root{color-scheme:dark}body{margin:0;background:#07080d;color:#e9e6dc;font:14px/1.5 Pretendard,system-ui,sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 4px}p{color:#9a97a3;margin:0 0 12px;font-size:13px}#big{display:block;width:100%;max-width:1100px;height:auto;border-radius:12px;background:#0b0c14}
+.labels{display:grid;grid-template-columns:repeat(3,1fr);max-width:1100px;text-align:center;font-size:12px;color:#b9b6c2;margin-top:6px}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:16px}.row canvas{border-radius:50%;background:#0b0c14}.lab{font-size:12px;color:#9a97a3}</style></head><body>
+<h1>무지개 — 행성 뒤에 걸친 호</h1><p>왼쪽 아래를 감싸는 얇은 무지개 호. 밑동은 행성 뒤로 숨고, 양 끝은 서서히 사라진다. 빛이 천천히 반짝이며 흐른다. (오로라는 윗쪽, 무지개는 아래쪽이라 겹치지 않음)</p>
+<canvas id="big" width="1100" height="330"></canvas>
+<div class="labels"><span>A. 얇은 무지개 (수+목)</span><span>B. 굵고 흐린 무지개 (토+목·화)</span><span>C. 쌍무지개 (금+토)</span></div>
+<div class="row" id="small"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const MAPS=__MAPS__;
+const loadImg=u=>new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=u;});
+// 무지개 호: 화면을 향한 띠. v=0 안쪽(보라) → v=1 바깥(빨강). 가장자리는 부드럽게, 양 끝은 사라짐.
+function rainbowArc(o){const SEG=200;const A0=o.a0*Math.PI/180,A1=o.a1*Math.PI/180;
+  const geo=new THREE.BufferGeometry();const pos=[],uv=[],idx=[];
+  for(let i=0;i<=SEG;i++){const u=i/SEG;const a=A0+(A1-A0)*u;const c=Math.cos(a),s=Math.sin(a);
+    pos.push(c*o.r0+o.cx,s*o.r0+o.cy,0,c*o.r1+o.cx,s*o.r1+o.cy,0);uv.push(u,0,u,1);if(i<SEG){const k=i*2;idx.push(k,k+1,k+2,k+1,k+3,k+2);}}
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(idx);
+  const mat=new THREE.ShaderMaterial({uniforms:{time:{value:0},op:{value:o.op}},
+    vertexShader:'varying vec2 vU;void main(){vU=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'uniform float time,op;varying vec2 vU;'+
+      'vec3 spec(float x){return clamp(vec3(abs(x*6.-3.)-1.,2.-abs(x*6.-2.),2.-abs(x*6.-4.)),0.,1.);}'+     // 무지개 색(빨강→보라)
+      'void main(){float v=vU.y;vec3 c=spec(.8*(1.-v));c=pow(c,vec3(.8))*1.25;'+
+      'float band=smoothstep(0.,.18,v)*smoothstep(1.,.82,v);float ends=smoothstep(0.,.22,vU.x)*smoothstep(1.,.78,vU.x);'+
+      'float sh=.85+.15*sin(vU.x*18.-time*1.2);float a=band*ends*sh*op;gl_FragColor=vec4(c*a,a);}',
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
+  return new THREE.Mesh(geo,mat);}
+const STYLES={
+  A:[{cx:.08,cy:.02,r0:1.3,r1:1.4,a0:140,a1:285,op:1.25}],
+  B:[{cx:.08,cy:.02,r0:1.26,r1:1.46,a0:140,a1:285,op:.8}],
+  C:[{cx:.08,cy:.02,r0:1.28,r1:1.37,a0:140,a1:285,op:1.25},{cx:.08,cy:.02,r0:1.47,r1:1.54,a0:150,a1:275,op:.5}]};
+async function planet(key,style){
+  const im=await loadImg(MAPS[key]);const map=new THREE.Texture(im);map.needsUpdate=true;map.encoding=THREE.sRGBEncoding;map.anisotropy=8;
+  const g=new THREE.Group();g.add(new THREE.Mesh(new THREE.SphereGeometry(1,128,96),new THREE.MeshStandardMaterial({map,bumpMap:map,bumpScale:.015,roughness:.8,metalness:0})));
+  g.rotation.x=.25;const arcs=STYLES[style].map(rainbowArc);const holder=new THREE.Group();arcs.forEach(a=>holder.add(a));return {g,holder,arcs};}
+function lights(s){s.add(new THREE.AmbientLight(0x9098b8,.55));const k=new THREE.DirectionalLight(0xfff4e6,1.35);k.position.set(5,6,8);s.add(k);const r=new THREE.DirectionalLight(0x9fc0ff,.5);r.position.set(-6,3,-9);s.add(r);}
+(async()=>{
+  const big=new THREE.WebGLRenderer({canvas:document.getElementById('big'),antialias:true});big.outputEncoding=THREE.sRGBEncoding;
+  const S=new THREE.Scene();lights(S);const cam=new THREE.PerspectiveCamera(16,1100/330,.1,100);cam.position.set(0,2.2,12.4);cam.lookAt(0,0,0);
+  const spec=[['su-mok','A'],['to-mok-hwa','B'],['geum-to','C']];const P=[];let x=-2.9;
+  for(const [k,st] of spec){const p=await planet(k,st);p.g.position.x=x;p.holder.position.x=x;S.add(p.g);S.add(p.holder);p.cam=cam;P.push(p);x+=2.9;}
+  const small=[];const box=document.getElementById('small');
+  for(const [k,st] of spec){const cv=document.createElement('canvas');cv.width=cv.height=264;cv.style.width=cv.style.height='132px';box.appendChild(cv);
+    const r=new THREE.WebGLRenderer({canvas:cv,antialias:true});r.outputEncoding=THREE.sRGBEncoding;const s=new THREE.Scene();lights(s);const p=await planet(k,st);s.add(p.g);s.add(p.holder);
+    const c=new THREE.PerspectiveCamera(30,1,.1,100);c.position.set(0,.3,1).normalize().multiplyScalar(1.75/Math.tan(15*Math.PI/180));c.lookAt(0,0,0);p.cam=c;small.push({r,s,c,p});}
+  const lab=document.createElement('span');lab.className='lab';lab.textContent='← 실제 초상 크기 132px';box.appendChild(lab);
+  const t0=performance.now();
+  (function loop(now){const t=(now-t0)/1000;
+    for(const p of [...P,...small.map(o=>o.p)]){p.g.rotation.y=-.9+t*.12;p.holder.quaternion.copy(p.cam.quaternion);p.arcs.forEach(a=>a.material.uniforms.time.value=t);}
+    big.setClearColor(0x0b0c14,1);big.render(S,cam);for(const o of small){o.r.setClearColor(0x0b0c14,1);o.r.render(o.s,o.c);}
+    requestAnimationFrame(loop);})(t0);
+})();
+</script></body></html>

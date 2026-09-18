@@ -1,0 +1,61 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>움직이는 오로라</title>
+<style>:root{color-scheme:dark}body{margin:0;background:#07080d;color:#e9e6dc;font:14px/1.5 Pretendard,system-ui,sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 4px}p{color:#9a97a3;margin:0 0 12px;font-size:13px}#big{display:block;width:100%;max-width:1100px;height:auto;border-radius:12px;background:#0b0c14}
+.labels{display:grid;grid-template-columns:repeat(3,1fr);max-width:1100px;text-align:center;font-size:12px;color:#b9b6c2;margin-top:6px}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:16px}.row canvas{border-radius:50%;background:#0b0c14}.lab{font-size:12px;color:#9a97a3}</style></head><body>
+<h1>움직이는 오로라 — 윤곽 오로라(A안)</h1><p>행성 윗쪽 윤곽을 따라 오로라 커튼(AI 그림)이 지평선 너머에서 솟는다. 커튼은 천천히 흐르며 일렁이고, 윤곽을 따라 표면에 옅은 초록 기운이 비친다.</p>
+<canvas id="big" width="1100" height="330"></canvas>
+<div class="labels"><span>수+목 · 오로라 A</span><span>토+목·화 · 오로라 B</span><span>금+토 · 오로라 A</span></div>
+<div class="row" id="small"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const MAPS=__MAPS__;const AUR={a:'__AUR_A__',b:'__AUR_B__'};
+const loadImg=u=>new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=u;});
+// [A안] 윤곽 오로라: 화면을 향한 부채꼴 띠를 행성 윗쪽 윤곽에 세운다. 안쪽 반지름 <1 이라 밑동은 행성에 가려
+//  지평선 너머에서 솟는 것처럼 보이고, 항상 옆모습이라 커튼 결이 살아 있다.
+function limbAurora(tex){const SEG=240;const A0=12*Math.PI/180,A1=168*Math.PI/180;
+  const geo=new THREE.BufferGeometry();const pos=new Float32Array((SEG+1)*2*3),uv=new Float32Array((SEG+1)*2*2),idx=[];
+  for(let i=0;i<=SEG;i++){const u=i/SEG;uv.set([u,0,u,1],i*4);if(i<SEG){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));geo.setIndex(idx);
+  const mat=new THREE.ShaderMaterial({uniforms:{tex:{value:tex},time:{value:0}},
+    vertexShader:'varying vec2 vU;void main(){vU=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'uniform sampler2D tex;uniform float time;varying vec2 vU;'+
+      'void main(){float u=vU.x*1.6+time*.015+sin(vU.y*4.+time*.9+vU.x*14.)*.008;'+
+      'vec3 c=texture2D(tex,vec2(fract(u),vU.y)).rgb;float sh=.82+.18*sin(vU.x*70.+time*1.6);'+
+      'float ends=smoothstep(0.,.18,vU.x)*smoothstep(1.,.82,vU.x);'+                         // 양 끝은 서서히 사라짐
+      'float a=max(c.r,max(c.g,c.b))*sh*ends;gl_FragColor=vec4(c*1.5*sh*ends,a);}',
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
+  const m=new THREE.Mesh(geo,mat);
+  m.userData.update=(t)=>{for(let i=0;i<=SEG;i++){const u=i/SEG;const a=A0+(A1-A0)*u;
+      const hmul=.72+.28*Math.sin(u*Math.PI)+.06*Math.sin(u*9+t*.5);                            // 가운데가 높고 끝이 낮은 부채꼴 + 물결
+      const r0=.9,r1=1.0+.34*hmul;const ca=Math.cos(a),sa=Math.sin(a);
+      pos.set([ca*r0,sa*r0,0,ca*r1,sa*r1,0],i*6);}geo.attributes.position.needsUpdate=true;geo.computeBoundingSphere();mat.uniforms.time.value=t;};
+  m.userData.update(0);return m;}
+// 윗쪽 윤곽을 따라 행성 표면에 비치는 옅은 초록 기운
+function limbGlow(){return new THREE.Mesh(new THREE.SphereGeometry(1.004,96,64),new THREE.ShaderMaterial({
+  vertexShader:'varying vec3 vN;varying vec3 vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',
+  fragmentShader:'varying vec3 vN;varying vec3 vV;void main(){float f=pow(1.-abs(dot(vN,vV)),3.);float up=smoothstep(-.1,.7,vN.y);float g=f*up*.55;gl_FragColor=vec4(vec3(.3,1.,.55)*g,g);}',
+  transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));}
+async function planet(key,aurTex){
+  const im=await loadImg(MAPS[key]);const map=new THREE.Texture(im);map.needsUpdate=true;map.encoding=THREE.sRGBEncoding;map.anisotropy=8;
+  const g=new THREE.Group();g.add(new THREE.Mesh(new THREE.SphereGeometry(1,128,96),new THREE.MeshStandardMaterial({map,bumpMap:map,bumpScale:.015,roughness:.8,metalness:0})));
+  g.rotation.x=.25;const band=limbAurora(aurTex);band.renderOrder=20;const gl=limbGlow();return {g,band,gl};}
+function lights(s){s.add(new THREE.AmbientLight(0x9098b8,.55));const k=new THREE.DirectionalLight(0xfff4e6,1.35);k.position.set(5,6,8);s.add(k);const r=new THREE.DirectionalLight(0x9fc0ff,.5);r.position.set(-6,3,-9);s.add(r);}
+(async()=>{
+  const T={};for(const k of ['a','b']){const im=await loadImg(AUR[k]);const t=new THREE.Texture(im);t.needsUpdate=true;t.encoding=THREE.sRGBEncoding;t.wrapS=THREE.RepeatWrapping;T[k]=t;}
+  const big=new THREE.WebGLRenderer({canvas:document.getElementById('big'),antialias:true});big.outputEncoding=THREE.sRGBEncoding;
+  const S=new THREE.Scene();lights(S);const cam=new THREE.PerspectiveCamera(16,1100/330,.1,100);cam.position.set(0,2.2,11.2);cam.lookAt(0,.1,0);
+  const spec=[['su-mok','a'],['to-mok-hwa','b'],['geum-to','a']];const P=[];let x=-2.9;
+  for(const [k,a] of spec){const p=await planet(k,T[a]);p.g.position.x=x;S.add(p.g);p.band.position.x=x;p.gl.position.x=x;S.add(p.band);S.add(p.gl);p.cam=cam;P.push(p);x+=2.9;}
+  const small=[];const box=document.getElementById('small');
+  for(const [k,a] of spec){const cv=document.createElement('canvas');cv.width=cv.height=264;cv.style.width=cv.style.height='132px';box.appendChild(cv);
+    const r=new THREE.WebGLRenderer({canvas:cv,antialias:true});r.outputEncoding=THREE.sRGBEncoding;const s=new THREE.Scene();lights(s);const p=await planet(k,T[a]);s.add(p.g);s.add(p.band);s.add(p.gl);
+    const c=new THREE.PerspectiveCamera(30,1,.1,100);c.position.set(0,.3,1).normalize().multiplyScalar(1.62/Math.tan(15*Math.PI/180));c.lookAt(0,0,0);p.cam=c;small.push({r,s,c,p});}
+  const lab=document.createElement('span');lab.className='lab';lab.textContent='← 실제 초상 크기 132px';box.appendChild(lab);
+  const t0=performance.now();
+  (function loop(now){const t=(now-t0)/1000;window.__t=t;
+    for(const p of [...P,...small.map(o=>o.p)]){p.g.rotation.y=-.9+t*.12;p.band.userData.update(t);p.band.quaternion.copy(p.cam.quaternion);}
+    big.setClearColor(0x0b0c14,1);big.render(S,cam);for(const o of small){o.r.setClearColor(0x0b0c14,1);o.r.render(o.s,o.c);}
+    requestAnimationFrame(loop);})(t0);
+})();
+</script></body></html>
