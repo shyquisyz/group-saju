@@ -1,0 +1,99 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>움직이는 구름 · 태풍</title>
+<style>:root{color-scheme:dark}body{margin:0;background:#07080d;color:#e9e6dc;font:14px/1.5 Pretendard,system-ui,sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 4px}p{color:#9a97a3;margin:0 0 12px;font-size:13px}#big{display:block;width:100%;max-width:1100px;height:auto;border-radius:12px;background:#0b0c14}
+.labels{display:grid;grid-template-columns:repeat(4,1fr);max-width:1100px;text-align:center;font-size:12px;color:#b9b6c2;margin-top:6px}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:16px}.row canvas{border-radius:50%;background:#0b0c14}.lab{font-size:12px;color:#9a97a3}</style></head><body>
+<h1>움직이는 구름 · 먹구름 · 번개구름 · 태풍</h1><p>행성은 천천히 자전하고, 구름은 표면을 따라 조금 더 빠르게 흘러간다. 번개구름은 불규칙하게 번쩍인다. 태풍은 제자리에서 소용돌이친다.</p>
+<canvas id="big" width="1100" height="300"></canvas>
+<div class="labels"><span>흰 구름 (수+목)</span><span>먹구름 (토+목·화)</span><span>번개구름 (금+토)</span><span>태풍 (목+화·토)</span></div>
+<div class="row" id="small"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const MAPS=__MAPS__;const CLOUD='__CLOUD__';const HURR='__HURR__';
+const loadImg=u=>new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=u;});
+const LDIR=new THREE.Vector3(5,6,8).normalize();
+// 구름 높이 지도 (한 번만 계산): 문턱 → 저주파 노이즈로 면적 cover만 남김 → 큰/작은 흐림을 섞어 둥근 솜뭉치 높이
+function cloudHeight(im,th,cover,soft){const W=im.width,H=im.height;const src=document.createElement('canvas');src.width=W;src.height=H;const sx=src.getContext('2d');sx.drawImage(im,0,0);
+  const sd=sx.getImageData(0,0,W,H);const t0=th/255;const V=new Float32Array(W*H);for(let j=0;j<W*H;j++){let x=(sd.data[j*4]/255-t0)/(1-t0);V[j]=x<0?0:x>1?1:x;}
+  const hs=(x,y,z)=>{const t=Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453;return t-Math.floor(t);};
+  const vn=(x,y,z)=>{const ix=Math.floor(x),iy=Math.floor(y),iz=Math.floor(z),fx=x-ix,fy=y-iy,fz=z-iz;const u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy),w=fz*fz*(3-2*fz);const L=(a,b,t)=>a+(b-a)*t;const c=(a,b,d)=>hs(ix+a,iy+b,iz+d);
+    return L(L(L(c(0,0,0),c(1,0,0),u),L(c(0,1,0),c(1,1,0),u),v),L(L(c(0,0,1),c(1,0,1),u),L(c(0,1,1),c(1,1,1),u),v),w);};
+  const N=new Float32Array(W*H),Wt=new Float32Array(H);let cov0=0;
+  for(let y=0;y<H;y++){const la=(.5-(y+.5)/H)*Math.PI;Wt[y]=Math.cos(la);const cy=Math.sin(la),cr=Math.cos(la);
+    for(let x=0;x<W;x++){const lo=(x+.5)/W*Math.PI*2;const px=cr*Math.cos(lo),pz=cr*Math.sin(lo);const j=y*W+x;N[j]=.65*vn(px*2.2+11,cy*2.2+3,pz*2.2+7)+.35*vn(px*4.4+2,cy*4.4+9,pz*4.4+5);if(V[j]>.15)cov0+=Wt[y];}}
+  const covAt=th=>{let c=0;for(let y=0;y<H;y++)for(let x=0;x<W;x++){const j=y*W+x;let m=(N[j]-th)/.16+.5;m=m<0?0:m>1?1:m;if(V[j]*m>.15)c+=Wt[y];}return c;};
+  let lo=0,hi=1;for(let it=0;it<12;it++){const mid=(lo+hi)/2;if(covAt(mid)>cover*cov0)lo=mid;else hi=mid;}const th2=(lo+hi)/2;
+  for(let j=0;j<W*H;j++){let m=(N[j]-th2)/.16+.5;m=m<0?0:m>1?1:m;const v=Math.round(255*V[j]*m);sd.data[j*4]=sd.data[j*4+1]=sd.data[j*4+2]=v;}
+  sx.putImageData(sd,0,0);
+  const bl=px=>{const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.filter='blur('+px+'px)';x.drawImage(src,0,0);return x.getImageData(0,0,W,H).data;};
+  const bd=bl(soft?6:7),md=bl(soft?2.4:1.2);const out=document.createElement('canvas');out.width=W;out.height=H;const ox=out.getContext('2d');const od=ox.createImageData(W,H);
+  for(let i=0;i<od.data.length;i+=4){const hb=bd[i]/255,hsv=md[i]/255;let h=soft?Math.max(0,Math.min(1,(.65*hb+.35*hsv)*1.9-.42))*(hsv>.3?1:0):(.6*Math.min(1,hb*1.6)+.4*hsv)*(hsv>.04?1:0);
+    h=Math.pow(Math.min(1,h),.8);const v=Math.round(255*h);od.data[i]=od.data[i+1]=od.data[i+2]=v;od.data[i+3]=255;}
+  ox.putImageData(od,0,0);const t=new THREE.CanvasTexture(out);t.wrapS=THREE.RepeatWrapping;return t;}
+const TYPES={white:{top:0xffffff,bot:0x8e98ab,flash:0},dark:{top:0x6f7684,bot:0x15181e,flash:0},storm:{top:0x656c79,bot:0x121418,flash:1}};
+const FP1=new THREE.Vector3(.25,.35,.9).normalize(),FP2=new THREE.Vector3(.55,-.15,.82).normalize();
+// 구름 층 재질: uv를 시간에 따라 옆으로 밀어 흐르게. 번개는 행성 기준 두 점에서 불규칙하게 번쩍.
+function cloudShellMat(tex,t,fr,T,drift,shadow){
+  const shOff=shadow?'+.012,-.006':',0.';const shCut=shadow?'gl_FragColor=vec4(0.,0.,0.,a*.5);return;':'';
+  return new THREE.ShaderMaterial({uniforms:{hm:{value:tex},t:{value:t},fr:{value:fr},L:{value:LDIR},TOP:{value:new THREE.Color(T.top)},BOT:{value:new THREE.Color(T.bot)},fl:{value:T.flash},
+    F1:{value:FP1},F2:{value:FP2},time:{value:0},drift:{value:drift},flash1:{value:0},flash2:{value:0}},
+  vertexShader:'varying vec2 vU;varying vec3 vN;varying vec3 vP;void main(){vU=uv;vP=normalize(position);vN=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+  fragmentShader:'uniform sampler2D hm;uniform float t,fr,fl,time,drift,flash1,flash2;uniform vec3 L,TOP,BOT,F1,F2;varying vec2 vU;varying vec3 vN;varying vec3 vP;\n'+
+    'void main(){vec2 uv=vU+vec2(time*drift'+shOff+');float h=texture2D(hm,uv).r;if(h<.03)discard;\n'+
+    'float a=smoothstep(t-(BOT.r<.2?.1:.05),t+.015,h);if(a<.01)discard;'+shCut+'\n'+
+    'float diff=max(dot(normalize(vN),L),0.);float occ=mix(.15,1.,pow(fr,.7));float rim=pow(1.-abs(dot(normalize(vN),normalize(vec3(0.,.3,1.)))),3.)*fr;\n'+
+    'vec3 col=mix(BOT,TOP,clamp(occ*(.35+.75*diff)+rim*.3,0.,1.));\n'+
+    'float g=flash1*exp(-(1.-dot(vP,F1))*55.)+flash2*exp(-(1.-dot(vP,F2))*70.);col+=fl*g*(1.-fr*.55)*vec3(.75,.85,1.)*1.8;\n'+
+    'gl_FragColor=vec4(col,a*mix(.85,.95,fr));}',transparent:true,depthWrite:false});}
+function typhoonShellMat(tex,t,fr,C,R,shadow){const up=new THREE.Vector3(0,1,0);const e1=new THREE.Vector3().crossVectors(up,C).normalize(),e2=new THREE.Vector3().crossVectors(C,e1);
+  const shCut=shadow?'gl_FragColor=vec4(0.,0.,0.,a*.45);return;':'';
+  return new THREE.ShaderMaterial({uniforms:{hm:{value:tex},t:{value:t},fr:{value:fr},L:{value:LDIR},C:{value:C},E1:{value:e1},E2:{value:e2},R:{value:R},time:{value:0}},
+    vertexShader:'varying vec3 vP;varying vec3 vN;void main(){vP=normalize(position);vN=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'uniform sampler2D hm;uniform float t,fr,R,time;uniform vec3 L,C,E1,E2;varying vec3 vP;varying vec3 vN;\n'+
+      'void main(){float dt=dot(vP,C);if(dt<cos(R))discard;float rr=acos(min(1.,dt))/R;float tt=atan(dot(vP,E2),dot(vP,E1))+time*.35;\n'+
+      'float lum=texture2D(hm,.5+.5*rr*vec2(cos(tt),sin(tt))).r;float h=pow(max(0.,(lum-.03)/.97),.85)*(1.-smoothstep(.86,1.,rr));\n'+
+      'float a=smoothstep(t-.05,t+.015,h);if(a<.01)discard;'+shCut+'\n'+
+      'float diff=max(dot(normalize(vN),L),0.);float occ=mix(.15,1.,pow(fr,.7));\n'+
+      'gl_FragColor=vec4(mix(vec3(.56,.6,.67),vec3(1.),clamp(occ*(.35+.75*diff),0.,1.)),a*mix(.85,.95,fr));}',transparent:true,depthWrite:false});}
+function boltTex(){const c=document.createElement('canvas');c.width=64;c.height=128;const x=c.getContext('2d');const pts=[[34,4],[26,40],[38,46],[22,86],[34,90],[28,124]];
+  for(const [w,a] of [[12,.2],[6,.5],[2.5,1]]){x.strokeStyle='rgba('+(a<1?'170,200,255':'255,255,255')+','+a+')';x.lineWidth=w;x.lineJoin='round';x.beginPath();pts.forEach(([px,py],i)=>i?x.lineTo(px,py):x.moveTo(px,py));x.stroke();}
+  return new THREE.CanvasTexture(c);}
+const BOLT=boltTex();
+async function planet(key,kind,res){
+  const im=await loadImg(MAPS[key]);const map=new THREE.Texture(im);map.needsUpdate=true;map.encoding=THREE.sRGBEncoding;map.anisotropy=8;
+  const g=new THREE.Group();g.add(new THREE.Mesh(new THREE.SphereGeometry(1,128,96),new THREE.MeshStandardMaterial({map,bumpMap:map,bumpScale:.015,roughness:.8,metalness:0})));
+  const mats=[],bolts=[];const N=18,G=new THREE.SphereGeometry(1,128,96);
+  if(kind==='typhoon'){const C=new THREE.Vector3(.35,.32,.88).normalize();
+    const sh=new THREE.Mesh(new THREE.SphereGeometry(1.004,128,96),typhoonShellMat(res.hurr,.1,0,C,.35,true));sh.rotation.set(.02,.05,0);g.add(sh);mats.push(sh.material);
+    for(let i=0;i<N;i++){const fr=i/(N-1);const m=new THREE.Mesh(G,typhoonShellMat(res.hurr,.03+fr*.92,fr,C,.35,false));m.scale.setScalar(1.025+fr*.065);m.renderOrder=10+i;g.add(m);mats.push(m.material);}}
+  else{const T=TYPES[kind];const tex=kind==='white'?res.white:res.dark;const drift=.006;
+    const sh=new THREE.Mesh(new THREE.SphereGeometry(1.004,128,96),cloudShellMat(tex,.1,0,T,drift,true));g.add(sh);mats.push(sh.material);
+    for(let i=0;i<N;i++){const fr=i/(N-1);const m=new THREE.Mesh(G,cloudShellMat(tex,.03+fr*.92,fr,T,drift,false));m.scale.setScalar(1.03+fr*.11);m.renderOrder=10+i;g.add(m);mats.push(m.material);}
+    if(T.flash){for(const [d,sc] of [[FP1,1],[FP2,.8]]){
+      const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:BOLT,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));sp.position.copy(d.clone().multiplyScalar(1.08));sp.scale.set(.2*sc,.4*sc,1);sp.renderOrder=40;g.add(sp);bolts.push(sp);}}}
+  g.rotation.x=.25;return {g,mats,bolts,kind};}
+function lights(s){s.add(new THREE.AmbientLight(0x9098b8,.55));const k=new THREE.DirectionalLight(0xfff4e6,1.35);k.position.set(5,6,8);s.add(k);const r=new THREE.DirectionalLight(0x9fc0ff,.5);r.position.set(-6,3,-9);s.add(r);}
+// 번개 깜빡임: 짧게 두세 번 번쩍 → 몇 초 쉼 (두 지점이 서로 다른 박자)
+function flicker(t,off){const p=(t+off)%3.7;if(p>.55)return 0;return Math.max(0,Math.sin(p*40.))*((p<.12||(p>.22&&p<.3)||(p>.42&&p<.5))?1:0);}
+(async()=>{
+  const cIm=await loadImg(CLOUD),hIm=await loadImg(HURR);
+  const ht=new THREE.Texture(hIm);ht.needsUpdate=true;
+  const res={white:cloudHeight(cIm,125,.6,false),dark:cloudHeight(cIm,125,.6,true),hurr:ht};
+  const big=new THREE.WebGLRenderer({canvas:document.getElementById('big'),antialias:true});big.outputEncoding=THREE.sRGBEncoding;
+  const S=new THREE.Scene();lights(S);const cam=new THREE.PerspectiveCamera(16,1100/300,.1,100);cam.position.set(0,2.2,11.6);cam.lookAt(0,0,0);
+  const P=[];const spec=[['su-mok','white'],['to-mok-hwa','dark'],['geum-to','storm'],['mok-hwa-to','typhoon']];let x=-3.9;
+  for(const [k,kind] of spec){const p=await planet(k,kind,res);p.g.position.x=x;S.add(p.g);P.push(p);x+=2.6;}
+  const small=[];const box=document.getElementById('small');
+  for(const [k,kind] of spec){const cv=document.createElement('canvas');cv.width=cv.height=264;cv.style.width=cv.style.height='132px';box.appendChild(cv);
+    const r=new THREE.WebGLRenderer({canvas:cv,antialias:true});r.outputEncoding=THREE.sRGBEncoding;const s=new THREE.Scene();lights(s);const p=await planet(k,kind,res);s.add(p.g);
+    const c=new THREE.PerspectiveCamera(30,1,.1,100);c.position.set(0,.3,1).normalize().multiplyScalar(1.62/Math.tan(15*Math.PI/180));c.lookAt(0,0,0);small.push({r,s,c,p});}
+  const lab=document.createElement('span');lab.className='lab';lab.textContent='← 실제 초상 크기 132px';box.appendChild(lab);
+  window.__ready=true;const t0=performance.now();
+  (function loop(now){const t=(now-t0)/1000;window.__t=t;
+    for(const p of [...P,...small.map(o=>o.p)]){p.g.rotation.y=-.9+t*.12;
+      const f1=flicker(t,0),f2=flicker(t,1.9);for(const m of p.mats){m.uniforms.time.value=t;if(m.uniforms.flash1){m.uniforms.flash1.value=f1;m.uniforms.flash2.value=f2;}}
+      if(p.bolts.length){p.bolts[0].material.opacity=f1;p.bolts[1].material.opacity=f2;}}
+    big.setClearColor(0x0b0c14,1);big.render(S,cam);for(const o of small){o.r.setClearColor(0x0b0c14,1);o.r.render(o.s,o.c);}
+    requestAnimationFrame(loop);})(t0);
+})();
+</script></body></html>
