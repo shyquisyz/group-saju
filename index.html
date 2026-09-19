@@ -3498,13 +3498,16 @@ const DAEUN_WORD={비겁:'내 사람·내 몫을 넓히는',식상:'재주를 �
 /* ═══ [2026-09-20 U32] 운 기둥의 갈래별 강도 — 사용자: "돈 점수를 재성 개수로만 세지 말 것 · 앞 5년/뒤 5년 기계적 분리 제거" ═══
    천간 1 + 지지 1.5(속 글자 날수 비율) + 원국과 새로 이루는 합(삼합·방합 +1, 반합 +.5 — 합의 오행 갈래에). 천간·지지는 10년 전체에 함께 작용한다고 본다.
    대운은 지지가 조금 더 무겁다는 널리 쓰는 견해를 따랐다 [권장]. 충은 강도에 넣지 않고 문장(변화 압력)으로만 쓴다 */
-function luckForce(r,pillar){
-  const me=STEM_EL[r.day[0]],g={비겁:0,식상:0,재성:0,관성:0,인성:0};
-  g[elGroupOf(me,STEM_EL[pillar[0]])]+=1;
+function luckForce(r,pillar){return luckForceTrace(r,pillar).g;}
+/** [U39] luckForce의 근거까지 — {g:갈래별 점수, why:갈래별 ["천간 丙=편재 +1", "지지 午 속 丁(정재) +0.50", "원국 寅·午와 반합(화) +0.5"]} */
+function luckForceTrace(r,pillar){
+  const d=r.day[0],me=STEM_EL[d],g={비겁:0,식상:0,재성:0,관성:0,인성:0},why={비겁:[],식상:[],재성:[],관성:[],인성:[]};
+  {const gg=elGroupOf(me,STEM_EL[pillar[0]]);g[gg]+=1;why[gg].push(`천간 ${STEMS[pillar[0]]}=${TEN_GODS[tenGod(d,pillar[0])]} +1`);}
   const hs=HIDDEN_STEMS[pillar[1]],tot=hs.reduce((a,x)=>a+x[1],0);
-  hs.forEach(([st,dd])=>{g[elGroupOf(me,STEM_EL[st])]+=1.5*dd/tot;});
-  const c=daeunCombo(r,pillar);if(c)g[elGroupOf(me,c.el)]+=c.kind==='banhap'?.5:1;
-  return g;}
+  hs.forEach(([st,dd])=>{const gg=elGroupOf(me,STEM_EL[st]),v=1.5*dd/tot;g[gg]+=v;why[gg].push(`지지 ${BRANCHES[pillar[1]]} 속 ${STEMS[st]}(${TEN_GODS[tenGod(d,st)]}) +${v.toFixed(2)}`);});
+  const c=daeunCombo(r,pillar);
+  if(c){const gg=elGroupOf(me,c.el),v=c.kind==='banhap'?.5:1;g[gg]+=v;why[gg].push(`원국 ${c.others.map(x=>BRANCHES[x]).join('·')}와 ${c.kind==='samhap'?'삼합':c.kind==='banghap'?'방합':'반합'}(${EL_KO[c.el]}) +${v}`);}
+  return {g,why};}
 /** 대운 한 칸의 성격 한 마디 — 식상과 재성이 함께 있으면 "재주를 돈으로 잇는", 재성이 크게 두드러지면 "돈과 결과를 굴리는" */
 function daeunTheme(g){
   const top=Object.keys(g).sort((a,b)=>g[b]-g[a])[0];
@@ -3555,8 +3558,86 @@ function todayHtml(n){
   const L=luckNow(); if(!L||!L.day||!n.birth)return '';
   const t=luckTouch(n,L.day); if(!t)return '';
   const dh=t.hits.find(h=>h.pos==='day');
-  return `<p class="nowtoday">${DAY_LINE[t.groups[0]]}${dh?' '+DAY_HIT[dh.kind]:''} <span class="daylucky">오늘의 작은 행운: ${DAY_LUCK[t.groups[1]]}</span></p>`;}
+  return `<p class="nowtoday">${DAY_LINE[t.groups[0]]}${dh?' '+DAY_HIT[dh.kind]:''} <span class="daylucky">오늘의 작은 제안: ${DAY_LUCK[t.groups[1]]}</span></p>`;}   /* [U39] ~~작은 행운~~ — 일진 지지 십성으로 고르는 고정 제안(엔터테인먼트). 사주 해석 문장과 구분 */
 /** 올해 입춘부터 열두 달 — {pil, cal(달력 달 1~12), g, good, warn, now} */
+/* ═══ [2026-09-20 U39] 근거 역추적(개발용) — 사용자: "화면 문장마다 최소 하나의 생성 근거를 추적할 수 있게" ═══
+   traceReasons(n): 화면 문장 → {fn(생성 함수), code(reasonCode), basis(계산 근거), kind(계산형/고정카피/엔터테인먼트), probe(화면에서 찾을 조각)}.
+   **같은 표·같은 입력**으로 고른다(문장을 다시 쓰지 않는다). 자가진단 traceVerify가 probe가 실제 패널 글에 있는지 확인 — 추적과 출력이 갈라지면 걸린다.
+   traceLife(n): 대운별 wealth·career·relationship 점수와 기여 이유. traceMonths(n): 12달 월주·절입·십성·합충·대운/세운 관계·판정 규칙 */
+function hcRelOf(a,b){const h=hapChungOf(a[0],b[0],a[1],b[1]);return h?h.kind:null;}
+function posListOf(r,grp){
+  const d=r.day[0],out=[],P=[['년',r.year],['월',r.month],['일',r.day],['시',r.hour]];
+  P.forEach(([k,p])=>{if(!p)return;if(k!=='일'&&TEN_GOD_GROUP[tenGod(d,p[0])]===grp)out.push(`${k}간 ${STEMS[p[0]]}(${TEN_GODS[tenGod(d,p[0])]})`);
+    if(TEN_GOD_GROUP[branchTenGod(d,p[1])]===grp)out.push(`${k}지 ${BRANCHES[p[1]]} 본기(${TEN_GODS[branchTenGod(d,p[1])]})`);});
+  return out.join('·')||'없음';}
+function traceLife(n){
+  const du=daeunOf(n),r=rOf(n);if(!du||!r)return [];
+  const gy=gangyak(r),sg=n.birth.sex==='남'?'재성':'관성',cap=v=>+Math.min(3,v).toFixed(2);
+  return du.list.slice(0,9).map(d=>{const T=luckForceTrace(r,d.pillar);
+    return {daeun:pillarStr(d.pillar),when:daeunSpanText(r,d),
+      wealth:{score:cap(T.g.재성),why:T.why.재성},
+      career:{score:cap((T.g.관성+T.g.식상)*.75),why:T.why.관성.concat(T.why.식상,['합계 ×0.75(관성+식상)'])},
+      relationship:{score:cap(T.g[sg]),why:T.why[sg].concat([`짝 별 = ${sg}(${n.birth.sex})`])},
+      capacity:`${gy.verdict} — 점수에는 넣지 않음. 대운 문장("채워 주는/힘 조절")에만 반영`};});}
+function traceMonths(n){
+  const L=luckNow(),r=rOf(n);if(!L||!r)return [];
+  const du=daeunOf(n),cur=du&&du.cur,N=window.SOLAR_TERMS.names;
+  return yearMonths(n).map((m,i)=>{const t=luckTouch(n,m.pil),Y=L.luckYear+(i===11?1:0),idx=i===11?0:2+2*i,st=window.SOLAR_TERMS.ofYear(Y)[idx];
+    const dh=t.hits.find(h=>h.pos==='day');
+    return {month:m.cal+'월',pillar:pillarStr(m.pil),start:`${N[idx]} ${new Date(st+9*3600e3).toISOString().slice(0,10)}`,
+      stem:`${STEMS[m.pil[0]]}=${TEN_GODS[t.stemGod]}`,branch:`${BRANCHES[m.pil[1]]}=${TEN_GODS[t.branchGod]}`,
+      hits:t.hits.map(h=>h.pos+':'+h.kind).concat((t.hyeong||[]).map(h=>h.pos+':'+h.kind)).join(',')||'-',
+      helps:t.helps?t.helps.map(x=>x?'도움':'부담').join('/'):'판단 안 함',
+      daeunRel:cur?(hcRelOf(cur.pillar,m.pil)||'-'):'-',yearRel:hcRelOf(L.year,m.pil)||'-',
+      result:m.good?'좋은 달':m.warn?'조심할 달':'-',
+      rule:m.warn?'일지 충':m.good?(dh&&dh.kind!=='chung'?'일지와 합':'천간·지지 둘 다 도움(억부)'):'-'};});}
+function traceReasons(n){
+  const out=[],add=(probe,fn,code,basis,kind)=>out.push({probe,fn,code,basis,kind});
+  const r=rOf(n),L=luckNow();if(!r||!L)return out;
+  const d=r.day[0],det=sajuDetail(r),gy=gangyak(r),pc=personGroupCounts(n),cnt=pc.cnt,sex=n.birth.sex;
+  /* 오늘 */
+  const td=luckTouch(n,L.day),dh=td.hits.find(h=>h.pos==='day');
+  add(DAY_LINE[td.groups[0]].split('.')[0],'todayHtml','TODAY_STEM_GROUP',`오늘 일진 ${pillarStr(L.day)} — 천간 ${STEMS[L.day[0]]}=${TEN_GODS[td.stemGod]}(${td.groups[0]}) → 갈래별 고정 문장. 대운·세운은 안 봄`,'계산형(갈래)+고정카피');
+  if(dh)add(DAY_HIT[dh.kind].split(' ')[0],'todayHtml','TODAY_DAY_HIT',`일진 지지 ${BRANCHES[L.day[1]]} ↔ 일지 ${BRANCHES[r.day[1]]} = ${dh.kind}`,'계산형');
+  add('오늘의 작은 제안','todayHtml','TODAY_SUGGEST',`일진 지지 ${BRANCHES[L.day[1]]} 본기 = ${TEN_GODS[td.branchGod]}(${td.groups[1]}) → "${DAY_LUCK[td.groups[1]]}" 고정 제안`,'엔터테인먼트');
+  /* 올해·이번 달·대운 */
+  const y=luckTouch(n,L.year),m=luckTouch(n,L.month);
+  add(NOW_YEAR[y.groups[0]].split('.')[0],'nowStoryHtml','YEAR_STEM_GROUP',`세운 ${pillarStr(L.year)} — 천간 ${TEN_GODS[y.stemGod]}(${y.groups[0]}) · 지지 ${TEN_GODS[y.branchGod]}(${y.groups[1]})`,'계산형+고정카피');
+  if(y.helps)add(y.helps.every(x=>!x)?'어깨가 무거울':y.helps.every(Boolean)?'반가운 해':'반은 힘이 되고','nowStoryHtml','YEAR_HELPS',`억부: ${y.verdict} → 천간·지지 갈래 도움 여부 ${y.helps.map(x=>x?'도움':'부담').join('/')}`,'계산형');
+  y.hits.forEach(h=>add(NOW_HIT[h.pos][h.kind].slice(0,12),'nowStoryHtml','YEAR_HIT_'+h.pos.toUpperCase(),`세운 ${pillarStr(L.year)} ↔ 원국 ${h.pos}주 ${h.kind}`,'계산형'));
+  {const hl=hyeongLine(y);if(hl)add(hl.slice(0,14),'nowStoryHtml','YEAR_HYEONG',`세운 지지 ↔ 원국 형: ${y.hyeong.map(h=>h.pos+':'+h.kind).join(',')}`,'계산형');}
+  add(NOW_MONTH[m.groups[1]].split('.')[0],'nowStoryHtml','MONTH_BRANCH_GROUP',`월운 ${pillarStr(L.month)} — 지지 ${TEN_GODS[m.branchGod]}(${m.groups[1]})`,'계산형+고정카피');
+  const du=daeunOf(n);
+  if(du&&du.cur){const T=luckForceTrace(r,du.cur.pillar);add(daeunTheme(T.g),'nowStoryHtml·lifeFlowHtml','DAEUN_THEME',`대운 ${pillarStr(du.cur.pillar)} 강도 ${Object.keys(T.g).map(k=>k+' '+T.g[k].toFixed(2)).join(' · ')}`,'계산형');
+    const nx=du.list[du.cur.k];if(nx){const T2=luckForceTrace(r,nx.pillar);add(daeunTheme(T2.g),'nowStoryHtml·lifeFlowHtml','DAEUN_THEME_NEXT',`대운 ${pillarStr(nx.pillar)} 재성 ${T2.g.재성.toFixed(2)} ← ${T2.why.재성.join(' / ')}`,'계산형');}}
+  /* 궁금한 것 */
+  add(cnt.재성>=2?'돈과 실속을 보는 눈이 여러 겹':cnt.재성===1?'돈 감각이 딱 한 줄':"'돈을 쥐는 기운'이 겉에",'askHtml','MONEY_STAR_COUNT',`재성 개수(일간 제외 천간 + 지지 본기) ${cnt.재성}: ${posListOf(r,'재성')}`,'계산형(개수)+고정카피');
+  if(gy.verdict==='신약'&&cnt.재성>=2)add('혼자보다 같이 굴릴 때','askHtml','MONEY_WEAK_MANY',`신약 + 재성 ${cnt.재성}개 → 재다신약 쪽 조언`,'계산형');
+  add(cnt.관성>=2?'자리와 직함이 따라오는 사주':cnt.관성===1?'맡은 자리에서 차근차근':'타이틀보다 실력으로','askHtml','WORK_GWAN_COUNT',`관성 개수 ${cnt.관성}: ${posListOf(r,'관성')}`,'계산형(개수)+고정카피');
+  if(sex){const sg=sex==='남'?'재성':'관성',st=LOVE_OK(n.love)?n.love:'none';
+    add(st==='married'&&cnt[sg]>=2?'사람을 끄는 힘이 있어요':null,'askHtml','LOVE_SPOUSE_STAR',`짝 별(${sg}) 개수 ${cnt[sg]}: ${posListOf(r,sg)} · 관계 상태 ${st}`,'계산형(개수)+고정카피');
+    const cg=sex==='남'?'관성':'식상';
+    add(cnt[cg]>=2?'아이 일에 마음이 많이 가요':cnt[cg]===1?'아이 한 명 한 명에게':'아이 일에 매이기보다','askHtml','KIDS_STAR_COUNT',`자식 별(${cg}) 개수 ${cnt[cg]}: ${posListOf(r,cg)}${cg==='관성'?' — ※ 「일·명예」의 관성 개수와 같은 값을 쓴다':''}`,'계산형(개수)+고정카피');}
+  {const F=forcesOf(r),top=Object.keys(F.grp).sort((a,b)=>F.grp[b]-F.grp[a])[0];add(HEALTH_TEND[top].slice(0,10),'askHtml','HEALTH_FORCE_TOP',`세력 최대 갈래 ${top} ${(F.grp[top]/F.total*100).toFixed(0)}%`,'계산형');}
+  /* 이런 사람 */
+  add(STEM_BLURB[d][0].slice(0,12),'personReading','DAYMASTER_COPY',`일간 ${STEMS[d]} 고정 원고`,'고정카피');
+  add('겨울의 끝자락'.length&&MONTH_POS[r.month[1]],'strengthStory·seasonLine','SEASON_MONTH_BRANCH',`월지 ${BRANCHES[r.month[1]]} = ${MONTH_POS[r.month[1]]} · 지장간 ${HIDDEN_STEMS[r.month[1]].map(x=>STEMS[x[0]]).join('')}`,'계산형');
+  {const g2=gyGrade(gy);add(g2.mid?'중간 정도로':g2.ko.replace(' 편',' 쪽'),'strengthStory','STRENGTH_FORCE',`균형 지표 ${gy.score.toFixed(2)}(지장간 비율+합) → ${gy.verdict}`,'계산형');}
+  add(POS_YEAR[det[0].stemGod].slice(0,10),'personReading ⑤','PILLAR_POS_YEAR',`년간 ${STEMS[r.year[0]]} = ${TEN_GODS[det[0].stemGod]} → 자리별 고정 원고`,'계산형(십성)+고정카피');
+  add(POS_MONTH[det[1].stemGod].slice(0,10),'personReading ⑤','PILLAR_POS_MONTH',`월간 ${STEMS[r.month[0]]} = ${TEN_GODS[det[1].stemGod]}`,'계산형(십성)+고정카피');
+  add(POS_DAY[det[2].branchGod].slice(0,10),'personReading ⑤','PILLAR_POS_DAY',`일지 ${BRANCHES[r.day[1]]} 본기 = ${TEN_GODS[det[2].branchGod]}`,'계산형(십성)+고정카피');
+  add(UNSEONG_LINE[det[2].unseong].slice(0,8),'personReading ⑤','UNSEONG_DAY',`일간 ${STEMS[d]}의 일지 ${BRANCHES[r.day[1]]} 12운성 ${det[2].unseong}`,'계산형+고정카피');
+  if(det[3])add(POS_HOUR[det[3].stemGod].slice(0,10),'personReading ⑤','PILLAR_POS_HOUR',`시간 ${STEMS[r.hour[0]]} = ${TEN_GODS[det[3].stemGod]}`,'계산형(십성)+고정카피');
+  const mGod=branchTenGod(d,r.month[1]),mGrp=TEN_GOD_GROUP[mGod];
+  add(GOD_STAGE[mGod],'personReading ② → cornerJob','JOB_MONTH_GOD',`월지 ${BRANCHES[r.month[1]]} 본기 = ${TEN_GODS[mGod]}(${mGrp}) — 격`,'계산형+고정카피');
+  add(JOB_DIR[mGrp==='비겁'?'식상':mGrp].slice(0,10),'cornerJob','JOB_DIR_GYEOK',`격 ${mGrp} → JOB_DIR`,'계산형(격)+고정카피');
+  jobForms(forcesOf(r),gy.verdict).forEach(k=>add(`(${k})`,'cornerJob','JOB_FORM_'+k,`세력 비율 ${Object.keys(forcesOf(r).grp).map(g=>g+' '+(forcesOf(r).grp[g]/forcesOf(r).total*100).toFixed(0)+'%').join(' · ')}`,'계산형'));
+  add('모아 지키는 쪽','cornerMoney','MONEY_JEONG_PYEON',`정재 ${pc.cnt10[5]} · 편재 ${pc.cnt10[4]} → ${pc.cnt10[5]===pc.cnt10[4]?'even':'한쪽'} 표`,'계산형(개수)+고정카피');
+  add(TIE_STEM[d].slice(0,10),'cornerTie','TIE_DAYMASTER_COPY',`일간 ${STEMS[d]} 고정 원고`,'고정카피');
+  {const weak=gy.verdict==='신약'||gy.verdict==='극약',mate=weak?elBorn(STEM_EL[d]):GEN[STEM_EL[d]];add('편한 상대는','cornerTie','TIE_MATE_EL',`${gy.verdict} → ${weak?'나를 낳는':'내가 낳는'} 오행 ${EL_KO[mate]} → "${EL_PEOPLE[mate]}"`,'계산형(억부)+고정카피');}
+  add('나를 보충하는 역할','cornerPower','POWER_ALLY_EL',`${gy.verdict} → 도움 오행 목록(억부만, 조후·월령 미반영)`,'계산형(억부)');
+  (pastYears(n)||[]).forEach(c=>add(`${c.Y}년(만 ${c.age}세)`,'pastHtml','PAST_YEAR_PRESSURE',`점수 ${c.sc.toFixed(1)}: ${c.t.hits.map(h=>h.pos+':'+h.kind).join(',')}${c.nd?' + 대운 전환':''} · 예시 = 나이대 ${ageBand(c.age)}`,'계산형'));
+  return out;}
 function yearMonths(n){
   const L=luckNow(); if(!L||!n.birth)return [];
   const ys=L.year[0], out=[];
@@ -3699,7 +3780,7 @@ function lifeFlow(n){
   /* [U32] ~~천간·지지에 그 갈래가 몇 번 드는지 + 도움 반 점~~ → luckForce 강도(천간 1 · 지지 1.5 비율 · 원국과 새 합). 0~3으로 자른다 */
   const r=rOf(n),cap=v=>Math.min(3,v);
   return du.list.slice(0,9).map(d=>{const f=luckForce(r,d.pillar);
-    return {from:Math.round(d.from),to:Math.round(d.to),money:cap(f.재성),work:cap((f.관성+f.식상)*.75),love:cap(f[sg]),cur:!!du.cur&&du.cur.k===d.k};});}
+    return {from:Math.floor(d.from),to:Math.floor(d.to),when:daeunWhen(r,d.from).text,money:cap(f.재성),work:cap((f.관성+f.식상)*.75),love:cap(f[sg]),cur:!!du.cur&&du.cur.k===d.k};});}   /* [U39] ~~Math.round~~ 만 나이 내림 */
 /* ═══ [2026-09-20 U31] 대운이 사주와 합을 이루면 그 10년의 판이 바뀐다 — 지금·다음 10년 두 줄 ═══
    대운 지지 + 사주 지지로 삼합(셋)·방합(셋)이 새로 완성되거나, 반합(왕지 포함 둘)이 생기면 그 오행이 이 사람에게 어떤 갈래인지와,
    세기(약하면 비겁·인성이 도움, 세면 나머지가 도움)로 좋고 나쁨을 한 줄로 */
@@ -3717,7 +3798,7 @@ function daeunLines(n,isMe){
   [[du.cur,'지금 10년'],[du.list[i+1],'다음 10년']].forEach(([d,lab])=>{if(!d)return;
     const t=luckTouch(n,d.pillar),c=daeunCombo(r,d.pillar);
     void t;const gw=daeunTheme(luckForce(r,d.pillar));   /* [U32] 10년 전체의 성격 한 마디 */
-    let line=`<b>${lab}</b>(${STEMS[d.pillar[0]]}${BRANCHES[d.pillar[1]]}, ${Math.round(d.from)}~${Math.round(d.to)}살) — ${gw} 10년이에요.`;
+    let line=`<b>${lab}</b>(${STEMS[d.pillar[0]]}${BRANCHES[d.pillar[1]]}, ${daeunSpanText(r,d)}) — ${gw} 10년이에요.`;   /* [U39] */
     if(c){const g=elGroupOf(me,c.el),good=weak?(g==='비겁'||g==='인성'):(g!=='비겁'&&g!=='인성');
       const joined=c.kind==='banhap'?`사주 속 ${c.others.map(x=>BRANCHES[x]).join('·')}와 이어져 ${EL_PLAIN[c.el]} 기운 쪽으로 더 기울어요(반합)`
         :`사주 속 ${c.others.filter(x=>x!==d.pillar[1]).map(x=>BRANCHES[x]).join('·')}와 모여 ${EL_PLAIN[c.el]} 기운 ${c.kind==='samhap'?'삼합':'방합'}이 이루어져요`;   /* [U32] 원국만일 땐 반합(기울어짐), 대운이 채우면 삼합 성립 — 단계별 */
@@ -3738,7 +3819,7 @@ function lifeFlowHtml(n,isMe){
     +(ci>=0?`<rect x="${px(ci)-12}" y="4" width="24" height="${H-18}" rx="4" fill="rgba(255,255,255,.07)"/>`:'')
     +line('money','#e8c66a')+line('work','#7fb6ff')+line('love','#ff8fb0')
     +F.map((f,i)=>`<text x="${px(i)}" y="${H-3}" text-anchor="middle" font-size="9" fill="currentColor" opacity=".7">${f.from}</text>`).join('')+`</svg>`;
-  const best=k=>{const m=Math.max(...F.map(f=>f[k]));return m>0?F.filter(f=>f[k]===m).slice(0,2).map(f=>`${f.from}~${f.to}살`).join('·'):null;};
+  const best=k=>{const m=Math.max(...F.map(f=>f[k]));return m>0?F.filter(f=>f[k]===m).slice(0,2).map(f=>`${f.when}부터 10년(만 ${f.from}~${f.to}세)`).join('·'):null;};   /* [U39] */
   const bm=best('money'),bw=best('work'),bl=best('love');
   const who=isMe?'내':bkEsc(n.name)+'의';
   return `<div class="lifebox">${svg}<div class="lifelg"><span style="color:#e8c66a">● 돈</span><span style="color:#7fb6ff">● 일</span><span style="color:#ff8fb0">● 사랑</span>${ci>=0?'<span>▯ 지금</span>':''}</div>`
@@ -3920,16 +4001,16 @@ function nowStoryHtml(n,isMe){
   /* 대운 */
   const du=daeunOf(n);
   if(!du){}   /* [U12] ~~여기 「성별 넣기」~~ — 바로 아래 「궁금한 것」이 한 번만 안내한다(한 패널에 같은 버튼 세 번이던 것) */
-  else if(!du.cur)ps.push(`<p>${X}의 첫 10년 흐름은 ${Math.round(du.startYears)}살 무렵부터 시작돼요.</p>`);
+  else if(!du.cur)ps.push(`<p>${X}의 첫 10년 흐름은 만 ${Math.floor(du.startYears)}세 무렵부터 시작돼요.</p>`);
   else{
     const c=du.cur, ct=luckTouch(n,c.pillar), within=du.ageNow-c.from;
     const ph=within<3?'초입':within>7?'끝자락':'한가운데';
     void ct;const rr=rOf(n);   /* [U32] ~~앞 5년 천간 / 뒤 5년 지지~~ — 기계적 반 나눔을 없애고 10년 전체의 성격 한 마디로 */
     const what=`'${daeunTheme(luckForce(rr,c.pillar))}' 10년`;
-    let td=`큰 흐름으로 보면, 지금 ${X}${Xp('은는')} ${Math.round(c.from)}~${Math.round(c.to)}살 — ${what}의 ${ph}${ieyo(ph)}.`;
+    let td=`큰 흐름으로 보면, 지금 ${X}${Xp('은는')} ${daeunSpanText(rr,c)} 대운 — ${what}의 ${ph}${ieyo(ph)}.`;   /* [U39] 실제 시점 */
     const left=c.to-du.ageNow, nx=du.list[c.k];
     if(nx&&left<=3){
-      td+=` ${left<1?'올해 안에':`${Math.max(1,Math.round(left))}년쯤 뒤`}(${Math.round(nx.from)}살 무렵)부터는 '${daeunTheme(luckForce(rr,nx.pillar))}' 10년이 시작돼요.`;}
+      {const w=daeunWhen(rr,nx.from);td+=` ${w.text} 무렵(만 ${w.age}세)부터는 '${daeunTheme(luckForce(rr,nx.pillar))}' 10년이 시작돼요.`;}}   /* [U39] ~~1년쯤 뒤(41살 무렵)~~ */
     ps.push(`<p>${td}</p>`);}
   {const lk=luckMarkOf(n);   /* [U28] 은하 그림과 잇는 한 줄 */
    if(lk)ps.push(`<p class="nowhint">은하에서 ${isMe?'내 항성':'이 행성'} 이름표에 ${lk==='good'?`✨가 붙어 있어요${isMe?'':' — 둘레에 금빛도 돌아요'}. 이번 달이 좋은 달이라서예요`:'⚡가 붙어 있어요. 이번 달이 예민한 달이라서예요(태어난 날 글자와 이번 달 글자가 부딪혀요)'}.</p>`);}
@@ -3955,7 +4036,12 @@ function askYears(x,test,n){
     const pil=[((Y-4)%10+10)%10,((Y-4)%12+12)%12], t=luckTouch(x,pil);
     if(t&&test(t))out.push({Y,age:Y-x.birth.y,t});}
   return out;}
-function askYearStr(ys,k){return ys.slice(0,k||3).map(o=>`${o.Y}년(${o.age}살)`).join('·');}
+function askYearStr(ys,k){return ys.slice(0,k||3).map(o=>`${o.Y}년(만 ${o.age}세)`).join('·');}   /* [U39] ~~(40살)~~ → 만 나이(그해 생일이 지난 뒤) */
+/** [U39] 대운이 실제로 바뀌는 시점 — 생일 + 대운 시작 나이(소수)로 날짜를 구해 "2027년 후반"처럼. ~~Math.round(나이)~~ 는 40.7을 41로 올려 "41살"과 "2027년(40살)"이 한 화면에 같이 나왔다 */
+function daeunWhen(r,age){
+  const w=new Date(r.utcMs+age*365.2425*864e5+9*3600e3),y=w.getUTCFullYear(),m=w.getUTCMonth()+1;
+  return {y,m,part:m<=4?'초반':m<=8?'중반':'후반',text:`${y}년 ${m<=4?'초반':m<=8?'중반':'후반'}`,age:Math.floor(age)};}
+function daeunSpanText(r,d){const a=daeunWhen(r,d.from),b=daeunWhen(r,d.to);return `${a.text}~${b.text}, 만 ${a.age}~${b.age}세`;}
 /** [U38] 연도를 이어진 구간으로 — 2027·2028·2029 → "2027~2029년". 예측형 문장 대신 "주제가 강해지는 해" 목록에 쓴다 */
 function yearRangeStr(ys,k){
   const Y=ys.slice(0,k||4).map(o=>o.Y),out=[];let a=null,b=null;
@@ -3973,7 +4059,7 @@ function askDaeun(x,grp){
   if(!cand.length)return null;
   const sc=cand.map(d=>({d,v:luckForce(r,d.pillar)[grp]})).sort((a,b)=>b.v-a.v)[0];
   if(sc.v<1)return null;
-  const d=sc.d;return {a0:Math.round(Math.max(d.from,du.ageNow)),a1:Math.round(d.to),now:du.ageNow>=d.from,v:sc.v};}
+  const d=sc.d;return {a0:Math.round(Math.max(d.from,du.ageNow)),a1:Math.round(d.to),now:du.ageNow>=d.from,v:sc.v,start:daeunWhen(r,d.from),end:daeunWhen(r,d.to),d};}   /* [U39] 실제 시점 */
 function askHtml(n,isMe){
   const b=n.birth; if(!b)return '';
   const r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est}); if(!r)return '';
@@ -3983,7 +4069,7 @@ function askHtml(n,isMe){
   const sex=b.sex==='남'||b.sex==='여'?b.sex:null;
   const sexBtn=`<button type="button" class="estnotebtn" data-edit="${n.id}">성별 넣기 →</button>`;
   const qs=[];
-  const dStr=(d,what,tail)=>d?(d.now?` 큰 흐름으로는 <b>지금(${d.a1}살까지)</b>이 ${what} 10년이에요.`:` 큰 흐름으로는 <b>${d.a0}~${d.a1}살</b>이 ${what} 10년이에요.`)+(tail||''):'';
+  const dStr=(d,what,tail)=>d?(d.now?` 큰 흐름으로는 <b>지금 대운(${d.end.text}까지)</b>이 ${what} 10년이에요.`:` 큰 흐름으로는 <b>${d.start.text} 무렵(만 ${d.start.age}세)부터 10년</b>이 ${what} 10년이에요.`)+(tail||''):'';   /* [U39] 만 나이·실제 시점 */
   if(age<18){
     /* 공부·재능 — 인성(받아들이기)·식상(꺼내기) */
     const inS=cnt['인성'], sik=cnt['식상'];
@@ -13273,6 +13359,17 @@ async function sajuSelfTest(){
       k1.includes('samhap')&&k1.includes('ganhap')&&Object.keys(f1.el).every(e=>e==='su'||f1.el.su>f1.el[e])
       &&!!n2&&n2.far&&!f3.notes.some(n=>n.kind==='banhap')&&/겨울의 끝자락인 丑월/.test(ss)&&/己·癸·辛/.test(ss)&&!/겨울에 핀 꽃|반쯤|진짜 이유/.test(ss),   /* [U37·U38] 계절 문장 */
       k1.join('·')+' / 떨어진 반합 '+(n2?'있음':'없음')+' / '+ss.slice(0,40)); }
+  /* [2026-09-20 U39] ① traceVerify — 추적한 문장 조각이 실제 인물 패널 글에 있다(추적과 출력이 갈라지지 않음)
+     ② feedbackInvariant — 지나온 길 답·직업을 넣어도 여덟 글자·세기·대운 점수·고른 해가 그대로 */
+  { const mn=nodes.find(x=>x.isMe&&x.birth);let miss=[];
+    if(mn){const prevG=activeGroup;showNode(mn);const txt=pbody.textContent;
+      traceReasons(mn).forEach(e=>{if(e.probe&&!txt.includes(e.probe))miss.push(e.code);});
+      if(prevG)selectGroup(prevG);}
+    T('traceVerify: 추적 조각이 실제 출력에 있다',miss.length===0,miss.length?miss.join(','):'전부 있음');
+    const x={id:'__fb',name:'가',isMe:false,birth:{y:1984,m:6,d:9,hour:10,min:0,sex:'여',est:null,dayRule:null,city:'서울',lon:126.978},past:null};
+    const sig=()=>{const r=rOf(x),du=daeunOf(x);return JSON.stringify([[r.year,r.month,r.day,r.hour],gangyak(r).score,pastYears(x).map(c=>c.Y),hourProbes(x,pastYears(x)).map(p=>p.Y),du.list.map(d=>luckForce(r,d.pillar))]);};
+    const before=sig();x.past=pastClean({answers:Object.fromEntries(pastYears(x).map((c,i)=>[c.Y,i%2?'n':'y'])),job:'재성'});const after=sig();
+    T('feedbackInvariant: 지나온 길 답이 계산을 바꾸지 않는다',before===after&&!/data-pastest/.test(pastHtml(x,false)),before===after?'같음':'달라짐'); }
   /* [2026-09-20 U36] 같이 겪은 해 — v9→v10 group.past:null · 둘 이상·절반 이상만 · 고른 해는 연도순·2년 간격 · 문장은 변화 압력 틀 */
   { const m=MIGRATIONS['9']({v:9,people:[],links:[],groups:[{key:'g1',name:'가',type:'가족',members:[]}]});
     const mk=(y,mo,d)=>({id:'__s'+y,name:'가'+y,isMe:false,birth:{y,m:mo,d,hour:null,min:null,sex:'남',est:null,dayRule:null,city:'서울',lon:126.978}});
@@ -13927,15 +14024,15 @@ function pastHtml(n,isMe){
   const main=pastYears(n);if(!main.length)return '';
   const probes=hourProbes(n,main),A=(n.past&&n.past.answers)||{},job=n.past?n.past.job:null;
   const btns=Y=>`<span class="mask-btns">${Object.keys(PAST_ANS).map(v=>`<button type="button" class="estnotebtn${A[Y]===v?' on':''}" data-past="${Y}" data-ans="${v}">${PAST_ANS[v]}</button>`).join('')}</span>`;
-  const rows=main.map(c=>`<div class="pastrow"><b>${c.Y}년(${c.age}살)</b> ${pastLine(c)} ${btns(c.Y)}</div>`).join('');
-  const pr=probes.length?`<div class="pastsub">태어난 시각을 좁히는 질문</div>`+probes.map(p=>`<div class="pastrow"><b>${p.Y}년(${p.age}살)</b> 이 해에 세워 둔 계획이 크게 틀어지거나 방향을 바꾼 일이 있었나요? ${btns(p.Y)}</div>`).join(''):'';
+  const rows=main.map(c=>`<div class="pastrow"><b>${c.Y}년(만 ${c.age}세)</b> ${pastLine(c)} ${btns(c.Y)}</div>`).join('');   /* [U39] 만 나이 */
+  const pr=probes.length?`<div class="pastsub">태어난 시각을 좁히는 질문</div>`+probes.map(p=>`<div class="pastrow"><b>${p.Y}년(만 ${p.age}세)</b> 이 해에 세워 둔 계획이 크게 틀어지거나 방향을 바꾼 일이 있었나요? ${btns(p.Y)}</div>`).join(''):'';
   const jb=`<div class="pastsub">지금 하는 일은 어느 쪽에 가까워요?</div><span class="mask-btns">`
     +PAST_JOB.map(([k,lab])=>`<button type="button" class="estnotebtn${job===k?' on':''}" data-pjob="${k}">${lab}</button>`).join('')+`</span>`;
   const sm=pastSummary(n,main,probes);
   let sum=sm.tot?`<p><b>답한 해 ${sm.tot}개 중 ${sm.yes}개가 맞았어요.</b> ${sm.msg}</p>`:'';
   if(sm.hourPick!==null){const sj=SIJIN[sm.hourPick];
     sum+=`<p>답으로 보면 태어난 시각은 <b>${sj[0]}시(${sj[1]}시)</b>일 가능성이 있어요 — 확실하진 않으니 참고로만 봐 주세요.
-      <span class="mask-btns"><button type="button" class="estnotebtn" data-pastest="${sm.hourPick}">이 시각으로 추정해 두기</button><button type="button" class="estnotebtn" data-est="${n.id}">질문으로 더 좁히기</button></span></p>`;}
+      <span class="mask-btns"><button type="button" class="estnotebtn" data-est="${n.id}">시각 추정에서 확인하기</button></span></p>`;}   /* [U39] ~~「이 시각으로 추정해 두기」(답 → birth.est 직접 기록)~~ — 사용자: 지나온 길 답은 계산(여덟 글자)을 바꾸지 못한다. 시각은 시각 추정 질문(별도 입력)에서만 */
   return `<div class="pastbox"><p class="nowhint">${isMe?'지난 삶':bkEsc(n.name)+'의 지난 삶'}에서 흐름이 크게 움직였을 해를 골랐어요. 맞는지 눌러 주시면 시각·직업 풀이를 그 답에 맞춰 좁혀요.</p>${rows}${pr}${jb}${sum}</div>`;}
 /** 「어울리는 일」 끝에 붙는 한 줄 — 고른 직업이 사주의 어느 기운과 닿는지 */
 const FORM_GROUPS={식신생재:['식상','재성'],재생관:['재성','관성'],관인상생:['관성','인성'],재다신약:['재성'],군겁쟁재:['비겁']};
@@ -13953,9 +14050,7 @@ function wirePast(n,redraw){
     const a=Object.assign({},p.answers);if(a[Y]===v)delete a[Y];else a[Y]=v;n.past=pastClean({answers:a,job:p.job,at:nowISO()});touch();});
   pbody.querySelectorAll('[data-pjob]').forEach(b=>b.onclick=()=>{const p=cur(),k=b.dataset.pjob;
     n.past=pastClean({answers:p.answers,job:p.job===k?null:k,at:nowISO()});touch();});
-  pbody.querySelectorAll('[data-pastest]').forEach(b=>b.onclick=()=>{const sj=+b.dataset.pastest,sl=EST_SLOTS.find(x=>x.sijin===sj);
-    n.birth=Object.assign({},n.birth,{est:{sijin:sl.sijin,sub:sl.sub,hour:sl.hour,answers:[],at:nowISO()}});
-    n.updatedAt=nowISO();updateNodeIdentity(n);saveState();redraw();});}
+  /* [U39] ~~data-pastest → birth.est 기록~~ 삭제 — 답은 표시층(요약·예시·직업 한 줄)에만 */}
 function showNode(n,groupContext,targetMesh){
   activeVirtual=false; /* [§5.5] 다른 패널로 넘어감 */
   deselect();selected=n;selectedMesh=targetMesh||n.mesh;
