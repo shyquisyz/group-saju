@@ -241,7 +241,8 @@
   .lifebox{margin:6px 0 12px}.lifesvg{width:100%;max-width:420px;height:auto;display:block;color:var(--mut)}
   .lifelg{display:flex;gap:12px;font-size:var(--fs-sm);margin:4px 0 6px}.lifelg span:last-child{color:var(--mut)}
   .lifebox p{margin:4px 0;line-height:1.65;color:var(--ink);word-break:keep-all}
-  .groles{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}.groles span{padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-size:var(--fs-sm);color:var(--ink)}
+  .groles{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+  .grep .gsecp{margin:0 0 6px}.groles span{padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-size:var(--fs-sm);color:var(--ink)}
   .nowbox p.nowtoday{background:rgba(232,198,106,.07);border-radius:8px;padding:8px 10px}
   .daylucky{display:block;margin-top:3px;font-size:var(--fs-sm);color:var(--gold)}
   .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:8px 0}
@@ -2279,7 +2280,7 @@ const LOVE_TIP={
   인성:'사랑에서 편안함을 찾는 쪽이에요 — 기대는 만큼 상대 얘기도 들어 주면 오래가요.'};
 /* 고민 주제 → 그 주제를 뜻하는 갈래(연애는 성별에 따라 짝 기운). 건강은 갈래가 아니라 「건강은?」 답으로 잇는다 */
 const CONCERN_GRP={일:['관성','식상'],돈:['재성'],가족:['인성','비겁'],공부:['인성']};
-const CONCERN_Q={일:null,돈:'돈은 언제 들어와요?',연애:'연애·결혼',가족:null,건강:'건강은?',공부:'공부·재능은?'};
+const CONCERN_Q={일:'일·명예는?',돈:'돈은 언제 들어와요?',연애:'연애·결혼',가족:null,건강:'건강은?',공부:'공부·재능은?'};
 const PHASE_MATCH={start:'시작하려던 거라면 올해가 때예요.',hold:'버티고 있다면 올해 안에 풀릴 틈이 보여요.',end:'정리하려던 거라면 올해 매듭짓기 좋아요.'};
 const PHASE_MISS={start:'시작은 서두르지 말고 준비하는 해로 쓰세요.',hold:'지금은 버티는 게 맞는 해예요 — 판을 키우진 마세요.',end:'정리는 해도 되지만 새로 벌이진 마세요.'};
 const STEM_EL=['mok','mok','hwa','hwa','to','to','geum','geum','su','su'];
@@ -3551,7 +3552,12 @@ function lensHtml(me,o){
       :`올해 나는 '${NOW_WORD[ya.groups[0]]}', ${bkEsc(o.name)}${particle(o.name,'은는')} '${NOW_WORD[yb.groups[0]]}'의 해라 서로 바빠요 — 약속은 미리 잡으세요.`):'';
     body=`<div class="lensbox"><div class="lensscore"><b>${sc}</b>점 <span>${cur} 궁합 · 재미로 보는 점수</span></div>`
       +`<p>${LENS_LINE[cur][g].replace(/이 사람/g,bkEsc(o.name))}</p>${hc?`<p>${HC_LENS[hc]}</p>`:''}${both?`<p>${both}</p>`:''}${lensDeepHtml(me,o,cur)}</div>`;}   /* [U18] 더 깊게 */
-  return `<div class="lens"><div class="lensq">만약 ${bkEsc(o.name)}${particle(o.name,'이가')} 나의 …라면?</div><div class="lenschips">${chips}</div>${body}</div>`;}
+  /* [2026-09-19 U20] 여덟 글자 전체로 본 한 줄 — 사용자: 권장대로(R4 ②). 관계 문단은 두 사람 일간 하나(relGod)로 정해져 거칠었다.
+     상대의 여덟(여섯) 글자를 내 일간 기준으로 세어 가장 많은 갈래가 일간 관계와 다르면 그 결을 덧붙인다 */
+  const sp=relSpread(me,o), dg=TEN_GOD_GROUP[relGod(me,o)];
+  const whole=sp&&sp.max>=2&&sp.tops.length===1&&sp.tops[0]!==dg
+    ?`<p class="nowhint">여덟 글자 전체로 보면 — ${bkEsc(o.name)}의 글자 중엔 나에게 <b>${GROUP_TOWARD[sp.tops[0]]}</b>이 가장 많아요. 겉보기(태어난 날)보다 그 결이 오래 사귈수록 드러나요.</p>`:'';
+  return `<div class="lens"><div class="lensq">만약 ${bkEsc(o.name)}${particle(o.name,'이가')} 나의 …라면?</div><div class="lenschips">${chips}</div>${body}</div>${whole}`;}
 /* ═══ [2026-09-19 U18] 내 패널 — 평생 흐름 그래프 · 일주 캐릭터 ═══ 사용자: 권장대로(내 패널 → 타인 → 그룹).
    평생 흐름: 대운 10개마다 돈(재성)·일(관성·식상)·사랑(남 재성/여 관성)이 천간·지지에 몇 번 드는지 + 신약·신강이면 도움 반 점 → 0~3.
    일주 캐릭터: 일간 형용사 + 일지 동물("단단한 원숭이") · 키워드 셋(일간 물상 · 가까운 사람 앞 · 기세) — 60일주를 조각으로 조립한다(손으로 60장을 쓰지 않았다). */
@@ -3617,7 +3623,7 @@ function gRoleHtml(ms,nm){
   pairs.sort((p,q)=>q.sc-p.sc);
   const best=pairs[0], fire=pairs.find(p=>p.hc==='chung')||pairs[pairs.length-1];
   return `<div class="gsub">우리 역할</div><div class="groles">`+rows.map(r=>`<span>${GROLE_KO[r.top][0]} <b>${nm(r.x)}</b> ${GROLE_KO[r.top][1]}</span>`).join('')+`</div>`
-    +(pairs.length>=2?`<p class="gsecp">💞 제일 잘 맞는 짝 <b>${nm(best.a)}·${nm(best.b)}</b> (${best.sc}점) · 🔥 제일 불꽃 튀는 짝 <b>${nm(fire.a)}·${nm(fire.b)}</b>${fire.hc==='chung'?' (태어난 날 글자가 부딪힘)':` (${fire.sc}점)`}</p>`:'');}
+    +(pairs.length>=2?`<p class="gsecp">💞 제일 잘 맞는 짝 <b>${nm(best.a)}·${nm(best.b)}</b> (${best.sc}점) · ${fire.hc==='chung'?'🔥 제일 불꽃 튀는 짝':'🌗 제일 결이 다른 짝'} <b>${nm(fire.a)}·${nm(fire.b)}</b>${fire.hc==='chung'?' (태어난 날 글자가 부딪힘)':` (${fire.sc}점)`}</p>`:'');}
 /* ═══ [2026-09-19 U19] 「만약 우리가 ○○한다면?」 ═══ 사용자: "그룹이 사업한다면? 여행한다면? 이런 것도 있으면 좋을 것 같음".
    상황 넷 × 그 사람 사주 1순위 갈래 → 맡을 일. + 이 그룹에 없는 갈래 = 빈 역할 · 태어난 날 충인 짝 = 떨어뜨릴 짝 · 그룹 12달의 좋은 달 ·
    추천(사업 = 그룹에 가장 많은 오행의 업종 / 여행 = 그룹에 없는 오행을 채우는 곳). 상황별 문장은 갈래 다섯 칸씩. */
@@ -3643,7 +3649,7 @@ const GSCENE={
 const gLensPick={};   /* 그룹 id → 상황(화면 상태, 저장 안 함) */
 function gSceneHtml(A,g,nm){
   const cur=gLensPick[g.id]||null;
-  const chips=Object.keys(GSCENE).map(k=>`<button type="button" class="estnotebtn${k===cur?' on':''}" data-glens="${k}">${GSCENE[k].icon} ${k}</button>`).join(' ');
+  const chips=(GSCENE_ORDER[g.type]||Object.keys(GSCENE)).map(k=>`<button type="button" class="estnotebtn${k===cur?' on':''}" data-glens="${k}">${GSCENE[k].icon} ${k}</button>`).join(' ');   /* [U20] 종류별 순서 */
   let body='';
   if(cur){
     const S=GSCENE[cur];
@@ -3661,6 +3667,65 @@ function gSceneHtml(A,g,nm){
       +(bestM.length?`<p><b>${S.good}</b> ${bestM.join('·')}</p>`:'')
       +(S.rec?`<p><b>${S.recH}</b> ${S.rec[recEl]}${cur==='여행'&&elMiss.length?` — 우리에게 없는 ${EL_KO[recEl]} 기운을 채워 줘요`:''}</p>`:'')+`</div>`;}
   return `<div class="gsub">만약 우리가 ○○한다면?</div><div class="lenschips">${chips}</div>${body}`;}
+/* ═══ [2026-09-19 U20] 그룹 종류별 초점 ═══ 사용자: "그룹 패널은 너무 돈 버는 것에 맞춰졌어. 가족이면 가족에 맞는 초점, 비즈니스나 친구면 그에 맞게.
+   돈·연애·건강·사업·명예 — 사람들이 가장 궁금해할 카테고리를 정해서". 주제 열 가지 중 그룹 종류마다 3~4개를 순서대로 보여 준다.
+   ~~공통 순위(바쁜·돈·사람 복·챙겨 줄)~~ 는 이 주제 안으로 흩었다. 주제에 해당하는 사람이 없으면 그 주제는 안 그린다 */
+const GFOCUS={가족:['harmony','health','kids','money'],부부:['love','money','health','kids'],연인:['love','fun','money'],
+  친구:['fun','rival','money'],동료:['honor','work','money','rival'],친척:['events','harmony','health'],기타:['fun','honor','money']};
+const GSCENE_ORDER={가족:['여행','같이 살기','위기 때','사업'],부부:['같이 살기','여행','위기 때','사업'],연인:['여행','같이 살기','위기 때','사업'],
+  친구:['여행','사업','위기 때','같이 살기'],동료:['사업','위기 때','여행','같이 살기'],친척:['여행','위기 때','같이 살기','사업'],기타:['여행','사업','위기 때','같이 살기']};
+function gFocusHtml(A,g,R,nm,me){
+  const dayC=t=>t.hits.some(h=>h.pos==='day'&&h.kind==='chung'), dayH=t=>t.hits.some(h=>h.pos==='day'&&h.kind!=='chung');
+  const has=(o,k)=>o.y.groups.indexOf(k)>=0, two=(o,k)=>o.y.groups.filter(x=>x===k).length;
+  const names=a=>a.map(nm).join('·');
+  const P=b=>sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});
+  const age=o=>(Date.now()-P(o.x.birth).utcMs)/(365.2425*86400000);
+  const fires=[];for(let i=0;i<R.length;i++)for(let j=i+1;j<R.length;j++)if((hapChung(R[i].x,R[j].x)||{}).kind==='chung')fires.push([R[i],R[j]]);
+  const monthsOf=test=>{const out=[];for(let i=0;i<12;i++){const c=R.filter(o=>o.ms[i]&&test(o.ms[i])).length;if(c>=Math.max(1,Math.ceil(R.length/2)))out.push(R[0].ms[i].cal+'월');}return out;};
+  const C={
+    harmony:()=>{const L=[];
+      if(fires.length)L.push(`${fires.slice(0,2).map(p=>`<b>${nm(p[0])}·${nm(p[1])}</b>`).join(', ')}는 태어난 날 글자가 부딪히는 짝이에요 — 같은 일을 맡기지 말고, 한쪽이 먼저 한 박자 쉬기.`);
+      const sh=R.filter(o=>dayC(o.m)); if(sh.length)L.push(`이번 달 예민한 사람은 <b>${names(sh)}</b> — 이 사람 앞에선 말끝을 부드럽게.`);
+      const calm=R.filter(o=>has(o,'인성')||dayH(o.y)); if(calm.length)L.push(`올해 집안의 완충재는 <b>${names(calm)}</b> — 다툼이 나면 이 사람이 중재하게 해 보세요.`);
+      return ['🕊 화목',L.length?L:['올해는 태어난 날 글자가 부딪히는 짝도, 예민한 사람도 없어요 — 평화로운 해라 같이 뭔가 벌이기 좋아요.']];},   /* 비면 긍정 한 줄 */
+    health:()=>{const L=R.map(o=>{const r=P(o.x.birth),sur=sajuElements(r),miss=EL_ORDER.filter(k=>!sur[k]);
+        const shake=dayC(o.y);if(!miss.length&&!shake)return null;
+        return `<b>${nm(o)}</b> ${miss.length?ASK_ORG[miss[0]]+' 챙기기':''}${shake?(miss.length?' · ':'')+'올해 몸의 리듬이 흔들리기 쉬움':''}`;}).filter(Boolean);
+      return L.length?['🏥 건강 챙길 곳',[L.join(' · ')+' <span class="gwhy">재미로 보는 풀이예요 — 불편하면 병원이 먼저.</span>']]:null;},
+    kids:()=>{const kids=R.filter(o=>age(o)<20);if(!kids.length)return null;
+      const L=kids.map(o=>{const ys=askYears(o.x,t=>t.groups.includes('인성')).filter(z=>z.age<=20);
+        return `<b>${nm(o)}</b> ${has(o,'인성')?'올해 공부 운이 붙어요':has(o,'식상')?'올해는 재능을 꺼내 보여 줄 해':'올해는 기초를 다지는 해'}${ys.length?` · 공부 운 좋은 해 ${askYearStr(ys,2)}`:''}`;});
+      return ['📚 아이·공부',L];},
+    money:()=>{const top=R.filter(o=>has(o,'재성'));const good=monthsOf(m=>m.g==='재성'&&!m.warn);
+      const L=[];if(top.length)L.push(`올해 돈 기운이 들어오는 사람은 <b>${names(top)}</b> — ${g.type==='가족'||g.type==='부부'?'큰 살림 결정은 이 사람 의견을 먼저':'돈 관리는 이 사람에게'}.`);
+      if(good.length)L.push(`${g.type==='가족'||g.type==='부부'?'큰 지출·계약':'돈 이야기'}는 <b>${good.slice(0,2).join('·')}</b>에 하면 좋아요.`);
+      const bj=R.filter(o=>two(o,'비겁')>=1);if((g.type==='친구'||g.type==='동료')&&bj.length)L.push(`<b>${names(bj)}</b>는 올해 "내 몫" 기운이 커요 — 돈 거래·공동 구매는 숫자로 적어 두기.`);
+      return L.length?[g.type==='가족'?'💰 가계':'💰 돈',L]:null;},
+    love:()=>{if(R.length!==2)return null;const [a,b]=R, sc=lensScore(a.x,b.x,g.type==='부부'?'배우자':'애인');
+      return ['💕 애정',[`둘의 ${g.type==='부부'?'부부':'연인'} 궁합 <b>${sc}점</b> <span class="gwhy">재미로 보는 점수</span>`,lensDeepHtml(a.x,b.x,g.type==='부부'?'배우자':'애인').replace(/<\/?p>/g,' ')]];},
+    fun:()=>{const f=R.filter(o=>has(o,'식상'));const good=monthsOf(m=>m.good);const L=[];
+      if(f.length)L.push(`올해 제일 신나게 노는 사람은 <b>${names(f)}</b> — 약속은 이 사람한테 잡게 하세요.`);
+      if(good.length)L.push(`같이 놀기 좋은 달 <b>${good.slice(0,3).join('·')}</b>.`);
+      return ['🎉 같이 놀기',L.length?L:['올해는 다들 바빠서 약속 잡기가 쉽지 않아요 — 날짜를 먼저 박아 두는 사람이 이겨요.']];},
+    rival:()=>{const pr=[];for(let i=0;i<R.length;i++)for(let j=i+1;j<R.length;j++){const gg=TEN_GOD_GROUP[relGod(R[i].x,R[j].x)];if(gg==='비겁')pr.push([R[i],R[j]]);}
+      if(!pr.length&&!fires.length)return null;const L=[];
+      if(pr.length)L.push(`${pr.slice(0,2).map(p=>`<b>${nm(p[0])}·${nm(p[1])}</b>`).join(', ')}는 같은 결이라 서로 비교하기 쉬워요 — 같은 걸 두고 겨루지 않게.`);
+      if(fires.length)L.push(`${fires.slice(0,1).map(p=>`<b>${nm(p[0])}·${nm(p[1])}</b>`).join('')}는 불꽃 튀는 짝 — 자극이 되지만 선은 지키기.`);
+      return ['🔥 경쟁·질투',L];},
+    honor:()=>{const h=R.filter(o=>has(o,'관성')), st=R.filter(o=>has(o,'인성'));const L=[];
+      if(h.length)L.push(`올해 인정받는 사람은 <b>${names(h)}</b> — 승진·평가·자리 이동이 따라오기 쉬운 해.`);
+      if(st.length)L.push(`시험·자격증에 좋은 사람은 <b>${names(st)}</b>.`);
+      return ['🏆 인정·명예',L.length?L:['올해는 평가보다 실력을 쌓는 해예요 — 인정은 내년 이후에 몰려와요.']];},
+    work:()=>{const busy=R.filter(o=>two(o,'관성')+two(o,'식상')>=2), burn=R.filter(o=>(o.y.verdict==='신약'||o.y.verdict==='극약')&&o.y.helps&&o.y.helps.every(h=>!h));const L=[];
+      if(busy.length)L.push(`올해 성과가 몰리는 사람은 <b>${names(busy)}</b> — 큰 일은 이 사람 중심으로.`);
+      if(burn.length)L.push(`번아웃 주의 <b>${names(burn)}</b> — 일을 덜어 주거나 쉬는 날을 박아 두세요.`);
+      return L.length?['💼 성과·번아웃',L]:null;},
+    events:()=>{const good=monthsOf(m=>m.good&&!m.warn);const L=[];
+      if(good.length)L.push(`다 같이 모이기 좋은 달 <b>${good.slice(0,2).join('·')}</b>.`);
+      if(fires.length)L.push(`명절엔 ${fires.slice(0,1).map(p=>`<b>${nm(p[0])}·${nm(p[1])}</b>`).join('')}를 옆자리에 앉히지 마세요.`);
+      return L.length?['🎎 모임·경조사',L]:null;}};
+  return (GFOCUS[g.type]||GFOCUS.기타).map(k=>C[k]()).filter(Boolean)
+    .map(([h,L])=>`<div class="gsub">${h}</div>${L.map(t=>`<p class="gsecp">${t}</p>`).join('')}`).join('');}
 /** 받침에 따라 이에요/예요 */
 function ieyo(w){const c=w.charCodeAt(w.length-1);return(c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28)?'이에요':'예요';}
 /** 「요즘」 이야기 층. isMe면 "당신" */
@@ -3780,6 +3845,15 @@ function askHtml(n,isMe){
       :' 앞으로 10년 안엔 따로 튀는 "돈의 해"가 없어요 — 꾸준히 모으는 쪽이 맞아요.';
     if(sex)t+=dStr(askDaeun(n,'재성'),"돈이 크게 도는");   /* 성별이 없으면 아래 「연애·결혼·자식」 한 곳에서만 안내(반복 금지) */
     qs.push(['돈은 언제 들어와요?',t]);
+    /* [U20] 일·명예 — 사용자: "돈·연애·건강·사업·명예". 관성(자리·평가) · 인성(시험·자격) 해를 짚는다 */
+    { const c=cnt['관성'];
+      let tw=c===0?'타이틀보다 실력으로 인정받는 쪽이에요 — 조직보다 내 이름이 걸린 일에서 빛나요.'
+        :c===1?'맡은 자리에서 차근차근 인정받는 쪽이에요.':'자리와 직함이 따라오는 사주예요 — 책임을 맡을수록 커져요.';
+      const up=askYears(n,t7=>t7.groups.includes('관성')), ex=askYears(n,t7=>t7.groups.includes('인성'));
+      if(up.length)tw+=` 승진·평가·자리 이동이 오기 쉬운 해: <b>${askYearStr(up)}</b>.`;
+      if(ex.length)tw+=` 시험·자격증에 좋은 해: <b>${askYearStr(ex,2)}</b>.`;
+      if(sex)tw+=dStr(askDaeun(n,'관성'),'자리를 잡는');
+      qs.push(['일·명예는?',tw]); }
     /* 연애·결혼 */
     if(!sex)qs.push(['연애·결혼·자식은?','짝과 자식을 보는 자리는 남녀에 따라 달라서, 위 「성별 넣기」를 하면 바로 보여 드려요.']);
     else{
@@ -3913,7 +3987,7 @@ function gReportHtml(A,g){
   const ys=gSecYear(A.ms);
   return `<div class="grep"><div class="greph">${bkEsc(g.name)} · ${L.luckYear} 보고서</div>`
     +(ys?ys.html:'')
-    +(lines.length?`<div class="gsub">올해 순위</div><div class="grank">${lines.map(l=>`<p>${l}</p>`).join('')}</div>`:'')
+    +(gFocusHtml(A,g,R,nm,me)||(lines.length?`<div class="gsub">올해 순위</div><div class="grank">${lines.map(l=>`<p>${l}</p>`).join('')}</div>`:''))   /* [U20] 종류별 초점 */
     +`<div class="gsub">이번 달 우리</div><p class="gsecp">${monthL}</p>`
     +(pairs.length?`<div class="gsub">누가 누구를 챙기면 좋을까</div>${pairs.map(t=>`<p class="gsecp">${t}</p>`).join('')}`:'')
     +`<div class="gsub">우리의 12달</div><p class="gsecp">${mSum}.</p><div class="mgrid">${mg}</div>`
