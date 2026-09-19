@@ -3847,6 +3847,8 @@ function nowStoryHtml(n,isMe){
       const nt=luckTouch(n,nx.pillar);
       td+=` ${left<1?'올해 안에':`${Math.max(1,Math.round(left))}년쯤 뒤`}(${Math.round(nx.from)}살 무렵)부터는 '${DAEUN_WORD[nt.groups[0]]}' 10년이 시작돼요.`;}
     ps.push(`<p>${td}</p>`);}
+  {const lk=luckMarkOf(n);   /* [U28] 은하 그림과 잇는 한 줄 */
+   if(lk)ps.push(`<p class="nowhint">은하에서 ${isMe?'내 항성':'이 행성'} 이름표에 ${lk==='good'?`✨가 붙어 있어요${isMe?'':' — 둘레에 금빛도 돌아요'}. 이번 달이 좋은 달이라서예요`:'⚡가 붙어 있어요. 이번 달이 예민한 달이라서예요(태어난 날 글자와 이번 달 글자가 부딪혀요)'}.</p>`);}
   return `<div class="nowbox">${todayHtml(n)}${ps.join('')}${monthsHtml(n)}</div>`;}   /* [U16] 오늘 · 12달 */
 /* ═══ 「궁금한 것」 [2026-09-19 U12] ═══ 사용자: "결국 사람들이 궁금해할 건 돈은 언제 버나, 건강은? 연애운은? 자식은 어떻게 되나 —
    이런 질문에 답이 있어야 할 듯. 아직 읽다 만 느낌". 질문 넷(18살 미만은 공부·재능 + 건강)을 접힌 제목으로 두고 누르면 답이 펼쳐진다.
@@ -5961,6 +5963,8 @@ const V2_TUNABLES={
   CLOUD_R: 1.24,                  // [2026-09-19] 장신구 구름 조각의 반지름 — 솟은 땅(1.10)보다 높이 떠서 가장자리에서 테두리 밖으로 삐져나온다
   CLOUD_ORBIT: 0.08,              // 구름 조각이 행성 둘레를 도는 속도(rad/s). 약 80초에 한 바퀴              // 변위 최대치(반지름 비). 초상·은하 공통
   GALAXY_LAVA_EM: 0.9,            // [3차] 은하 행성의 용암 발광층 세기(발광은 별도 층이라 성계 선택 시 밝아지는 연출과 안 섞인다)
+  LUCK_GLOW_SIZE: 5.2,            // [U28] 좋은 달 금빛 — 행성 지름(2)의 2.6배. ~~3.4·.42~~는 폰 성계 장면(행성 ~10px)에서 안 보였다(갈무리로 확인)
+  LUCK_GLOW_OPACITY: 0.7,         // [U28] 숨쉬듯 ±30%
   CV_PIVOT_MUL: 0.8,              // [U27] 중심 바꿔 보기 때 가운데 사람 크기 = 항성의 0.8배(나보다 조금 작게 — 진짜 항성은 나 하나라는 §2.1을 흐리지 않게)
   GALAXY_MAP_PX: 1024,            // [3차] ~~512~~ — 은하에서도 가까이 당기면 행성이 화면 60%까지 커져(핀치 수정 후) 512는 흐렸다             // 은하용 지도 폭(px). 은하에서 행성은 수~수십 px라 1024는 GPU 메모리만 쓴다
   PORTRAIT_BUMP: 0.03,            // 지표 굴곡(구 .015)
@@ -8478,7 +8482,28 @@ function galaxyMapTex(info){
     .catch(e=>{console.warn('[은하 행성 지도] 받지 못했다',info.key,e);_gMapTex.delete(info.key);return null;}));
   return _gMapTex.get(info.key);}
 /* [2026-09-20 U30] 이름표 아랫줄 — 호칭이 있으면 앞에: "아내 · 庚 · 금속의 행성"(U2 검토 ③: 장식은 사주 결, 글자는 실제 호칭) */
-function nodeSub(n){return (n.title?n.title+' · ':'')+STEMS[n.stemIdx]+' · '+EL_INFO[n.el].planet;}
+function nodeSub(n){const lk=luckMarkOf(n);return (lk==='warn'?'⚡ ':lk==='good'?'✨ ':'')+(n.title?n.title+' · ':'')+STEMS[n.stemIdx]+' · '+EL_INFO[n.el].planet;}   /* [U28] 이번 달 표시 */
+/* ═══ [2026-09-20 U28] 운에 따른 행성 변화 — 사용자: "권장대로"(Gemini 제안 채택) ═══
+   이번 달 운(yearMonths의 now 칸)을 은하에 잇는다 — 12달 표의 「좋은 달」·「조심할 달」과 **같은 판정**이라 글과 그림이 엇갈리지 않는다.
+   좋은 달 = 이름표 앞 ✨ + 행성 둘레 금빛(숨쉬듯) · 예민한 달(태어난 날 글자와 이번 달 글자가 부딪힘) = 이름표 앞 ⚡ · 그 밖 = 그대로.
+   나(항성)는 원래 빛나므로 금빛은 안 두르고 ✨·⚡만. 절기가 바뀌면(달이 넘어가면) 10분 안에 따라간다(refreshLuckLook). */
+function luckMarkOf(n){
+  const b=n&&n.birth;if(!b||!b.y)return null;
+  const L=luckNow();if(!L)return null;
+  const key=[b.y,b.m,b.d,b.hour,b.min,b.lon,b.dayRule,b.est&&b.est.hour,L.month.join(',')].join('|');
+  if(n._lkKey===key)return n._lk;
+  let v=null;try{const m=yearMonths(n).find(x=>x.now);v=m?(m.warn?'warn':m.good?'good':null):null;}catch(e){}
+  n._lkKey=key;n._lk=v;return v;}
+function refreshLuckLook(){
+  nodes.forEach(n=>{
+    const sub=nodeSub(n);
+    if(sub!==n.sub){n.sub=sub;scene.remove(n.label);n.label=makeLabel(n.name,n.sub);scene.add(n.label);
+      groupInstances.forEach(i=>{if(i.ref===n){scene.remove(i.label);i.label=makeLabel(n.name,n.sub);scene.add(i.label);}});}
+    const want=luckMarkOf(n)==='good'&&!n.isMe;
+    const meshes=[n.mesh];groupInstances.forEach(i=>{if(i.ref===n)meshes.push(i.mesh);});
+    meshes.forEach(m=>{const cur=m.userData.luckGlow;
+      if(want&&!cur){const g=makeGlow('#f3cf6a',V2_TUNABLES.LUCK_GLOW_SIZE);g.userData.luck=true;g.renderOrder=0;m.add(g);m.userData.luckGlow=g;_luckGlows.add(g);}
+      else if(!want&&cur){m.remove(cur);cur.material.map.dispose();cur.material.dispose();_luckGlows.delete(cur);delete m.userData.luckGlow;}});});}
 /* [2026-09-20 U30] 가족 호칭이면 가족 그룹을 **제안**한다 — 강제로 넣지 않고 안내 한 줄 + 버튼(사용자 확정: 호칭 칸 + 가족 그룹 자동 제안).
    이미 가족 그룹에 있으면 조용히. 가족 그룹이 없으면 「우리 가족」을 나와 둘로 만든다(§7.2 나 없는 그룹 금지·2인 미만 제거 둘 다 만족) */
 function suggestFamilyGroup(n){
@@ -8514,7 +8539,7 @@ function applyGalaxyMap(mesh,ref,holder){
     /* 일간 전용 장식 떼기 — 속 물체(Group)와 丙 코로나(나는 항성 글로우라 남긴다) */
     mesh.children.filter(c=>c.type==='Group').forEach(c=>mesh.remove(c));
     if(holder&&'innerTree'in holder)holder.innerTree=null;
-    if(!isMe){const co=holder?holder.glow:mesh.children.find(c=>c.type==='Sprite');
+    if(!isMe){const co=holder?holder.glow:mesh.children.find(c=>c.type==='Sprite'&&!c.userData.luck);   /* [U28] 금빛은 떼지 않는다 */
       if(co){mesh.remove(co);if(holder&&holder.glow===co)holder.glow=null;}}
     const m=mesh.material;
     m.map=T.map;m.bumpMap=null;m.normalMap=T.normal;m.normalScale.set(V2_TUNABLES.PORTRAIT_NORMAL,V2_TUNABLES.PORTRAIT_NORMAL); /* [3차] 노멀맵 */
@@ -8818,6 +8843,7 @@ return {start,stop,accessoriesFor,cloudTopTex,cloudPatch,flicker};})(); /* [2026
    구름 조각은 행성 mesh의 자식 — 행성 크기·위치·자전을 그대로 따라가고, 그 위에서 궤도(CLOUD_ORBIT)로 돈다.
    클릭 판정(intersectObjects)은 자식을 보지 않으므로 구름이 행성 선택을 가로채지 않는다. 나(항성)에는 붙이지 않는다. */
 const _gClouds=new Set();
+const _luckGlows=new Set();   /* [U28] 좋은 달 금빛 — simulate가 숨쉬게 한다 */
 async function applyGalaxyClouds(mesh,ref){
   if(mesh.userData.gClouds){mesh.remove(mesh.userData.gClouds);_gClouds.delete(mesh.userData.gClouds);mesh.userData.gClouds=null;}
   if(!ref||ref.isMe||!ref.birth||!nodes.some(x=>x.isMe))return;
@@ -8860,7 +8886,7 @@ function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updat
   if(glow)mesh.add(glow);
   if(!isMe&&!mapped){applyShell(mesh,stemIdx);const sh=makeShapes(stemIdx);if(sh)mesh.add(sh);} /* [F-5 甲·丁·戊] · [2026-09-20] 지도가 오면 안 만든다 */
   const title0=(typeof title==='string'&&title.trim())?title.trim().slice(0,12):null; /* [U30] 호칭 — 없으면 null */
-  const sub=nodeSub({title:title0,stemIdx,el});
+  const sub=nodeSub({title:title0,stemIdx,el,birth});   /* [U28] 이번 달 표시를 위해 birth도 */
   /* §2.9 밀도 보정 (d), [버그 2 수정] 지시선 폐기: 라벨을 mesh의 자식으로 두지 않는다.
      자식이면 라벨도 PLANET_SCALE(0.25)까지 함께 줄어들어 글자를 읽을 수 없게 된다.
      scene에 독립적으로 배치하고 매 프레임 월드 좌표를 직접 계산(행성 바로 아래, LABEL_GAP) —
@@ -9487,7 +9513,8 @@ function layoutGroupOrbits(){
     선택 경로(selectGroup)뿐 아니라 데이터 변경 경로에서도 한 번 더 건다 */
   verifyOrbitPointInvariants(topGroups);
   rebuildGroupOrbitLines(topGroups);
-  layoutVirtualSlot(topGroups);}
+  layoutVirtualSlot(topGroups);
+  refreshLuckLook();}   /* [U28] 새로 생긴 인스턴스에도 이번 달 금빛·표시 */
 
 /* v2 §5.5 — GALAXY-LAYOUT-SPEC §4 가상 성계. 6단계 스텁(위치 표시만)을 실제 조작 가능한
    작업대로 확장한다. **참조 기반 클론 모델**(설계안 1번, §7.4가 나중에 일반화할 원형) — 클론은
@@ -11691,6 +11718,7 @@ function showGroup(g){
       +'결이 비슷해 말이 잘 통하고, 그만큼 같은 데서 막힙니다.</span></div>'
     +'<div class="lgl-i"><i class="lgl-s same"></i><span><b>회청 점선</b> — 여러 그룹에 있는 '
       +'<b>같은 사람</b>을 이은 줄입니다. 관계가 아니라 같은 사람이라는 표시입니다.</span></div>'
+    +'<div class="lgl-i"><span><b>✨ 이름표 · 금빛</b> — 이번 달이 좋은 달인 사람. <b>⚡ 이름표</b> — 이번 달이 예민한 달인 사람. 달이 바뀌면 같이 바뀝니다.</span></div>'   /* [U28] */
     +'</div>','은하에 그어진 선 네 종류');
   pbody.innerHTML=`
     <span class="tag">${g.type}</span><span class="tag ${A.dyn==='긴장형'?'warn':''}">${DYN_KO[A.dyn]||A.dyn}</span><span class="tag sun">☀ ${bkEsc(A.sun.name)}</span>
@@ -11850,7 +11878,8 @@ function setMeshVis(mesh,v){
     m.opacity=v*base;}
   mesh.visible=v>0.01;}
 function simulate(){
-  _gClouds.forEach(o=>{o.userData.tick(t);o.visible=cvMix<.5;}); /* [2026-09-19] 은하 장신구 구름 궤도·태풍 회전·번개 · [U27] 구름은 나와의 관계라 중심 바꿔 보기 중엔 숨김 */
+  _gClouds.forEach(o=>{o.userData.tick(t);o.visible=cvMix<.5;});
+  _luckGlows.forEach(g=>{if(!g.parent){_luckGlows.delete(g);return;}g.material.opacity=V2_TUNABLES.LUCK_GLOW_OPACITY*(.7+.3*Math.sin(t*1.6));}); /* [U28] 좋은 달 금빛이 숨쉰다 */ /* [2026-09-19] 은하 장신구 구름 궤도·태풍 회전·번개 · [U27] 구름은 나와의 관계라 중심 바꿔 보기 중엔 숨김 */
   updateLabelDown(); /* [2026-08-24] 이번 프레임의 "화면 아래" 월드 방향 — 모든 라벨이 공유 */
   /* [F-2] 프레임 시간차. t를 밖에서 임의로 바꾸는 측정 스크립트가 있으므로 상수 0.016을
      쓰지 않고 실제 증가분을 쓰되, 음수·과대값은 잘라낸다(탭 복귀 시 한 번에 튀는 것 방지). */
@@ -12970,6 +12999,14 @@ async function sajuSelfTest(){
       !!cg&&cg.width===1080&&cg.height>1000&&ci.width===1080&&ci.height===1350&&cardWrap.length===4,
       (cg?cg.width+'x'+cg.height:'그룹 없음')+' · '+ci.width+'x'+ci.height);
   }catch(e){T('shareCards: 그룹 카드·일주 카드',false,'예외 '+e.message);}
+  /* [2026-09-20 U28] 운에 따른 행성 변화 — 이름표 표시·금빛이 12달 표의 이번 달 판정과 같은지(사람 전원) */
+  { let bad=0,cnt={good:0,warn:0,none:0};
+    nodes.forEach(n=>{const lk=luckMarkOf(n),m=n.birth?yearMonths(n).find(x=>x.now):null,exp=m?(m.warn?'warn':m.good?'good':null):null;
+      cnt[lk||'none']++;
+      if(lk!==exp)bad++;
+      if(n.sub.startsWith('⚡ ')!==(lk==='warn')||n.sub.startsWith('✨ ')!==(lk==='good'))bad++;
+      if(!!n.mesh.userData.luckGlow!==(lk==='good'&&!n.isMe))bad++;});
+    T('luckLook: 이번 달 ✨·⚡·금빛 = 12달 표 판정',bad===0,'좋은 달 '+cnt.good+' · 예민한 달 '+cnt.warn+' · 보통 '+cnt.none+' · 어긋남 '+bad); }
   /* [2026-09-20 U27] 중심 바꿔 보기 — 기준 사람 반경 0·항성 0.8배 · 나는 임시 궤도 · 글 "○○에게" · 풀면 원래대로 · 저장 안 됨 */
   try{const g0=groups.find(g=>{const A=g.analysis||analyzeGroup(g);return A.ms.length>=3&&A.ms.some(x=>x.isMe)&&!g.parentId;});
     if(g0){const prevG=activeGroup,A0=g0.analysis||analyzeGroup(g0),X=A0.ms.find(x=>!x.isMe),sv0=JSON.stringify(serializeState().people);
@@ -16241,6 +16278,7 @@ maybeOnboard();renderNextStep();
    그쪽에 붙였다가 시연이 아예 안 돌았다(실측: tourTimer null). 문자열이 같다고 같은
    자리가 아니다. */
 if(demoMode){demoBadge();tourStart();}
+setInterval(()=>{try{refreshLuckLook();}catch(e){}},10*60*1000);   /* [U28] 켜 둔 채 절기가 바뀌어도 이번 달 표시가 따라간다 */
 /* ═══ [2026-09-20 U29-2] 적응형 배율 — 사용자: 권장대로 ═══
    폰 GPU가 느리면 배율을 2 → 1.5 → 1로 낮춘다. 부팅 4초 뒤부터 3초 동안 rAF 간격을 모아 **중앙값이 30ms를 넘으면**(33fps 미만)
    한 단계 낮추고 2초 쉰 뒤 다시 잰다(최대 두 단계). 100ms 넘는 간격은 GPU가 아니라 CPU 멈춤(지도 가공·패널 조립)이라 뺀다.
