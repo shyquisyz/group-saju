@@ -3838,10 +3838,8 @@ function gFocusHtml(A,g,R,nm,me){
       const sh=R.filter(o=>dayC(o.m)); if(sh.length)L.push(`이번 달 예민한 사람은 <b>${names(sh)}</b> — 이 사람 앞에선 말끝을 부드럽게.`);
       const calm=R.filter(o=>has(o,'인성')||dayH(o.y)); if(calm.length)L.push(`올해 집안의 완충재는 <b>${names(calm)}</b> — 다툼이 나면 이 사람이 중재하게 해 보세요.`);
       return ['🕊 화목',L.length?L:['올해는 태어난 날 글자가 부딪히는 짝도, 예민한 사람도 없어요 — 평화로운 해라 같이 뭔가 벌이기 좋아요.']];},   /* 비면 긍정 한 줄 */
-    health:()=>{const L=R.map(o=>{const r=P(o.x.birth),sur=sajuElements(r),miss=EL_ORDER.filter(k=>!sur[k]);
-        const shake=dayC(o.y);if(!miss.length&&!shake)return null;
-        return `<b>${nm(o)}</b> ${miss.length?ASK_ORG[miss[0]]+' 챙기기':''}${shake?(miss.length?' · ':'')+'올해 몸의 리듬이 흔들리기 쉬움':''}`;}).filter(Boolean);
-      return L.length?['🏥 건강 챙길 곳',[L.join(' · ')+' <span class="gwhy">재미로 보는 풀이예요 — 불편하면 병원이 먼저.</span>']]:null;},
+    health:()=>{const L=R.filter(o=>dayC(o.y)).map(o=>`<b>${nm(o)}</b>`);   /* [U37] ~~없는 오행 → 장기 챙기기~~ 삭제 — 올해 생활 리듬이 흔들리기 쉬운 사람만 */
+      return L.length?['🏥 생활 리듬',[L.join(' · ')+' — 올해 생활 리듬이 흔들리기 쉬운 사람이에요. 무리한 일정은 나눠 들어 주세요. <span class="gwhy">재미로 보는 풀이예요 — 불편하면 병원이 먼저.</span>']]:null;},
     kids:()=>{const kids=R.filter(o=>age(o)<20);if(!kids.length)return null;
       const L=kids.map(o=>{const ys=askYears(o.x,t=>t.groups.includes('인성')).filter(z=>z.age<=20);
         return `<b>${nm(o)}</b> ${has(o,'인성')?'올해 공부 운이 붙어요':has(o,'식상')?'올해는 재능을 꺼내 보여 줄 해':'올해는 기초를 다지는 해'}${ys.length?` · 공부 운 좋은 해 ${askYearStr(ys,2)}`:''}`;});
@@ -3939,10 +3937,15 @@ function nowStoryHtml(n,isMe){
    이런 질문에 답이 있어야 할 듯. 아직 읽다 만 느낌". 질문 넷(18살 미만은 공부·재능 + 건강)을 접힌 제목으로 두고 누르면 답이 펼쳐진다.
    [읽는 규칙 — 명리의 널리 쓰는 대응, 유파 이견이 적은 것만]
      돈 = 재성 · 짝 = 남자 재성 / 여자 관성 · 자식 = 남자 관성 / 여자 식상 · 공부 = 인성 · 재능 = 식상
-     건강 = 오행 → 몸(목 간·눈·근육 / 화 심장·혈압·잠 / 토 위장·소화 / 금 폐·호흡기·피부 / 수 신장·허리·붓기) — 비었거나 넘치는 쪽
+     ~~건강 = 오행 → 몸(장기)~~ → [U37] 건강 = 기운이 몰리거나 소모되는 경향만(세력이 가장 큰 갈래). 장기·질병은 말하지 않는다
    [언제] 앞으로 10년 세운 중 그 갈래가 천간·지지에 드는 해 + 대운 중 그 갈래가 드는 10년(앞 5년 천간 · 뒤 5년 지지).
    [하지 않는 말] 자식이 있다·없다, 병 이름, 결혼 여부 단정 — 관계 방식과 "때"만 말한다. 건강은 매번 "병원이 먼저" 한 줄. */
-const ASK_ORG={mok:'간·눈·근육',hwa:'심장·혈압·잠',to:'위장·소화',geum:'폐·호흡기·피부',su:'신장·허리·붓기'};
+/* [U37] ~~ASK_ORG(오행 → 장기)~~ 삭제 — 장기·질병 예측 금지(사용자). 세력이 가장 큰 갈래로 "기운을 어디에 쓰는 경향"만 */
+const HEALTH_TEND={비겁:'기운이 안으로 몰리기 쉬운 편이라, 몸을 움직여 밖으로 풀어 주면 좋아요.',
+  식상:'표현하고 쏟아내는 쪽으로 기운을 많이 쓰는 편이라, 쉬는 시간을 따로 떼어 두면 좋아요.',
+  재성:'일을 벌이고 챙기느라 기운을 많이 쓰는 편이라, 몰아서 하고 쉬는 패턴을 조심하세요.',
+  관성:'책임과 긴장이 쌓이기 쉬운 편이라, 긴장을 푸는 습관이 도움이 돼요.',
+  인성:'생각이 많아 기운이 안으로 몰리기 쉬운 편이라, 몸을 움직여 풀어 주면 좋아요.'};
 /** 앞으로 n년 중 그 갈래가 드는 해. match(t) 로 더 좁힐 수 있다 */
 function askYears(x,test,n){
   const L=luckNow(); if(!L||!x.birth)return [];
@@ -4059,16 +4062,12 @@ function askHtml(n,isMe){
       if(ys.length)t3+=` 아이 일로 바빠지거나 좋은 소식이 오기 쉬운 해: <b>${askYearStr(ys)}</b>.`;
       qs.push(['자식은?',t3]);}
   }
-  /* 건강 */
-  { const sur=sajuElements(r), letters=r.hasTime?8:6, hi=letters===8?4:3;
-    const miss=EL_ORDER.filter(k=>!sur[k]), over=EL_ORDER.filter(k=>sur[k]>=hi);
-    let t=miss.length?`명리에서는 비어 있는 기운 쪽을 몸의 약한 고리로 봐요. ${Xh} ${miss.map(k=>EL_KO[k]).join('·')} 기운이 없어서 <b>${miss.map(k=>ASK_ORG[k]).join(', ')}</b> 쪽을 한 번 더 챙기면 좋아요.`
-      :'다섯 기운이 고루 있어서 크게 기우는 곳은 없어요.';
-    if(over.length)t+=` ${over.map(k=>EL_KO[k]).join('·')} 기운은 넘치는 편이라 <b>${over.map(k=>ASK_ORG[k]).join(', ')}</b> 쪽이 과열되기 쉬워요.`;
-    t+=(v==='극약'||v==='신약')?' 체력은 아껴 쓰는 편이 좋아요 — 몰아서 하고 앓아눕는 패턴을 조심하세요.'
-      :(v==='신강'||v==='극왕')?' 체력은 좋은 편인데, 그걸 믿고 무리하기 쉬워요.':'';
+  /* 건강 [2026-09-20 U37] — 사용자: "오행 표면 개수가 비슷하다고 균형이라 하지 말 것 · 질병·장기·실제 건강상태 예측 금지".
+     ~~비어 있는 오행 = 몸의 약한 고리(간·심장·위장…) · "다섯 기운이 고루 있어서 크게 기우는 곳은 없어요"~~ → 기운이 몰리거나 소모되는 **경향**만(세력이 가장 큰 갈래) */
+  { const F=forcesOf(r),top=Object.keys(F.grp).sort((a,b)=>F.grp[b]-F.grp[a])[0];
+    let t='오행의 개수만으로 건강 상태를 판단할 수는 없어요. 사주에서는 기운이 몰리거나 소모되는 경향 정도만 참고할 수 있어요. '+HEALTH_TEND[top];
     const L=luckNow(), yt=L?luckTouch(n,L.year):null;
-    if(yt&&yt.hits.some(h=>h.pos==='day'&&h.kind==='chung'))t+=' 올해는 몸의 리듬이 흔들리기 쉬운 해라, 검진은 미루지 마세요.';
+    if(yt&&yt.hits.some(h=>h.pos==='day'&&h.kind==='chung'))t+=' 올해는 생활 리듬이 흔들리기 쉬운 해라, 미뤄 둔 검진이 있다면 챙겨 두세요.';
     t+=' <span class="askdis">재미로 보는 풀이예요 — 몸이 불편하면 병원이 먼저예요.</span>';
     qs.push(['건강은?',t]); }
   /* [U15] 요즘 고민 주제의 질문을 맨 위로 올리고 펼쳐 둔다 */
@@ -4097,7 +4096,7 @@ function nowFactsHtml(n){
     const ss=shinsalOf(sr);
     rows.push('타고난 별(신살) — '+(ss.length?ss.map(x=>x.name+'('+x.at.join('·')+'주)').join(' · '):'넷 중 없음')+' · 도화·역마·화개는 년지·일지 삼합 기준, 천을귀인은 일간 기준.'); }
   rows.push('판단은 기운의 세기(억부)만 봅니다 — 계절 보정(조후)은 아직 넣지 않았습니다. 극왕·극약이면 도움·부담을 말하지 않습니다.');
-  rows.push('「궁금한 것」 읽는 규칙 — 돈 = 재성 · 짝 = 남자 재성 / 여자 관성 · 자식 = 남자 관성 / 여자 식상 · 공부 = 인성 · 재능 = 식상 · 건강 = 비었거나 넘치는 오행(목 간 · 화 심장 · 토 위장 · 금 폐 · 수 신장).');
+  rows.push('「궁금한 것」 읽는 규칙 — 돈 = 재성 · 짝 = 남자 재성 / 여자 관성 · 자식 = 남자 관성 / 여자 식상 · 공부 = 인성 · 재능 = 식상 · 건강 = 기운이 몰리거나 소모되는 경향(세력이 가장 큰 갈래)만 — 장기·질병은 말하지 않음(U37).');
   rows.push('짝 기운이 정·편 둘 다 있을 때(재성혼잡·관살혼잡)와 그해 짝 기운 + 일지 충 — 새 인연·외도로 읽지 않고, 관계의 생활·돈 문제와 변화 압력으로만 씁니다(U32).');
   return `<div class="basisrow"><div class="basish">운의 흐름</div>${rows.map(r=>`<p>${r}</p>`).join('')}</div>`;}
 /* ═══ [2026-09-19 U17] 그룹 = 「우리 ○○ 올해 보고서」 ═══ 사용자: "그룹 화면이 부족해. 보고서처럼 만드는 거 좋아 — 살을 더 붙여야 할 듯.
@@ -4492,16 +4491,39 @@ function innerHyeongLines(r){
     out.push(k==='jahyeong'?`${BRANCHES[a]} 글자가 둘이라(자형) 스스로를 몰아세우는 버릇이 생기기 쉬워요.`
       :`${BRANCHES[a]}·${BRANCHES[b]} 두 글자는 형(刑)으로 걸려 있어, 그 자리의 일에서 긴장이 쌓이기 쉬워요.`);}
   return out;}
+/* [2026-09-20 U37] ~~"계절의 도움을 반쯤만 받아요" · "약한 진짜 이유는 …"~~ — 사용자: 50%의 근거 없음 · 강약 계산과 성격 해석은 별개.
+   ① 계절 문장: 월지가 계절의 어디인지(초·한·끝자락). 辰戌丑未(환절기 흙)면 "월지 자체는 흙이고 그 안에 ○·○·○ 기운이 함께 있어 한 방향으로만 강하다고 보기 어렵다".
+      나머지는 월지 오행이 나와 같음/나를 키움/다름. 계절 오행을 월지 힘 100%로 치지 않는다(계산은 forcesOf의 지장간 비율)
+   ② 계산 결과: 계절 도움 정도 + 나를 소모시키는(식상·재성) / 누르는(관성) / 받쳐 주는(인성·비겁) 오행 중 세력 15% 이상인 것 → 등급
+   ③ 삶의 의미: 가장 큰 상대 갈래(약하면 식상·재성·관성 중, 세면 인성·비겁 중)의 오행이 삶에서 어떤 문제로 나타나기 쉬운지 */
+const MONTH_POS=['한겨울','겨울의 끝자락','초봄','한봄','봄의 끝자락','초여름','한여름','여름의 끝자락','초가을','한가을','가을의 끝자락','초겨울'];
+const GROUP_LIFE={식상:'표현·재주·말',재성:'돈·일·결과',관성:'책임·규칙·역할',인성:'배움·도움·생각',비겁:'나와 같은 편·경쟁'};
+function seasonLine(r,gy){
+  const F=forcesOf(r),me=F.me,mb=r.month[1],se=SEASON_OF[mb],B=BRANCHES[mb],pos=MONTH_POS[mb];
+  if([1,4,7,10].includes(mb)){
+    const hs=HIDDEN_STEMS[mb].map(x=>STEM_EL[x[0]]),order=[hs[hs.length-1]].concat(hs.slice(0,-1)),els=[...new Set(order)].map(e=>EL_PLAIN[e]).join('·');
+    return `${pos}인 ${B}월에 태어났어요. 계절에는 ${EL_PLAIN[se]}의 기운이 남아 있지만, 월지 자체는 흙이고 그 안에 ${els} 기운이 함께 들어 있어 한 방향으로만 강하다고 보기는 어려워요.`;}
+  const me2=BRANCH_EL[mb];
+  return me2===me?`${pos}인 ${B}월에 태어나, 계절이 나와 같은 ${EL_PLAIN[me2]} 기운이라 뒤에서 밀어 줘요.`
+    :GEN[me2]===me?`${pos}인 ${B}월에 태어나, 계절이 나를 키우는 ${EL_PLAIN[me2]} 기운이라 도움을 받아요.`
+    :`${pos}인 ${B}월에 태어났어요. 계절 기운(${EL_PLAIN[me2]})이 나와 다른 편이라 계절의 도움은 적은 편이에요.`;}
 function strengthStory(r,gy){
-  const F=forcesOf(r),me=F.me,mb=r.month[1],se=SEASON_OF[mb],own=se===me,feed=GEN[se]===me;
-  let s;
-  if(gy.deukRyeong)s=`태어난 달이 같은 편이라 계절이 뒤에서 밀어 줘요 — 힘을 안 들여도 자라는 때에 태어났어요.`;
-  else if(own||feed)s=`${SEASON_KO[se]}에 태어나 계절은 ${EL_PLAIN[me]}${own?'의 제철':particle(EL_PLAIN[me],'을를')+' 키우는 때'}인데, 태어난 달 글자의 중심은 ${EL_PLAIN[BRANCH_EL[mb]]} 기운이라 계절의 도움을 반쯤만 받아요.`;
-  else s=`태어난 달 기운이 이 사람과 다른 편이라, 계절이 밀어주지는 않아요.`;
-  const top=['식상','재성','관성'].sort((a,b)=>F.grp[b]-F.grp[a])[0],weak=gy.verdict==='신약'||gy.verdict==='극약';
-  if(weak){s+=` 약한 진짜 이유는 ${WEAK_WHY[top]} 때문이에요.`;   /* 관성은 빠져나가는 게 아니라 누른다 — 갈래마다 말을 달리 */
-    if(top==='재성'&&F.grp.재성>=F.total*.3)s+=' 돈이 눈에 보이는데 혼자 쥐기엔 힘이 부치는, 명리에서 말하는 재다신약 쪽이에요.';}
-  else s+=` 힘이 남는 만큼 ${DRAIN_KO[top]}으로 흘려보낼 곳이 있어야 좋아요.`;
+  const F=forcesOf(r),me=F.me,mb=r.month[1],se=SEASON_OF[mb],sh=g=>F.total?F.grp[g]/F.total:0;
+  const elsOf=gs=>[...new Set(gs.filter(g=>sh(g)>=.15).map(g=>groupEl(me,g)))].map(e=>EL_PLAIN[e]);
+  const inHidden=HIDDEN_STEMS[mb].some(x=>{const g=elGroupOf(me,STEM_EL[x[0]]);return g==='비겁'||g==='인성';});
+  const help=gy.deukRyeong?'계절의 도움을 받고':(se===me||GEN[se]===me||inHidden)?'계절의 도움은 일부 있지만':'계절의 도움은 적고';
+  const weak=gy.verdict==='신약'||gy.verdict==='극약',grade=gyGrade(gy),gk=grade.mid?'중간 정도로':grade.ko.replace(' 편',' 쪽')+'으로';
+  let bal;
+  if(weak||grade.mid){
+    const drain=elsOf(['식상','재성']),press=elsOf(['관성']);
+    const parts=[drain.length?`나를 소모시키는 ${drain.join('·')}`:'',press.length?`누르는 ${press.join('·')}`:''].filter(Boolean);
+    bal=`${help}, ${parts.length?parts.join(particle(drain.length?drain[drain.length-1]:'가','과와')+' ')+'도 함께 있어 ':''}전체적으로는 <b>${gk}</b> 봐요.`;}
+  else{const ally=elsOf(['인성','비겁']);
+    bal=`${help}, ${ally.length?`나를 받쳐 주는 ${ally.join('·')} 기운이 두텁게 있어 `:''}전체적으로는 <b>${gk}</b> 봐요.`;}
+  const cand=weak||grade.mid?['관성','재성','식상']:['인성','비겁'];
+  const tg=cand.sort((a,b)=>F.grp[b]-F.grp[a])[0],te=groupEl(me,tg);
+  const life=sh(tg)>=.15?` ${EL_PLAIN[te]} 기운은 삶에서는 ${GROUP_LIFE[tg]}의 문제로 나타나기 쉬워요.`:'';
+  let s=`${seasonLine(r,gy)} ${bal}${life}`;
   const cl=comboLines(F).concat(innerHyeongLines(r));if(cl.length)s+=' 여덟 글자 안에서는 '+cl.join(' ');   /* [U33] 원국 안의 형도 */
   return s;}
 /** 지장간까지 포함한 오행 개수. 가중치는 주지 않는다 — 여기·중기·정기에 몇 점씩 줄지가
@@ -5297,23 +5319,27 @@ function cornerTie(dayStem,cnt,verdict){
   return {h:'관계 스타일',
     t:cornerBlk(`태어난 날 윗글자는 <b>${STEMS[dayStem]}</b>, 오행은 <b>${EL_KO[el]}</b>입니다.`,
       TIE_STEM[dayStem]+fight+fit),raw:true};}   /* [2026-09-17 A6-3] ~~TIE_LINE[el]~~ → 일간별 */
-function cornerPower(sur,dayStem,verdict){
+function cornerPower(sur,dayStem,verdict,deep){   /* [U37] deep(지장간 포함 개수, 선택) — "없음"은 지장간까지 보고 말한다 */
   const miss=EL_ORDER.filter(k=>!sur[k]);
   const nmEl=a=>a.map(k=>EL_KO[k]).join('·');
   const myEl=STEM_EL[dayStem];
   let fact = miss.length
-    ? `이 사람의 여덟 글자에는 <b>${nmEl(miss)}</b> 기운이 없습니다. `
-      +miss.map(k=>`${EL_KO[k]} — ${EL_TRAIT[k]}`).join(' · ')+'.'
-    : `다섯 기운을 빠짐없이 갖췄습니다.`;
+    ? miss.map(k=>deep&&deep[k]>0?`<b>${EL_KO[k]}</b> 기운은 겉 글자에는 없고 지지 속(지장간)에만 숨어 있어요 — ${EL_TRAIT[k]}`
+        :`<b>${EL_KO[k]}</b> 기운은 겉 글자${deep?'에도 지지 속에도':'에'} 없어요 — ${EL_TRAIT[k]}`).join(' · ')+'.'
+    : `겉 글자에 다섯 기운이 모두 드러나 있어요(개수가 곧 균형은 아니에요).`;
   /* [U23] ~~극왕·극약은 억부 문장을 쓰지 않는다(2026-08-31 사용자 결정)~~ → 사용자: "성의 없다" — 넷 다 쓴다. 극약은 약한 쪽, 극왕은 센 쪽 규칙 그대로.
      기운 → 사람·계절·색·방위까지. 색·방위는 오행의 널리 쓰는 대응 */
   const EL_SEASON={mok:'봄',hwa:'여름',to:'환절기',geum:'가을',su:'겨울'}, EL_COLOR={mok:'초록·파랑',hwa:'빨강·주황',to:'노랑·베이지',geum:'흰색·은색',su:'검정·남색'}, EL_DIR={mok:'동쪽',hwa:'남쪽',to:'가운데',geum:'서쪽',su:'북쪽'};
   const weak=verdict==='신약'||verdict==='극약';
   const list=(weak?[elBorn(myEl),myEl]:[GEN[myEl],OVR[myEl],elRuled(myEl)]).filter(Boolean);
-  const take=verdict?`이 사람은 기운이 ${weak?'약한':'센'} 편이라 <b>${nmEl(list)}</b> 기운이 힘이 돼요. `
-    +`사람으로는 ${list.slice(0,2).map(k=>EL_PEOPLE[k]).join(', ')} — 곁에 있으면 숨통이 트여요. `
-    +`때로는 ${list.map(k=>EL_SEASON[k]).filter((x,i,a)=>a.indexOf(x)===i).join('·')}, 색은 ${list.slice(0,2).map(k=>EL_COLOR[k]).join('·')}, 자리는 ${list.slice(0,2).map(k=>EL_DIR[k]).join('·')}이 잘 맞아요. `
-    +(miss.length?`없는 ${nmEl(miss)} 기운을 가진 사람이 곁에 있으면 빈 데가 채워져요.`:'주변에 떠오르는 사람이 있다면 은하에 등록해 보세요.'):null;
+  /* [2026-09-20 U37] ~~"기운이 약한 편이라 금·수가 힘이 돼요" · 색·방향을 핵심 문장에~~ — 사용자: 신약 여부 하나로 희신을 정하지 말 것.
+     용신 판정 엔진이 없으므로 "보충하는 역할은 하지만 많을수록 좋다는 뜻은 아니다"로 낮추고, 색·방향·계절은 전통 상징(재미로 참고)으로 따로 */
+  const nm=nmEl(list),trulyMiss=miss.filter(k=>!deep||!deep[k]);
+  const take=verdict?(weak?`<b>${nm}</b> 기운이 나를 보충하는 역할을 하기는 하지만, 계절과 전체 균형까지 보면 항상 ${nm}${particle(nm,'이가')} 많을수록 좋다는 뜻은 아니에요. `
+      :`<b>${nm}</b> 기운이 넘치는 힘을 덜어 쓰게 해 주는 역할을 하기는 하지만, 계절과 전체 균형까지 보면 항상 그쪽이 많을수록 좋다는 뜻은 아니에요. `)
+    +`사람으로는 ${list.slice(0,2).map(k=>EL_PEOPLE[k]).join(', ')} — 곁에 있으면 숨통이 트이기 쉬워요. `
+    +(trulyMiss.length?`없는 ${nmEl(trulyMiss)} 기운을 가진 사람이 곁에 있으면 빈 데가 채워져요. `:'')
+    +`<span class="askdis">전통적인 오행 상징으로는 ${list.map(k=>EL_SEASON[k]).filter((x,i,a)=>a.indexOf(x)===i).join('·')} · ${list.slice(0,2).map(k=>EL_COLOR[k]).join('·')} · ${list.slice(0,2).map(k=>EL_DIR[k]).join('·')}${particle(EL_DIR[list[Math.min(1,list.length-1)]],'이가')} ${nm}에 해당해요 — 재미로 참고하는 정도예요.</span>`:null;
   return {h:'힘이 되는 기운',t:cornerBlk(fact,take),raw:true};}
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -5531,7 +5557,7 @@ function personReading(n){
   void STORY;
   /* [U32] ~~"편이 되는 기운이 36%예요(보통은 40% 안팎)"~~ — 사용자: 자체 점수를 명리의 표준 수치처럼 보이게 하지 말 것. 이야기 층은 등급 말로만, 숫자는 근거 층에 "앱 내부 균형 지표"로 */
   const grade=gyGrade(gy);
-  let t3=`전체적으로 일간(나를 나타내는 글자)의 힘은 <b>${grade.ko}</b>으로 봐요. ${strengthStory(r,gy)} ${grade.mid?GY_MID_CONC:CONC[gy.verdict]}`;   /* [U31] 계절 비유 → 계절 + 무엇이 기운을 빼는지 + 합 */
+  let t3=`${strengthStory(r,gy)} ${grade.mid?GY_MID_CONC:CONC[gy.verdict]}`;   /* [U37] 등급은 계산 결과 문장 안에서 한 번 */   /* [U31] 계절 비유 → 계절 + 무엇이 기운을 빼는지 + 합 */
   /* [2026-09-19 U11] ~~if(!r.hasTime)t3+=' 출생 시각을 모르고 본 결과라…'~~ — 시각 모름 안내가 한 패널에 여섯 번 나왔다(U10).
      이제 머리 날짜 줄 옆 한 번(「시간 모름 · 추정해 보기」)과 근거 층에만 둔다. */
   out.push({h:'기운의 세기',t:t3});
@@ -5553,26 +5579,20 @@ function personReading(n){
       ? `가장 많은 갈래가 ${NUM_KO[tops.length]}이고, 저마다 ${NUM_KO[mx]}씩입니다.`
       : `${j.t}${particle(j.base,'이가')} ${num}${ro(num)} 가장 많습니다.`); }
   if(zeros.length){
-    /* [2026-09-09 C10] 같은 규칙 — 셋부터는 이름을 빼고 한 문장으로 합친다(C9 승인).
-       ~~C8이 앞에 붙였던 18자짜리 별도 문장 + 이름 문장~~ 두 문장 꼴은 셋 이상에서만 없앤다.
-       둘까지는 이름이 45자 안에 들어가므로(실측 37자) 그대로 둔다. */
-    if(zeros.length>=3){
-      sents.push(`반면 ${NUM_KO[letters]} 글자 안에 없는 갈래가 ${NUM_KO[zeros.length]}입니다.`);
-    }else if(zeros.length===1){
-      /* [2026-09-09 C11] 하나뿐일 때는 개수를 세는 문장이 어색했다("…없는 갈래가 하나입니다.
-         A가 그렇습니다."). 하나면 셀 것이 없으니 이름을 주어로 놓고 한 문장으로 말한다.
-         C8 이전 꼴로 돌아간 셈이다 — 그때는 계열이 넷일 때 82자가 되는 게 문제였는데,
-         하나짜리는 가장 긴 이름(식상)으로도 32자다. */
-      const j=joinPowers(zeros);
-      sents.push(`반면 ${j.t}${particle(j.base,'은는')} ${NUM_KO[letters]} 글자 안에 하나도 없습니다.`);
-    }else{
-      const j=joinPowers(zeros);
-      sents.push(`반면 ${NUM_KO[letters]} 글자 안에 하나도 없는 갈래가 ${NUM_KO[zeros.length]}입니다.`);
-      sents.push(`${j.t}${particle(j.base,'이가')} 그렇습니다.`);
-    }
-    sents.push('없는 사람이라는 뜻이 아니라, <b>타고난 무기가 아니라는 뜻</b>입니다.');
+    /* [2026-09-20 U37] ~~"○○ 기운은 여덟 글자 안에 하나도 없습니다"~~ — 사실 오류(사용자): 일간 자신이 비겁 오행이고, 지지 속(지장간)에도 있을 수 있다.
+       셈(cnt)은 "일간을 뺀 겉 천간 + 지지 정기"다 — 그렇게 밝히고, 지장간(정기 말고 여기·중기)에 있으면 "숨어 있어 완전히 없는 것은 아니다" */
+    const OBJ=['을','을','을','을','를','를','을','을','을','를'];   /* 천간 읽기(갑을병정무기경신임계) 뒤 목적격 조사 */
+    const hidOf=grp=>{const out=[];[r.year,r.month,r.day,r.hour].forEach(p=>{if(!p)return;const hs=HIDDEN_STEMS[p[1]];
+      hs.forEach(([st],i)=>{if(i<hs.length-1&&TEN_GOD_GROUP[tenGod(d,st)]===grp)out.push({b:p[1],st});});});return out;};
+    zeros.forEach(z=>{const el=groupEl(STEM_EL[d],z),h=hidOf(z);
+      let t=z==='비겁'?`겉으로 드러난 글자만 보면, 일간 ${STEMS[d]}${OBJ[d]} 제외하고 같은 ${EL_PLAIN[el]}(${EL_KO[el]}) 기운이 따로 드러나 있지는 않아요.`
+        :`겉으로 드러난 글자에는 ${GROUP_POWER[z]}(${EL_KO[el]})이 따로 드러나 있지 않아요.`;
+      t+=h.length?` 다만 ${[...new Set(h.map(x=>BRANCHES[x.b]))].join('·')} 안의 지장간에는 ${[...new Set(h.map(x=>STEMS[x.st]))].join('·')}${EL_KO[el]}${particle(EL_KO[el],'이가')} 숨어 있어 완전히 없는 것은 아니에요.`
+        :' 지지 속(지장간)에도 없어요.';
+      sents.push(t);});
+    sents.push('드러나지 않은 쪽은 타고난 무기가 아니라는 뜻이지, 그런 면이 없는 사람이라는 뜻은 아니에요.');
   }else if(sents.length){
-    sents.push('다섯 갈래가 빠짐없이 채워져 한쪽으로 크게 쏠리지 않습니다.');
+    sents.push('다섯 갈래가 겉에 모두 드러나 있어요 — 다만 개수가 곧 힘의 크기는 아니에요.');   /* [U37] ~~쏠리지 않습니다~~ 개수로 균형을 말하지 않는다 */
   }
   /* 겉과 속의 차이 — 표를 훑어서는 안 보이는 정보다 */
   const sur=sajuElements(r), deep=sajuElementsDeep(r);
@@ -5605,7 +5625,7 @@ function personReading(n){
     { const prim=mGrp!=='비겁'?mGrp:(['식상','재성','관성'].sort((a,b)=>cnt[b]-cnt[a])[0]), jf=jobFitLine(n,prim,F0,gy.verdict); if(jf)cj.t+=jf; }   /* [U35] 고른 직업 한 줄 */ cj.t=cj.t.replace('<span class="nicktake-t">','<span class="nicktake-t">'+t2+' '); out.push(cj); }   /* [U22] 관심 문장을 앞머리로 */
   out.push(cornerMoney(cnt10,gy.verdict,cnt));  /* [2026-09-17 A6-3] 강/약 표 · [U23] 새는 곳·굴리는 법 */
   out.push(cornerTie(d,cnt,gy.verdict));   /* [U23] 다툴 때·맞는 사람 */
-  out.push(cornerPower(sajuElements(r),d,gy.verdict));
+  out.push(cornerPower(sajuElements(r),d,gy.verdict,sajuElementsDeep(r)));   /* [U37] 지장간까지 */
   /* [2026-08-30] key 는 제목 문자열 — 인물 패널이 일곱을 접을 때 쓴다.
      순서가 아니라 이름으로 잡아야 코너를 더하거나 옷겨도 접힘 기억이 안 엉힌다. */
   out.forEach(x=>{x.key='n:'+x.h;});
@@ -12871,22 +12891,22 @@ async function sajuSelfTest(){
    T('cnrPowerEven: 다섯 고루면 고루 문장',
      /* [2026-09-09 C8] 문구가 바뀌어 대조 문자열만 갱신 — 보는 동작은 그대로다
         (~~'다섯 기운을 고루 갖춘 판입니다'~~ → '다섯 기운을 빠짐없이 갖췄습니다') */
-     txt(evenWeak).indexOf('다섯 기운을 빠짐없이 갖췄습니다')>=0, txt(evenWeak).slice(0,40));
+     txt(evenWeak).indexOf('다섯 기운이 모두 드러나 있어요')>=0, txt(evenWeak).slice(0,40));   /* [U37] */
    const ex1=cornerPower(noTo,0,'극왕');
    /* [2026-09-19 U23] ~~극왕은 억부 문장 없음~~ → 사용자: "성의 없다" — 극왕도 센 쪽 규칙(화·토·금)으로 말한다 */
    T('cnrPowerExtreme: 극왕도 센 쪽 기운을 말한다',
-     /화·토·금 기운이 힘이 돼요/.test(txt(ex1))&&/색은/.test(txt(ex1)), txt(ex1).slice(0,46));
+     /화·토·금 기운이 넘치는 힘을 덜어/.test(txt(ex1))&&/전통적인 오행 상징/.test(txt(ex1)), txt(ex1).slice(0,46));   /* [U37] */
    const ex2=cornerPower(all,0,'극약');
    T('cnrPowerExtremeFull: 극약+고루 — 약한 쪽 기운 + 등록 권유',
      /* [2026-09-09 C8] 같은 이유로 대조 문자열만 갱신
         (~~'어느 쪽 사람과도 잘 어울립니다'~~ → '어느 쪽 사람과 만나도 무리가 없습니다') */
      /* [U23] ~~해석 층 생략~~ → 극약도 약한 쪽 규칙(수·목) + 다 갖췄으면 "등록해 보세요" */
-     /수·목 기운이 힘이 돼요/.test(txt(ex2))&&txt(ex2).indexOf('다섯 기운을 빠짐없이 갖췄습니다')>=0, txt(ex2).slice(0,52));
+     /수·목 기운이 나를 보충하는/.test(txt(ex2))&&txt(ex2).indexOf('다섯 기운이 모두 드러나 있어요')>=0, txt(ex2).slice(0,52));   /* [U37] */
    /* 23. 억부 골격 — 신약은 둘, 신강은 셋 */
    const w=cornerPower(noTo,0,'신약'), st=cornerPower(noTo,0,'신강');
    T('cnrPowerYeokbu: 신약 2개 · 신강 3개',
-     /수·목 기운이 힘이 돼요/.test(txt(w))&&/화·토·금 기운이 힘이 돼요/.test(txt(st)),   /* [U23] 말투 */
-     '신약→'+(txt(w).match(/편이라 ([^ ]+) 기운/)||[])[1]+' / 신강→'+(txt(st).match(/편이라 ([^ ]+) 기운/)||[])[1]);
+     /수·목 기운이 나를 보충/.test(txt(w))&&/화·토·금 기운이 넘치는 힘을 덜어/.test(txt(st)),   /* [U37] 말투 */
+     '신약→'+(txt(w).match(/([^ ]+) 기운이 나를/)||[])[1]+' / 신강→'+(txt(st).match(/([^ ]+) 기운이 넘치는/)||[])[1]);
   }
   /* 25. 관계 카드 [2026-08-30 → 2026-09-05 타로 판] — 캔버스를 뜨지 않고 **그리기 명령 목록**으로 검증한다 */
   {
@@ -13231,7 +13251,7 @@ async function sajuSelfTest(){
     const ss=strengthStory(R([2,0],[7,1],[8,8],[5,4]),{verdict:'신약',deukRyeong:false});
     T('forces: 삼합·천간합 묶임 · 떨어진 반합 약하게 · 년·시 반합 없음 · 壬 丑월 = 겨울 제철',
       k1.includes('samhap')&&k1.includes('ganhap')&&Object.keys(f1.el).every(e=>e==='su'||f1.el.su>f1.el[e])
-      &&!!n2&&n2.far&&!f3.notes.some(n=>n.kind==='banhap')&&/겨울에 태어나 계절은 물의 제철/.test(ss)&&!/겨울에 핀 꽃/.test(ss),
+      &&!!n2&&n2.far&&!f3.notes.some(n=>n.kind==='banhap')&&/겨울의 끝자락인 丑월/.test(ss)&&!/겨울에 핀 꽃|반쯤|진짜 이유/.test(ss),   /* [U37] 계절 문장 */
       k1.join('·')+' / 떨어진 반합 '+(n2?'있음':'없음')+' / '+ss.slice(0,40)); }
   /* [2026-09-20 U36] 같이 겪은 해 — v9→v10 group.past:null · 둘 이상·절반 이상만 · 고른 해는 연도순·2년 간격 · 문장은 변화 압력 틀 */
   { const m=MIGRATIONS['9']({v:9,people:[],links:[],groups:[{key:'g1',name:'가',type:'가족',members:[]}]});
@@ -13265,7 +13285,8 @@ async function sajuSelfTest(){
     const words=Object.values(NOW_HYEONG).every(t=>/긴장|마찰|몰아세우|서운함/.test(t));
     T('hyeong: 형 표 · 충 겹치면 뺌 · 긴장·마찰 틀',ok&&il.length===2&&words,'원국 형 '+il.length+'줄'); }
   /* [2026-09-20 U32] 해석 금지어 — 등록된 모든 사람의 인물 패널 글(요즘·궁금한 것·평생 흐름·이런 사람)에 과장·정량 단정 표현이 0건이어야 한다 */
-  { const BAN=['다른 인연','새 사람','힘이 반으로','떨어진 반합','40% 안팎','앞 5년','크게 도는','말다툼이 잦'],hit=[];
+  { const BAN=['다른 인연','새 사람','힘이 반으로','떨어진 반합','40% 안팎','앞 5년','크게 도는','말다툼이 잦',   /* [U32] */
+      '고루 있어서','반쯤','진짜 이유','하나도 없','힘이 돼요','간·눈','심장','위장','신장','호흡기'],hit=[];   /* [U37] */
     nodes.forEach(n=>{if(!n.birth)return;const d=document.createElement('div');
       d.innerHTML=askHtml(n,!!n.isMe)+nowStoryHtml(n,!!n.isMe)+lifeFlowHtml(n,!!n.isMe)+pastHtml(n,!!n.isMe)+personReading(n).map(x=>x.t).join(' ');   /* [U35] 지나온 길도 */
       const t=d.textContent;BAN.forEach(w=>{if(t.includes(w))hit.push(w);});});
