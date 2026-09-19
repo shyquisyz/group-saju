@@ -6955,32 +6955,43 @@ function portraitSnapshot(ps,cam,S){
    [방향] facing.json의 pass = 주 오행이 가장 넓고 보조가 모두 3% 이상 보이는 방향 목록(tools/planet-maps/passlist.html 실측).
      생년월일·시각의 해시로 그중 하나를 고른다 — 같은 조합이어도 사람마다 다른 면.
    [비동기] 지도를 내려받아 그려야 하므로 처음엔 구 초상(일간)을 보여 주고, 다 그려지면 같은 자리의 src를 바꾼다.
-   생년월일이 없으면 구 초상 그대로. */
-const PMAP_BASE='assets/planet-tex/map/';
+   생년월일이 없으면 구 초상 그대로.
+   → [2026-09-19 정정] 위 [고르는 규칙]은 **옛 규칙**이다. 사용자: "행성 자체가 나여야" → 4분할 확정.
+   [새 규칙] 나 = 일간 오행 한 지역 + 환경 = 사주 글자에 있는 **다른** 오행, 많은 순(동점은 목화토금수 순)으로 셋까지.
+     환경 3·2개 → map4/{나}__{환경…}.jpg (네·세 지역이 같은 크기, 50장)
+     환경 1개(무작위 2만 명 모의: 시각 있음 0.8% · 모름 4.3%) → 옛 두 오행 지도 map/{많은 쪽}-{적은 쪽}.jpg(동점이면 나가 앞)
+     환경 0개(여덟 글자가 전부 한 오행) → 옛 압도 지도 map/{나}.jpg
+     환경이 4개면 가장 적은 하나가 빠진다 — 지역은 넷까지(설명 문구가 뺀 것을 알려 준다).
+   [방향] map4/facing.json — 네(세) 지형이 **빛 받는 쪽에서** 가장 고르게 보이는 방향 목록(pass, 생성기 tools/planet-maps/facing4.js).
+     빛까지 따지는 이유: 측면 조명에서 그늘에 든 지형(특히 회색 금)이 안 읽혔다(실측). 옛 facing.json과 합쳐 한 표로 쓴다
+     (map4 키에는 '__'가 있어 옛 키와 안 겹친다). */
+const PMAP_BASE='assets/planet-tex/map/',PMAP4_BASE='assets/planet-tex/map4/';
 const _p2Cache=new Map(),_p2Pending=new Map();
 let _pFacingP=null;const _pSkyEnv=new Map(),_pStudioEnv=new Map(); /* 렌더러(WebGL 문맥)마다 따로 굽는다 */
 const P2_BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
-function pFacing(){if(!_pFacingP)_pFacingP=fetch(PMAP_BASE+'facing.json').then(r=>r.json()).catch(()=>({}));return _pFacingP;}
+function pFacing(){if(!_pFacingP)_pFacingP=Promise.all([PMAP_BASE,PMAP4_BASE].map(u=>fetch(u+'facing.json').then(r=>r.json()).catch(()=>({}))))
+  .then(([a,b])=>Object.assign({},a,b));return _pFacingP;}
 function pLoadImg(u){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=u;});}
 function planetMapInfo(n){
   const b=n&&n.birth;if(!b||!b.y||!b.m||!b.d)return null;
   let r=null;
   try{r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});}catch(e){return null;}
   if(!r||!r.day)return null;
-  const EL=['mok','hwa','to','geum','su'],c=sajuElements(r);
-  const max=Math.max(...EL.map(e=>c[e]||0)),tops=EL.filter(e=>(c[e]||0)===max);
-  const de=STEM_EL[r.day[0]],mb=r.month?BRANCH_EL[r.month[1]]:null;
-  const main=tops.length===1?tops[0]:tops.includes(de)?de:(mb&&tops.includes(mb))?mb:tops[0];
-  const rest=EL.filter(e=>e!==main&&(c[e]||0)>0);
-  let key=main;
-  if(c[main]<5&&rest.length){
-    const sec=rest.slice().sort((a,z)=>(c[z]-c[a])||EL.indexOf(a)-EL.indexOf(z)).slice(0,2).sort((a,z)=>EL.indexOf(a)-EL.indexOf(z));
-    key=[main].concat(sec).join('-');}
+  const EL=['mok','hwa','to','geum','su'],c=sajuElements(r),byEL=(a,z)=>EL.indexOf(a)-EL.indexOf(z);
+  const de=STEM_EL[r.day[0]];
+  /* 환경 = 나 말고 사주에 있는 오행, 많은 순(동점은 목화토금수 순). 지역은 넷까지라 셋만 쓴다 */
+  const env=EL.filter(e=>e!==de&&(c[e]||0)>0).sort((a,z)=>(c[z]-c[a])||byEL(a,z));
+  const pick=env.slice(0,3),dropped=env.slice(3);
+  let key,src,prep;
+  if(pick.length>=2){const es=pick.slice().sort(byEL);key=de+'__'+es.join('-');src=PMAP4_BASE+key+'.jpg';prep=[de].concat(es).join('-');}
+  else if(pick.length===1){const o=pick[0],main=(c[o]>c[de])?o:de;key=main+'-'+(main===de?o:de);src=PMAP_BASE+key+'.jpg';prep=key;}
+  else{key=de;src=PMAP_BASE+key+'.jpg';prep=key;}
   const season=(b.m===12||b.m<=2)?'winter':(b.m===7||b.m===8)?'summer':'';
   let h=2166136261;const sd=[b.y,b.m,b.d,b.hour,b.min].join('|');
   for(let i=0;i<sd.length;i++){h^=sd.charCodeAt(i);h=Math.imul(h,16777619);}
-  return {key,season,seed:h>>>0,id:key+'|'+(h>>>0)+'|'+season,
-    why:{c,main,tops,de,mb,mbIdx:r.month?r.month[1]:null,dayStem:r.day[0],noHour:!r.hour}};}
+  /* prep = 지도 가공(pPrepMap)에 넘길 오행 목록(금 광택·수 얼음 판정용). map4 키의 '__'를 그대로 넘기면 금을 못 알아본다 */
+  return {key,src,prep,season,seed:h>>>0,id:key+'|'+(h>>>0)+'|'+season,
+    why:{c,de,env:pick,dropped,dayStem:r.day[0],noHour:!r.hour}};}
 /* 바다 반사용 하늘(한 번만 굽는다) — U5 시안 portrait-fx.js skyEnv */
 function pSkyEnv(rdr){
   rdr=rdr||renderer;if(_pSkyEnv.has(rdr))return _pSkyEnv.get(rdr);
@@ -7044,37 +7055,34 @@ function pPrepMap(im,key){
    옛 문구는 "나"와 "행성"을 갈라 놓아, 행성 = 사람이라는 이 앱의 기본 은유와 어긋났다(사용자 지적).
    규칙은 planetMapInfo 그대로 읽어 온다 — 여기서 다시 계산하지 않는다(갈라지지 않게). 기본은 접힘. */
 function portraitNoteHtml(n,isMe){
+  /* [2026-09-19 4분할] 초상이 "나 한 지역 + 환경 지역"으로 바뀌어 문구도 그 구조를 그대로 읽는다. 옛 문구(바탕·보조 설명)는 폐기 */
   const info=planetMapInfo(n);if(!info||!info.why)return '';
   const w=info.why,c=w.c,EL=['mok','hwa','to','geum','su'];
   const ga=t=>{const k=String(t).replace(/<[^>]+>/g,'').slice(-1).charCodeAt(0)-0xAC00;return t+((k>=0&&k<11172&&k%28)?'이':'가');};
-  const parts=info.key.split('-');
+  const eun=t=>t+('목금'.includes(t.slice(-1))?'은':'는');
   const cnt=EL.map(e=>`<b style="color:${EL_INFO[e].css}">${EL_KO[e]} ${c[e]||0}</b>`).join(' · ');
   const who=isMe?'나':'이 사람';
   const self=`${STEMS[w.dayStem]}${EL_KO[w.de]}(${stemThing(w.dayStem)})`;
   const total=EL.reduce((a,e)=>a+(c[e]||0),0);
-  let base;
-  if(parts.length===1)base=`<b>${ga(EL_KO[w.main])}</b> ${c[w.main]}글자로 압도적이라 행성 전체가 ${EL_KO[w.main]}의 모습입니다.`;
-  else if(w.tops.length===1)base=`가장 많은 <b>${EL_KO[w.main]}</b>(${c[w.main]}글자)가 바탕이 됐습니다.`;
-  else{const tie=w.tops.map(e=>EL_KO[e]).join('·');
-    base=w.main===w.de?`${ga(tie)} ${c[w.main]}글자씩 같아, ${who}의 오행을 따라 <b>${ga(EL_KO[w.main])}</b> 바탕이 됐습니다.`
-      :w.main===w.mb?`${ga(tie)} ${c[w.main]}글자씩 같아, 태어난 달(${BRANCHES[w.mbIdx]}·${EL_KO[w.mb]})을 따라 <b>${ga(EL_KO[w.main])}</b> 바탕이 됐습니다.`
-      :`${ga(tie)} ${c[w.main]}글자씩 같아, 목·화·토·금·수 순서로 <b>${ga(EL_KO[w.main])}</b> 바탕이 됐습니다.`;}
-  const sec=parts.length>1?` 그다음 많은 <b>${ga(parts.slice(1).map(e=>EL_KO[e]).join('·'))}</b> 함께 보입니다.`:'';
-  const selfLine=parts.indexOf(w.de)>=0
-    ?`중심의 ${EL_KO[w.de]}도 겉모습에 함께 드러나 있습니다.`
-    :`중심의 ${EL_KO[w.de]}${'목금'.includes(EL_KO[w.de])?'은':'는'} ${total}글자 중 ${c[w.de]||0}글자뿐이라 겉으로는 드러나지 않습니다 — `
-      +`그래도 은하에서 ${who}의 빛은 이 중심의 색이라 ${EL_INFO[w.de].planet}으로 보입니다.`;
-  const body=`<p>이 행성이 곧 ${who}입니다. <b>겉모습</b>(색·땅·바다)은 사주 글자 전체가 모여 만든 모습이고, `
-    +`그 <b>중심(핵)</b>은 일간 <b>${self}</b>입니다.</p>`
+  const envKo=w.env.map(e=>EL_KO[e]).join('·');
+  const nReg=w.env.length+1;
+  const regWord=['','한','두','세','네'][nReg]||nReg;
+  let lines=[];
+  if(w.env.length){
+    lines.push(`이 행성이 곧 ${who}입니다. ${regWord} 지역 가운데 <b style="color:${EL_INFO[w.de].css}">${EL_KO[w.de]}</b> 지역이 ${who} 자신 — 일간 <b>${self}</b>이고, `
+      +`나머지 <b>${envKo}</b> 지역은 ${isMe?'나를':'이 사람을'} 이루는 다른 기운(사주 글자에 있는 오행)입니다.`);
+    if(w.dropped.length)lines.push(`${eun(w.dropped.map(e=>EL_KO[e]).join('·'))} ${w.dropped.map(e=>c[e]).join('·')}글자로 가장 적어 뺐습니다 — 지역은 넷까지 그립니다.`);
+    if(w.env.length===1)lines.push(`나 말고 다른 오행이 ${EL_KO[w.env[0]]} 하나뿐이라 두 지역으로 그렸습니다.`);}
+  else lines.push(`이 행성이 곧 ${who}입니다. 사주 글자가 모두 ${EL_KO[w.de]}라 행성 전체가 ${who} 자신 — 일간 <b>${self}</b>의 모습입니다.`);
+  const body=lines.map(t=>`<p>${t}</p>`).join('')
     +`<p>${cnt}${w.noHour?' (태어난 시각을 몰라 '+total+'글자로 셉니다)':''}</p>`
-    +`<p>${base}${sec}</p><p>${selfLine}</p>`
     +(info.season?`<p>${info.season==='winter'?'겨울(12~2월)':'한여름(7~8월)'}에 태어나 행성 가장자리에 ${info.season==='winter'?'푸른':'붉은'} 계절막이 씌워져 있습니다.</p>`:'');
-  const label=`왜 이런 모습일까 — ${ga(parts.map(e=>EL_KO[e]).join('·'))}${parts.length===1?' 압도적인':' 많은'} 사주`;
+  const label=`왜 이런 모습일까 — ${who}(${EL_KO[w.de]})${w.env.length?' + '+envKo:''}`;
   return `<div class="phero-note">${sjHelp('pnote',label,body,null,false)}</div>`;}
 async function renderPortrait2(info){
   const F=(await pFacing())[info.key];if(!F)return '';
-  const im=await pLoadImg(PMAP_BASE+info.key+'.jpg');
-  const P=pPrepMap(im,info.key),T=[];
+  const im=await pLoadImg(info.src);
+  const P=pPrepMap(im,info.prep),T=[];
   const tex=cv=>{const t=new THREE.CanvasTexture(cv);T.push(t);return t;};
   /* 앱 렌더러는 출력 색 변환을 안 쓴다(renderPortrait 주석) — 지도를 sRGB로 표시하면 어둡고 붉게 가라앉는다(실측으로 잡음). 그대로 둔다 */
   const map=tex(P.map);map.anisotropy=4;
@@ -7283,9 +7291,9 @@ function accessoriesFor(n){
 async function build(n,force){
   const info=planetMapInfo(n);if(!info)return null;
   const F=(await pFacing())[info.key];if(!F)return null;
-  const im=await load(PMAP_BASE+info.key+'.jpg');
+  const im=await load(info.src);
   const fx=force||accessoriesFor(n); /* force = 검사용(장신구 목록을 직접 준다) */
-  const P=pPrepMap(im,info.key);
+  const P=pPrepMap(im,info.prep);
   const S=new THREE.Scene();
   {const VT=V2_TUNABLES; /* [2026-09-19] 측면 조명 — 원래 값(.5 / 1.35 / .45)에 초상 배율을 곱한다 */
    S.add(new THREE.AmbientLight(0x9098b8,.5*VT.PORTRAIT_AMB_MUL));const k=new THREE.DirectionalLight(0xfff4e6,1.35*VT.PORTRAIT_KEY_MUL);k.position.copy(LPOS);S.add(k);
