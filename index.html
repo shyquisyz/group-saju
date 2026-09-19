@@ -7396,7 +7396,8 @@ let R=null,cur=null,cloudIm=null,hurrT=null,aurT=null;const H={};
 function load(u){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=u;});}
 /* [2026-09-19] 위에서 본 구름 그림(투명 배경, 512²) — 종류별로 한 번만 */
 const _ctop={};
-async function cloudTopTex(kind){if(_ctop[kind])return _ctop[kind];const t=new THREE.Texture(await load(FX+'cloud_top_'+kind+'.png'));t.encoding=THREE.sRGBEncoding;t.needsUpdate=true;return _ctop[kind]=t;}
+async function cloudTopTex(kind,lin){const k=kind+(lin?'#lin':'');if(_ctop[k])return _ctop[k];const t=new THREE.Texture(await load(FX+'cloud_top_'+kind+'.png'));
+  t.encoding=lin?THREE.LinearEncoding:THREE.sRGBEncoding;t.needsUpdate=true;return _ctop[k]=t;} /* lin = 은하(출력 색 변환 없는 렌더러)용 */
 /** 반지름 R 구면의 조각(가로·세로 L 라디안, 중심 +z)에 구름을 입히고 피벗으로 (pitch,yaw) 방향에 둔다. spin=true면 조각 중심 둘레로 돌릴 수 있게 한 겹 더 */
 function cloudPatch(tex,R,L,yaw,pitch,dark,spin){
   const geo=new THREE.SphereGeometry(R,48,48,Math.PI/2-L/2,L,Math.PI/2-L/2,L);
@@ -7506,7 +7507,35 @@ async function start(n,img,force){
     R.setSize(cv.width,cv.height,false);R.render(sc.S,sc.cam);ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(R.domElement,0,0);
     if(first){first=false;img.style.visibility='hidden';}};
   token.raf=requestAnimationFrame(loop);}
-return {start,stop,accessoriesFor};})();
+return {start,stop,accessoriesFor,cloudTopTex,cloudPatch,flicker};})(); /* [2026-09-19] 구름 도우미를 은하(applyGalaxyClouds)도 쓴다 */
+/* ═══ [2026-09-19] 은하 화면에도 장신구 구름 ═══ 사용자: "은하 화면에도 장신구 구름 보이게 해줘".
+   초상과 같은 규칙(accessoriesFor = 나와의 합충)으로 흰 구름·먹구름·번개구름·태풍만 붙인다(고리·무지개·오로라·별똥별은 초상 전용 그대로).
+   구름 조각은 행성 mesh의 자식 — 행성 크기·위치·자전을 그대로 따라가고, 그 위에서 궤도(CLOUD_ORBIT)로 돈다.
+   클릭 판정(intersectObjects)은 자식을 보지 않으므로 구름이 행성 선택을 가로채지 않는다. 나(항성)에는 붙이지 않는다. */
+const _gClouds=new Set();
+async function applyGalaxyClouds(mesh,ref){
+  if(mesh.userData.gClouds){mesh.remove(mesh.userData.gClouds);_gClouds.delete(mesh.userData.gClouds);mesh.userData.gClouds=null;}
+  if(!ref||ref.isMe||!ref.birth||!nodes.some(x=>x.isMe))return;
+  let fx=[];try{fx=LiveHero.accessoriesFor(ref).filter(f=>f==='white'||f==='dark'||f==='storm'||f==='typhoon');}catch(e){return;}
+  if(!fx.length)return;const f=fx[0],CR=V2_TUNABLES.CLOUD_R,H=LiveHero;
+  const orbit=new THREE.Group();orbit.rotation.z=.22;const spin=new THREE.Group();orbit.add(spin);const bolts=[];let ty=null;
+  if(f==='typhoon'){ty=H.cloudPatch(await H.cloudTopTex('typhoon',true),CR,1.15,-.2,-.1,true,true);spin.add(ty.pivot);spin.add(H.cloudPatch(await H.cloudTopTex('dark',true),CR,.55,.75,.6,true).pivot);}
+  else{const kind=f==='white'?'white':'dark',tex=await H.cloudTopTex(kind,true);const A=[[.95,-.35,-.25],[.7,.55,.45]];
+    A.forEach(([L,yw,pt])=>spin.add(H.cloudPatch(tex,CR,L,yw,pt,kind==='dark').pivot));
+    if(f==='storm')A.forEach(([L,yw,pt],i)=>{const d=new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(pt,yw,0));
+      const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:BOLT_G(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));
+      sp.position.copy(d.multiplyScalar(CR+.02));sp.position.y-=.12*(i?.8:1);const k=i?.8:1;sp.scale.set(.26*k,.52*k,1);spin.add(sp);bolts.push(sp);});}
+  /* 반투명 전환 중에는 행성 불투명도를 따른다 */
+  orbit.traverse(o=>{if(o.material){const base=o.material.opacity;o.onBeforeRender=()=>{const mo=mesh.material.opacity;o.material.opacity=(o.isSprite?o.material.opacity:base*mo);};}});
+  orbit.userData.tick=t=>{spin.rotation.y=t*V2_TUNABLES.CLOUD_ORBIT;if(ty)ty.spinner.rotation.z=-t*.35;
+    if(bolts.length){bolts[0].material.opacity=H.flicker(t,0)*mesh.material.opacity;bolts[1].material.opacity=H.flicker(t,1.1)*mesh.material.opacity;}};
+  if(!mesh.parent)return; /* 그사이 지워진 행성 */
+  mesh.add(orbit);mesh.userData.gClouds=orbit;_gClouds.add(orbit);}
+let _boltG=null;function BOLT_G(){if(_boltG)return _boltG;const c=document.createElement('canvas');c.width=128;c.height=256;const x=c.getContext('2d');
+  x.strokeStyle='rgba(255,250,215,1)';x.shadowColor='rgba(170,210,255,1)';x.shadowBlur=20;x.lineWidth=6;x.beginPath();x.moveTo(70,6);
+  [[48,70],[80,112],[44,172],[72,204],[40,250]].forEach(([a,b])=>x.lineTo(a,b));x.stroke();x.lineWidth=2.5;x.stroke();return _boltG=new THREE.CanvasTexture(c);}
+/** 모든 사람의 은하 구름을 다시 붙인다 — 나(meNode)가 바뀌거나 생일이 바뀌면 관계가 달라진다 */
+function refreshGalaxyClouds(){nodes.forEach(n=>{if(!n.isMe)applyGalaxyClouds(n.mesh,n);});groupInstances.forEach(i=>applyGalaxyClouds(i.mesh,i.ref));}
 function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt,self}){
   const el=STEM_EL[stemIdx],info=EL_INFO[el];
   /* [A] map/bumpMap/roughness/metalness를 stemSurface가 한 번에 준다 — 오행별 재질 분리
@@ -7545,6 +7574,7 @@ function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updat
     updatedAt:updatedAt===undefined?null:updatedAt};
   mesh.userData.node=node;nodes.push(node);
   applyGalaxyMap(mesh,node,node); /* [2026-09-19] 은하 행성도 초상과 같은 지도 */
+  setTimeout(()=>applyGalaxyClouds(mesh,node),0); /* [2026-09-19] 장신구 구름 — meNode가 정해진 뒤 계산되게 한 박자 늦춘다 */
   /* [계측] 첫 상대 추가 — 나 다음의 두 번째 사람. 부팅 복원·백업 불러오기(saveSuspended)와
      예시 은하(track 안에서 가드)는 세지 않는다. */
   if(nodes.length===2&&!saveSuspended)track('first-other-added');
@@ -7886,6 +7916,7 @@ function createGroupInstance(ref,group){
   {const co=makeCorona(ref.stemIdx,info);if(co)mesh.add(co);} /* [F-5-4] */
   {applyShell(mesh,ref.stemIdx);const sh=makeShapes(ref.stemIdx);if(sh)mesh.add(sh);} /* [F-5 甲·丁·戊] */
   applyGalaxyMap(mesh,ref,null); /* [2026-09-19] 원본과 같은 지도 */
+  setTimeout(()=>applyGalaxyClouds(mesh,ref),0); /* 같은 사람 — 같은 장신구 */
   mesh.userData.node=ref;
   mesh.userData.instanceGroup=group; /* [§7.4] 레이캐스트가 "이 인스턴스는 어느 그룹 문맥인지"를
     알 수 있게 태깅 — showNode(ref, group) 호출에 씀(3번) */
@@ -10422,6 +10453,7 @@ function setMeshVis(mesh,v){
     m.opacity=v*base;}
   mesh.visible=v>0.01;}
 function simulate(){
+  _gClouds.forEach(o=>o.userData.tick(t)); /* [2026-09-19] 은하 장신구 구름 궤도·태풍 회전·번개 */
   updateLabelDown(); /* [2026-08-24] 이번 프레임의 "화면 아래" 월드 방향 — 모든 라벨이 공유 */
   /* [F-2] 프레임 시간차. t를 밖에서 임의로 바꾸는 측정 스크립트가 있으므로 상수 0.016을
      쓰지 않고 실제 증가분을 쓰되, 음수·과대값은 잘라낸다(탭 복귀 시 한 번에 튀는 것 방지). */
@@ -14079,6 +14111,8 @@ function updateNodeIdentity(n){ /* 생일·시각·출생지 변경 시 오행/�
      다중소속 인스턴스도 같은 사람이므로 함께 */
   applyGalaxyMap(n.mesh,n,n);
   groupInstances.forEach(i=>{if(i.ref===n)applyGalaxyMap(i.mesh,n,null);}); /* Map이라 filter가 없다 */
+  /* [2026-09-19] 장신구 구름도 — 생일이 바뀌면 합충이 달라진다. 나의 생일이 바뀌면 모두와의 관계가 바뀐다 */
+  if(n.isMe)refreshGalaxyClouds();else{applyGalaxyClouds(n.mesh,n);groupInstances.forEach(i=>{if(i.ref===n)applyGalaxyClouds(i.mesh,n);});}
 }
 
 document.getElementById('f-newgrp-add').onclick=commitNewGroupRow;
