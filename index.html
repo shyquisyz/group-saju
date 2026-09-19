@@ -12142,8 +12142,13 @@ function pairReading(a,b,giver,receiver,rel,collapse,withStrength){
       +`<div class="nickname">${REL_NICK[g]}</div>`
       +`<div class="nickdesc">${relLead(g,hcKind)}${gang} ${d.b} ${d.c}</div></div>`;};
   const hcKind=(hapChung(a,b)||{}).kind||null;
-  let t1=blk(`${bkEsc(a.name)}에게 <b>${bkEsc(b.name)}</b>${particle(b.name,'은는')}`,gAB,hcKind,b)
-        +blk(`<b>${bkEsc(b.name)}</b> 입장에서는`,gBA,hcKind,a)
+  /* [2026-09-19] 서로 같은 자리(gAB===gBA — 비견·겁재끼리 등)면 **블록 하나.** 사용자: "같은 게 두 번 반복됨. 이런 건 피해야 함".
+     ~~두 블록 그대로~~ — 별명·설명(relLead·REL_DESC)이 십신 하나로 정해져 두 블록이 글자까지 같았다(세기 조각만 사람마다 다를 수 있다).
+     하나로 합치고 리드를 "A와 B는 서로에게"로 둔다. 아래 안내문 "서로를 같은 자리로 봅니다"가 그 뜻을 받친다. */
+  let t1=(gAB===gBA
+          ?blk(`${bkEsc(a.name)}${particle(a.name,'과와')} <b>${bkEsc(b.name)}</b>${particle(b.name,'은는')} 서로에게`,gAB,hcKind,b)
+          :blk(`${bkEsc(a.name)}에게 <b>${bkEsc(b.name)}</b>${particle(b.name,'은는')}`,gAB,hcKind,b)
+           +blk(`<b>${bkEsc(b.name)}</b> 입장에서는`,gBA,hcKind,a))
         +`<div class="nicknote">${NICK_NOTE}`
         +(gAB!==gBA?' 한 사이인데 서로 다르게 보이는 것은 각자의 태어난 날을 기준으로 보기 때문입니다.'
                    :' 서로를 같은 자리로 봅니다.')
