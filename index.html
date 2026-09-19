@@ -247,6 +247,7 @@
   .gtab td.g{color:var(--gold)}.gtab td.w{color:#ff8a6a}.gtab tr.now td{background:rgba(255,255,255,.06)}
   .gtab td.ln{text-align:left;white-space:normal;min-width:120px}
   .gm.now{border-left:2px solid rgba(232,198,106,.5);padding-left:8px}
+  h2 .ttl{font-weight:400;color:var(--mut);font-size:.78em;margin-left:4px} /* [U30] 패널 제목의 호칭 */
   .groles{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
   .grep .gsecp{margin:0 0 6px}.groles span{padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-size:var(--fs-sm);color:var(--ink)}
   .nowbox p.nowtoday{background:rgba(232,198,106,.07);border-radius:8px;padding:8px 10px}
@@ -1917,7 +1918,10 @@
 <div id="tab-person">
 <div id="ps-mode">
   <h3 id="as-title">사람 추가</h3>
-  <div class="field"><label>이름</label><input id="f-name" type="text" placeholder="예: 어머니, 김OO"></div>
+  <div class="field"><label>이름</label><input id="f-name" type="text" placeholder="예: 김OO (호칭만 써도 돼요)"></div>
+  <!-- [2026-09-20 U30] 호칭 칸(선택) — 사용자 확정: "호칭 칸 + 가족 그룹 자동 제안 만든다". 나 자신을 고칠 때는 감춘다 -->
+  <div class="field" id="f-title-field"><label>호칭 <small style="color:var(--mut);font-weight:400">(선택 — 나에게 이 사람은)</small></label>
+    <input id="f-title" type="text" list="title-list" maxlength="12" placeholder="예: 아내, 엄마, 첫째, 친구"><datalist id="title-list"></datalist></div>
   <div class="field"><label>그룹 (없으면 선택 안 해도 됨)</label><div class="typegrid" id="f-groups"></div>
     <div class="newgrp-row" id="f-newgrp-row" style="display:none">
       <input id="f-newgrp-name" type="text" placeholder="새 그룹 이름" maxlength="20">
@@ -6167,6 +6171,7 @@ catch(e){
     '브라우저의 하드웨어 가속(WebGL)이 꺼져 있거나 지원되지 않습니다. 다른 브라우저로 열거나 설정에서 하드웨어 가속을 켜 주세요.');
   throw e;}
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+let adaptPR=Math.min(devicePixelRatio,2); /* [2026-09-20 U29-2] 지금 쓰는 배율 — 적응형 배율(adaptTick)이 낮추면 살아 있는 초상도 따라간다 */
 const scene=new THREE.Scene();
 scene.fog=new THREE.Fog(0x07070e,40,100);
 /* ═══ [F-3, 2026-08-27] 거리 5배에 딸려 오는 값 한 묶음 ═══
@@ -8414,6 +8419,21 @@ function galaxyMapTex(info){
     height:new THREE.CanvasTexture(half(P.height))};})
     .catch(e=>{console.warn('[은하 행성 지도] 받지 못했다',info.key,e);_gMapTex.delete(info.key);return null;}));
   return _gMapTex.get(info.key);}
+/* [2026-09-20 U30] 이름표 아랫줄 — 호칭이 있으면 앞에: "아내 · 庚 · 금속의 행성"(U2 검토 ③: 장식은 사주 결, 글자는 실제 호칭) */
+function nodeSub(n){return (n.title?n.title+' · ':'')+STEMS[n.stemIdx]+' · '+EL_INFO[n.el].planet;}
+/* [2026-09-20 U30] 가족 호칭이면 가족 그룹을 **제안**한다 — 강제로 넣지 않고 안내 한 줄 + 버튼(사용자 확정: 호칭 칸 + 가족 그룹 자동 제안).
+   이미 가족 그룹에 있으면 조용히. 가족 그룹이 없으면 「우리 가족」을 나와 둘로 만든다(§7.2 나 없는 그룹 금지·2인 미만 제거 둘 다 만족) */
+function suggestFamilyGroup(n){
+  if(!n||n.isMe||!n.title||!FAMILY_TITLES.has(n.title))return;
+  if(groups.some(g=>g.type==='가족'&&effectiveMembers(g).includes(n)))return;
+  const fam=groups.find(g=>g.type==='가족'),meNode=nodes.find(x=>x.isMe);
+  if(!meNode)return;
+  const off=()=>document.getElementById('note').classList.remove('on');
+  showNote(`「${bkEsc(n.title)}」${particle(n.title,'은는')} 가족 호칭이에요 — ${fam?`<b>${bkEsc(fam.name)}</b> 그룹에`:'<b>우리 가족</b> 그룹을 만들어'} ${josa(n.name,'을를')} 넣을까요?`,
+    [[fam?'넣기':'만들고 넣기',()=>{off();
+      if(fam){if(!fam.members.includes(n))fam.members.push(n);}else createGroup('우리 가족','가족',[meNode,n]);
+      layoutGalaxy();rebuildRings();renderNav();saveState();}],
+     ['아니요',off]]);}
 /** mesh = 은하에 떠 있는 행성(본체·인스턴스·클론), ref = 그 사람, holder = glow/innerTree를 들고 있는 객체(없으면 mesh 자식에서 찾는다) */
 /* [2026-09-20 폰 속도] 지도가 올 행성(생년월일 있음)은 일간 표면을 **만들지 않는다.** 부팅 실측(10명): stemSurface 219ms · 속 물체(makeShapes) 77ms ·
    발광 지도 87ms — 전부 지도가 오면 applyGalaxyMap이 떼어 버리던 것이다. 지도가 올 때까지는 오행 색 민무늬로 두고(부팅 직후 잠깐, 행성은 수 px),
@@ -8708,7 +8728,7 @@ async function start(n,img,force){
   stop();if(!img||!planetMapInfo(n))return;
   const token={};cur=token;
   const box=img.getBoundingClientRect();const size=Math.round((box.width||132)*V2_TUNABLES.HERO_SPILL);
-  const cv=document.createElement('canvas');const dpr=Math.min(2,window.devicePixelRatio||1);
+  const cv=document.createElement('canvas');const dpr=Math.min(2,adaptPR||window.devicePixelRatio||1); /* [U29-2] 적응형 배율을 따른다 */
   cv.width=cv.height=Math.round(size*dpr);cv.className='phero-live';
   const par=img.parentNode;par.style.position='relative';
   if(!R){try{R=new THREE.WebGLRenderer({alpha:true,antialias:true,premultipliedAlpha:true});R.outputEncoding=THREE.sRGBEncoding;R.setClearColor(0x000000,0);}
@@ -8763,7 +8783,7 @@ let _boltG=null;function BOLT_G(){if(_boltG)return _boltG;const c=document.creat
   [[48,70],[80,112],[44,172],[72,204],[40,250]].forEach(([a,b])=>x.lineTo(a,b));x.stroke();x.lineWidth=2.5;x.stroke();return _boltG=new THREE.CanvasTexture(c);}
 /** 모든 사람의 은하 구름을 다시 붙인다 — 나(meNode)가 바뀌거나 생일이 바뀌면 관계가 달라진다 */
 function refreshGalaxyClouds(){nodes.forEach(n=>{if(!n.isMe)applyGalaxyClouds(n.mesh,n);});groupInstances.forEach(i=>applyGalaxyClouds(i.mesh,i.ref));}
-function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt,self,love,tests}){
+function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt,self,love,tests,title}){
   const el=STEM_EL[stemIdx],info=EL_INFO[el];
   /* [A] map/bumpMap/roughness/metalness를 stemSurface가 한 번에 준다 — 오행별 재질 분리
      (금 매끄럽고 반사 강하게 / 토 거칠고 무광)와 음양 요철이 전부 그 안에 들어 있다. */
@@ -8781,13 +8801,14 @@ function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updat
   const glow=isMe?makeGlow(info.css,V2_TUNABLES.STAR_GLOW_BASE):makeCorona(stemIdx,info);
   if(glow)mesh.add(glow);
   if(!isMe&&!mapped){applyShell(mesh,stemIdx);const sh=makeShapes(stemIdx);if(sh)mesh.add(sh);} /* [F-5 甲·丁·戊] · [2026-09-20] 지도가 오면 안 만든다 */
-  const sub=`${STEMS[stemIdx]} · ${info.planet}`;
+  const title0=(typeof title==='string'&&title.trim())?title.trim().slice(0,12):null; /* [U30] 호칭 — 없으면 null */
+  const sub=nodeSub({title:title0,stemIdx,el});
   /* §2.9 밀도 보정 (d), [버그 2 수정] 지시선 폐기: 라벨을 mesh의 자식으로 두지 않는다.
      자식이면 라벨도 PLANET_SCALE(0.25)까지 함께 줄어들어 글자를 읽을 수 없게 된다.
      scene에 독립적으로 배치하고 매 프레임 월드 좌표를 직접 계산(행성 바로 아래, LABEL_GAP) —
      지시선 없이도 겹치지 않을 만큼 노드에 붙어 있어 별도 연결선이 필요 없다. */
   const label=makeLabel(name,sub);scene.add(label);
-  const node={id:key||('n'+(seq++)),name,sub,stemIdx,el,rich:rich||null,mesh,label,glow,
+  const node={id:key||('n'+(seq++)),name,sub,stemIdx,el,rich:rich||null,mesh,label,glow,title:title0,   /* [U30] */
     innerTree:mesh.children.find(c=>c.type==='Group')||null, /* [F-5 甲] 일간 교체 때 떼어내려면 참조가 필요하다 */
     vel:new THREE.Vector3(), /* [U6] ~~spin:.003+random*.004(프레임당)~~ → spinPhase + PLANET_SPIN_RATE */
     orbit:null,rings:[],birth:birth||null,isMe:!!isMe,
@@ -9657,7 +9678,7 @@ function applySeed(seed){
   const byKey=new Map();
   seed.people.forEach(p=>{
     /* 저장본에는 시각이 들어 있고 `my-data.js`에는 없다 — 없으면 null 그대로 둔다 */
-    const n=addNode({key:p.key,name:p.name,isMe:!!p.isMe,rich:p.rich||null,
+    const n=addNode({key:p.key,name:p.name,isMe:!!p.isMe,rich:p.rich||null,title:p.title||null,   /* [U30] */
       createdAt:p.createdAt||null,updatedAt:p.updatedAt||null,
       /* [2026-08-29] birth를 **먼저** 만들고 그걸로 일간을 구한다 — sajuOf가 경도·시각을
          보기 때문이다. 예전엔 날짜만 넘겨 lon이 없어도 됐다. */
@@ -10385,7 +10406,7 @@ const JUSTLOADED_KEY='groupsaju:justloaded';   /* 새로고침 너머로 넘기�
 const BACKUP_APP='group-saju';
 const BACKUP_MAX_CHARS=2*1024*1024; /* 실측 저장 한계 5,177,344바이트 대비 여유(30인=7,931바이트) */
 const BACKUP_MAX_PEOPLE=1000;       /* 폭주 방지. 30인 7.9KB이므로 1000인도 260KB 안팎이다 */
-const SAVE_VER=7;
+const SAVE_VER=8;   /* [2026-09-20 U30] 8 = 호칭(title) */
 /* ═════ 마이그레이션 [틀 정비 2026-08-28] ═════
    키 'N'이 **vN → v(N+1)** 변환이다. 구조를 바꾸는 사람이 함수를 더하고 SAVE_VER을 올린다.
    규칙 전문은 CLAUDE.md "저장 형식을 바꿀 때는 변환을 함께 넣는다".
@@ -10443,6 +10464,8 @@ const MIGRATIONS={
      빈 값을 0으로 채우면 **"모르는 사람이 0시에 태어난 것"**이 되어 L2가 틀린 시주를 낸다 —
      CLAUDE.md "빠진 필드를 '없음'으로 때우지 말 것"의 반대편 경우다(여기서는 **모른다는
      사실 자체가 값**이므로 null이 맞다). */
+  /* [v7 → v8, 2026-09-20 U30] 호칭 `title` 신설 — null = 안 적음. 나(isMe)도 null */
+  '7':d=>Object.assign({},d,{v:8,people:(d.people||[]).map(p=>Object.assign({title:null},p))}),
   '1':d=>Object.assign({},d,{v:2,
     people:(d.people||[]).map(p=>Object.assign({},p,{
       birth:Object.assign({hour:null,min:null},p.birth)}))}),
@@ -10560,7 +10583,7 @@ function clearDemo(){
    0,1,2…로 다시 매기므로 배치가 그대로 재현된다. */
 function serializeState(){
   return {v:SAVE_VER,savedAt:nowISO(),
-    people:nodes.map(x=>({key:x.id,name:x.name,isMe:!!x.isMe,birth:x.birth,self:x.self,love:x.love||null,tests:x.tests||null,
+    people:nodes.map(x=>({key:x.id,name:x.name,isMe:!!x.isMe,birth:x.birth,self:x.self,love:x.love||null,tests:x.tests||null,title:x.title||null,   /* [U30] */
       createdAt:x.createdAt||null,updatedAt:x.updatedAt||null})),
     /* [2026-08-28] 성계마다 선을 긋게 되면서 같은 쌍이 여러 번 나온다. 저장본에는 한 번만
        담는다 — 어차피 불러온 뒤 그룹에서 다시 만든다(rebuildEdges). */
@@ -12855,6 +12878,12 @@ async function sajuSelfTest(){
       !!cg&&cg.width===1080&&cg.height>1000&&ci.width===1080&&ci.height===1350&&cardWrap.length===4,
       (cg?cg.width+'x'+cg.height:'그룹 없음')+' · '+ci.width+'x'+ci.height);
   }catch(e){T('shareCards: 그룹 카드·일주 카드',false,'예외 '+e.message);}
+  /* [2026-09-20 U30] 호칭 칸 — v7→v8 title:null · 이름표 아랫줄에 호칭 · 가족 호칭 판정 · 저장에 title */
+  { const m=MIGRATIONS['7']({v:7,people:[{key:'t1',name:'갑',isMe:true}]});
+    const sub1=nodeSub({title:'엄마',stemIdx:0,el:'mok'}),sub0=nodeSub({title:null,stemIdx:0,el:'mok'});
+    T('titleField: v7→v8 title:null · 이름표 "엄마 · 甲 · …" · 가족 호칭 엄마○ 친구× · 저장 title',
+      m.v===8&&m.people[0].title===null&&sub1==='엄마 · 甲 · '+EL_INFO.mok.planet&&sub0==='甲 · '+EL_INFO.mok.planet
+      &&FAMILY_TITLES.has('엄마')&&!FAMILY_TITLES.has('친구')&&serializeState().people.every(p=>'title' in p)&&SAVE_VER===8, sub1); }
   /* [2026-09-19 U24] 그룹을 열어 둔 채 다른 그룹 사람의 관계 줄을 누르면 그룹 패널이 사람 패널을 덮어썼다 —
      ~~showNode→focusNode~~ 순서였는데 focusNode가 그룹을 바꾸며 showGroup을 불렀다. 호출 10곳을 focusNode→showNode로. */
   { const gA=groups.find(g=>g.type==='동료')||groups[1], gB=groups[0];
@@ -13411,7 +13440,7 @@ function showNode(n,groupContext,targetMesh){
      태그·제목·생년월일 줄은 그대로 오른쪽 칸으로 옮겼다(내용은 무변경). */
   pbody.innerHTML=`${backHtml}<div class="phero" style="--pc:${EL_INFO[n.el].css}">${portraitImg(n,'phero-img',true)}
     <div class="phero-t"><div class="phero-tags">${roleTag}<span class="tag">${EL_INFO[n.el].name}</span></div>
-    <h2>${r?r.title:`${bkEsc(n.name)} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
+    <h2>${r?r.title:`${bkEsc(n.name)}${n.title?'<span class="ttl">('+bkEsc(n.title)+')</span>':''} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
     ${birthLine}</div></div>${portraitNoteHtml(n,isMe)}${nowSec}${relSec}${selfSec}${basisSec}
     <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">${josa(n.name,'과와')} 다른 사람의 관계 보기</button></div>
     <div class="panelbtns"><button class="pbtn" id="vstoggle">${virtualMembers.some(c=>c.ref===n)?'가상 성계에서 빼기':'가상 성계에 담기'}</button></div>`;
@@ -14215,6 +14244,10 @@ const selY=document.getElementById('f-y'),selM=document.getElementById('f-m'),se
 /* [2026-09-19 U12] ~~[null,'안 밝힘']~~ — 사용자: "성별은 반드시 받도록 하자". 대운 방향·연애·자식 풀이가 성별 없이는 안 나온다.
    세 입력 경로(첫 화면·한 명 시트·표)가 모두 고르지 않으면 저장을 막는다. 이미 null로 저장된 사람은 패널이 「성별 넣기」로 안내한다 */
 const SEX_OPTS=[['남','남'],['여','여']];
+/* [2026-09-20 U30] 호칭 — 자동완성 목록과 「가족 호칭」 판정. 가족 호칭이면 저장 뒤 가족 그룹을 제안한다(suggestFamilyGroup).
+   친척(삼촌·이모…)은 가족 그룹이 아니라 친척 그룹감이라 판정에서 뺐다 — 목록에는 둔다 */
+const FAMILY_TITLES=new Set(['아내','남편','엄마','아빠','어머니','아버지','어머님','아버님','아들','딸','첫째','둘째','셋째','막내','형','누나','오빠','언니','동생','남동생','여동생','할머니','할아버지','외할머니','외할아버지','손자','손녀','며느리','사위','장모님','장인어른','시어머니','시아버지']);
+const TITLE_LIST=[...FAMILY_TITLES,'삼촌','이모','고모','외삼촌','조카','사촌','친구','애인','남자친구','여자친구','동료','선배','후배','상사','팀장님','사장님'];
 /* 미선택 = `undefined`, "안 밝힘"을 **고른 것** = `null`. 화면에서만 갈린다 —
    저장할 때는 둘 다 `sex:null`이 된다(L2에게는 똑같이 "값 없음"이므로). */
 function renderSex(elId,cur,onPick){
@@ -14774,6 +14807,9 @@ function resetPersonForm(node){
   document.getElementById('delbtn').style.display=(node&&!meEditing)?'block':'none';
   document.getElementById('del-guard').style.display=meEditing?'block':'none';
   document.getElementById('f-name').value=node?node.name:'';
+  {const tf=document.getElementById('f-title');tf.value=node?(node.title||''):'';   /* [U30] 호칭 — 나 자신은 감춘다 */
+    document.getElementById('f-title-field').style.display=meEditing?'none':'';
+    const dl=document.getElementById('title-list');if(!dl.children.length)dl.innerHTML=TITLE_LIST.map(t=>`<option value="${t}">`).join('');}
   fGroups.clear();
   if(node)groups.forEach(g=>{if(g.members.includes(node))fGroups.add(g.id);});
   if(node&&node.birth){selY.value=node.birth.y;selM.value=node.birth.m;refreshDays();selD.value=node.birth.d;
@@ -15777,7 +15813,7 @@ function updateNodeIdentity(n){ /* 생일·시각·출생지 변경 시 오행/�
     edges.filter(e=>e.a===n||e.b===n).forEach(e=>{
       const rel=relation(e.a.el,e.b.el);
       e.kind=rel.kind;e.label=rel.label;e.rel=rel;});}
-  n.sub=`${STEMS[n.stemIdx]} · ${EL_INFO[n.el].planet}`;
+  n.sub=nodeSub(n);   /* [U30] 호칭 포함 */
   scene.remove(n.label);n.label=makeLabel(n.name,n.sub);scene.add(n.label); /* d: scene 직속으로 교체 */
   /* [2026-09-19] 지도 다시 입히기 — 일간이 같아도 시각·날짜가 바뀌면 지도가 바뀐다. 위에서 일간 재질로 되돌렸으면 그 위에 덮는다.
      다중소속 인스턴스도 같은 사람이므로 함께 */
@@ -15802,6 +15838,7 @@ function savePerson(){
   const name=document.getElementById('f-name').value.trim();
   if(!name){alert('이름을 입력해주세요');return;}
   if(fSex!=='남'&&fSex!=='여'){alert('성별을 골라 주세요');return;}   /* [U12] 필수 */
+  const title=document.getElementById('f-title').value.trim().slice(0,12)||null;   /* [U30] 호칭(선택) */
   /* [2026-08-27] 경도를 함께 저장한다. 지금은 아무 계산에도 안 쓰이지만, L2(만세력 엔진)의
      진태양시 보정이 이 값을 요구한다 — 그때 사람들의 출생지를 다시 물을 수는 없다.
      목록 밖 도시(직접 입력)와 "모름"은 경도가 null이고, L2는 그때 보정을 건너뛰면 된다. */
@@ -15821,6 +15858,7 @@ function savePerson(){
   let n;
   if(editTarget){
     n=editTarget;n.name=name;n.birth=birth;n.love=fLove;   /* [U12] */
+    if(!n.isMe)n.title=title;   /* [U30] updateNodeIdentity가 이름표를 다시 만든다 */
     n.updatedAt=nowISO();   /* [시각 필드] 수정 때는 이쪽만 바뀐다 */
     updateNodeIdentity(n);
   }else{
@@ -15833,7 +15871,7 @@ function savePerson(){
        [왜 "이 사람이 당신인가요?"를 안 묻나] 두 번째부터는 답이 늘 "아니오"다. 내 정보를
        고치는 경로는 이미 있다(내 카드 → 정보 수정). */
     const t0=nowISO();
-    n=addNode({name,stemIdx:si,birth,isMe:false,createdAt:t0,updatedAt:t0,love:fLove});
+    n=addNode({name,stemIdx:si,birth,isMe:false,createdAt:t0,updatedAt:t0,love:fLove,title});   /* [U30] */
     /* [2026-08-28] ~~전원과 관계선~~ — rebuildEdges가 그룹에서 만든다(addEdge 주석 참고) */}
   /* 그룹 멤버십 동기화 (이동 포함) */
   groups.forEach(g=>{
@@ -15853,6 +15891,7 @@ function savePerson(){
   for(let i=groups.length-1;i>=0;i--){
     if(effectiveMembers(groups[i]).length<2)removeGroupAt(i);}
   layoutGalaxy();rebuildRings();renderNav();
+  suggestFamilyGroup(n);   /* [U30] 가족 호칭이면 가족 그룹 제안 */
   editTarget=null;
   /* [2026-08-28] 그룹 탭에서 "＋ 새 사람"으로 넘어온 것이면 **닫지 않고 돌아간다.**
      그룹 입력은 탭이 들고 있으므로 복원할 것이 없고, 방금 만든 사람을 체크만 한다.
@@ -16095,8 +16134,26 @@ maybeOnboard();renderNextStep();
    그쪽에 붙였다가 시연이 아예 안 돌았다(실측: tourTimer null). 문자열이 같다고 같은
    자리가 아니다. */
 if(demoMode){demoBadge();tourStart();}
-(function loop(){
+/* ═══ [2026-09-20 U29-2] 적응형 배율 — 사용자: 권장대로 ═══
+   폰 GPU가 느리면 배율을 2 → 1.5 → 1로 낮춘다. 부팅 4초 뒤부터 3초 동안 rAF 간격을 모아 **중앙값이 30ms를 넘으면**(33fps 미만)
+   한 단계 낮추고 2초 쉰 뒤 다시 잰다(최대 두 단계). 100ms 넘는 간격은 GPU가 아니라 CPU 멈춤(지도 가공·패널 조립)이라 뺀다.
+   빠른 기기는 중앙값 8~17ms라 아무 일도 없다 — 데스크톱 실측 16.7ms. 화면이 숨어 있으면 rAF가 멈춰 재지 않는다.
+   composer.setPixelRatio가 없으면 블룸만 옛 크기로 남아 뿌예진다(resize 주석) — 둘을 같이 바꾼다. */
+const _adapt={t0:performance.now()+4000,d:[],last:0,steps:0};
+function adaptTick(now){
+  if(_adapt.steps>=2||now<_adapt.t0)return;
+  if(_adapt.last){const d=now-_adapt.last;if(d<100)_adapt.d.push(d);}
+  _adapt.last=now;
+  if(now-_adapt.t0<3000||_adapt.d.length<60)return;
+  const s=_adapt.d.slice().sort((a,b)=>a-b),med=s[s.length>>1];
+  _adapt.d=[];_adapt.t0=now+2000;_adapt.last=0;
+  if(med<=30){_adapt.steps=2;return;}
+  const next=adaptPR>1.5?1.5:1;if(next>=adaptPR){_adapt.steps=2;return;}
+  adaptPR=next;_adapt.steps++;renderer.setPixelRatio(adaptPR);if(composer&&composer.setPixelRatio)composer.setPixelRatio(adaptPR);resize();
+  console.log('[적응형 배율] 프레임 중앙값 '+med.toFixed(1)+'ms → 배율 '+adaptPR);}
+(function loop(now){
   requestAnimationFrame(loop);
+  adaptTick(now||performance.now());
   t+=.016;
   simulate();
   starsFar.rotation.y+=.00012;starsNear.rotation.y+=.0002;
