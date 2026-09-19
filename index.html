@@ -4705,7 +4705,8 @@ const V2_TUNABLES={
      · 자전 속도 = 기운의 세기(신강약) — gangyak()의 돕는 글자 비율 ally/total. 셀수록 빨리 돈다.
      · 자전축 기울기 = 태어난 계절의 깊이 — 하지·동지에 가까울수록 크게, 춘분·추분 무렵엔 거의 곧게.
        여름 쪽 반년이면 오른쪽, 겨울 쪽 반년이면 왼쪽으로 기운다(지구 기울기가 계절을 만드는 것과 같은 이치). */
-  PLANET_SPIN_RANGE: [0.06, 0.20], // rad/s. 약 105초 ~ 31초에 한 바퀴. 비율 0 → 0.06, 비율 1 → 0.20
+  PLANET_SPIN_RANGE: [0.035, 0.35], // rad/s. ~~[0.06,0.20](105~31초, 3.3배)~~ 사용자 "차이나는지 잘 모르겠음" → 약 180초 ~ 18초(10배)
+  FOCUS_ALIGN_EASE: 0.06,          // [U6-3] 행성을 누를 때 화면이 그 축에 맞춰 도는 빠르기(프레임당 비율)
   PLANET_SPIN_FINE: 0.12,         // [U6-2] 세부 폭(±6%) — 태어난 시각(없으면 날)
   PLANET_TILT_RANGE: [4, 28],
   PLANET_LEAN_MAX: 10,             // [U6-2] 앞뒤 기울기 최대(도) — 띠 12칸을 -10°~+10°로 편다      // 도. 춘분·추분 4° ~ 하지·동지 28°(지구 23.4°가 이 안에 든다)
@@ -5406,6 +5407,22 @@ function camTick(){
     cam.target.x+cam.r*Math.sin(cam.phi)*Math.sin(cam.theta),
     cam.target.y+cam.r*Math.cos(cam.phi),
     cam.target.z+cam.r*Math.sin(cam.phi)*Math.cos(cam.theta));
+  /* ═══ [U6-3 2026-09-19] 행성을 누르면 화면을 그 행성의 자전축에 맞춘다 ═══
+     사용자: "행성 누르면 화면의 기울기가 행성의 기울기와 일치하게 보여줘서 행성의 정면이 보였으면".
+     (1) 화면 위쪽 = 그 행성의 자전축 → 축이 화면에서 똑바로 선다(기울기만큼 화면이 돈다).
+     (2) 카메라를 축에 수직인 쪽으로 옮긴다 → 적도를 옆에서 보는 "정면". 가로 드래그는 축을 따라 돌고,
+         세로 드래그는 이 동안 효과가 없다(정면을 유지하려고 세로 성분을 지운다).
+     들어갈 때·나올 때 FOCUS_ALIGN_EASE로 부드럽게. 항성(나)도 같은 규칙. */
+  const alignOn=!!(focusedMesh&&focusedNode);
+  cam.alignK=(cam.alignK||0)+((alignOn?1:0)-(cam.alignK||0))*V2_TUNABLES.FOCUS_ALIGN_EASE;
+  if(alignOn)cam.alignAxis=new THREE.Vector3(0,1,0).applyQuaternion(focusedMesh.quaternion).normalize();
+  if(cam.alignK>1e-3&&cam.alignAxis){
+    const k=cam.alignK,ax=cam.alignAxis;
+    const off=camera.position.clone().sub(cam.target);
+    const perp=off.clone().addScaledVector(ax,-off.dot(ax));
+    if(perp.lengthSq()>1e-8){perp.setLength(off.length());camera.position.copy(cam.target).add(off.lerp(perp,k));}
+    camera.up.set(0,1,0).lerp(ax,k).normalize();}
+  else camera.up.set(0,1,0);
   camera.lookAt(cam.target);}
 /* GALAXY-LAYOUT-SPEC §6: "목표 화면 채움률 65%에서 역산" — 반경 radius인 천체(또는 은하)가
    수직 화면의 65%를 채우도록 카메라 거리를 FOV로부터 직접 유도한다. 경험적 상수(구 `*2.2+12`,
@@ -5447,6 +5464,10 @@ function fitGalaxy(immediate){
   /* [F-2] 그룹이 선택돼 있으면 은하가 아니라 그 성계가 무대다 — 다른 성계는 화면에 없으므로
      은하 거리로 물러나면 텅 빈 화면이 된다 */
   if(activeGroup){fitGroup(activeGroup);return;}
+  /* [U6] 성계에서 궤도면 쪽으로 돌렸던 각도를 은하로 나오면 되돌린다. 안 돌리면 은하 조망이 마지막으로 연 성계의
+     각도로 남는다 — 자가진단 nodeLabelZoom이 두 번째 실행부터 1/10으로 깨져서 잡았다(첫 실행은 통과). */
+  if(cam.savedAng){cam.angGoal=cam.savedAng;cam.savedAng=null;
+    if(immediate){cam.theta=cam.angGoal.theta;cam.phi=cam.angGoal.phi;cam.angGoal=null;}}
   const H=canvas.clientHeight||innerHeight;
   const d=2*V2_TUNABLES.STAR_SCALE*(H/2)/Math.tan(camera.fov*Math.PI/360)/V2_TUNABLES.GALAXY_STAR_PX;
   cam.targetGoal.set(0,0,0);
@@ -5478,6 +5499,7 @@ function faceOrbitPlane(g){
   const nrm=new THREE.Vector3().crossVectors(dir,b).normalize();
   if(nrm.y<0)nrm.negate();
   const phiN=Math.acos(Math.min(1,nrm.y)),thetaN=Math.atan2(nrm.x,nrm.z);
+  if(!cam.savedAng)cam.savedAng={theta:cam.theta,phi:cam.phi}; /* 은하로 나올 때 되돌릴 각도 */
   cam.angGoal={theta:thetaN,phi:Math.min(cam.PHI_MAX,Math.max(cam.PHI_MIN,phiN+V2_TUNABLES.GROUP_FACE_TILT))};}
 /* [수정] 기존 R_NODE=16 고정값은 PLANET_SCALE이 1.0→0.25로 줄면서 행성 기준 비율이
    4배로 벌어져(감사 목록 #1), 사람을 포커스하면 상대적으로 너무 멀리서 보였다.
@@ -10334,6 +10356,9 @@ async function sajuSelfTest(){
      이게 LOD가 지켜야 하는 성질이고 데이터와 무관하다. */
   const lblSave={r:cam.r,rt:cam.rTarget,ag:activeGroup};
   selectGroup(null);
+  /* [U6] 성계→은하 각도 복귀는 부드럽게 돌아서 3프레임으로는 안 끝난다 — 이 검사는 거리(LOD)를 보는 것이지 각도가
+     아니므로 복귀 목표로 바로 맞춘다 */
+  if(cam.angGoal){cam.theta=cam.angGoal.theta;cam.phi=cam.angGoal.phi;cam.angGoal=null;}
   const zoomAt=r=>{cam.r=cam.rTarget=r;
     for(let i=0;i<3;i++){t+=1/60;simulate();camTick();}
     cam.r=r;camera.updateMatrixWorld(true);simulate();
