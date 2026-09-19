@@ -219,6 +219,8 @@
   .nowbox p.nowhint{font-size:var(--fs-sm);color:var(--mut)}
   .askbox .sjhelp-body p{font-size:var(--fs-base);line-height:1.7;color:var(--ink);word-break:keep-all;margin:4px 0 6px}
   .askdis{display:block;margin-top:6px;font-size:var(--fs-sm);color:var(--mut)}
+  .lovepick{display:block;margin-top:8px;font-size:var(--fs-sm);color:var(--mut)}
+  .lovepick .estnotebtn.on{color:var(--ink);border-color:var(--ink)}
   .basis{margin:22px 0 6px;border-top:1px solid var(--line);padding-top:8px}
   .basis .sjhelp-body{color:var(--mut)}
   .basisrow{margin:10px 0 12px}
@@ -1805,7 +1807,7 @@
        필수 항목을 큰 덩어리 뒤에 두면 묻힌다. -->
   <div class="field"><label>성별</label>
     <div class="sexrow" id="ob-sex"></div>
-    <div class="fieldwhy">운의 흐름 방향(대운)을 계산하는 데 쓰입니다. 지금은 저장만 하고, 만세력 엔진이 붙으면 사용합니다.</div></div>
+    <div class="fieldwhy">꼭 골라 주세요 — 10년 흐름(대운)·연애·자식 풀이가 남녀에 따라 달라집니다.</div></div>
 
   <!-- [★ 시각 입력 3모드, 2026-08-28] §5.6 문제 2의 (가) 안 채택.
        왜 바꿨나 — 나중에 진태양시 보정(서울 32분·부산 24분)이 들어가면 **두 시간짜리 칸으로는
@@ -1894,7 +1896,10 @@
        안 읽힌다. -->
   <div class="field"><label>성별</label>
     <div class="sexrow" id="f-sex"></div>
-    <div class="fieldwhy">운의 흐름 방향(대운) 계산에 쓰입니다. 비워 둬도 저장됩니다.</div></div>
+    <div class="fieldwhy">꼭 골라 주세요 — 10년 흐름(대운)·연애·자식 풀이가 남녀에 따라 달라집니다.</div></div>
+  <div class="field"><label>지금 상태</label>
+    <div class="sexrow" id="f-love"></div>
+    <div class="fieldwhy">연애·결혼 풀이를 상황에 맞춰 드려요. 모르면 비워 두세요.</div></div>
   <!-- [★ 접힘 제거, 2026-08-28] 시각·도시를 **펼친 채로 상시 노출**한다.
        [왜 접었었나] 2026-08-26에는 `dayStem(y,m,d)`가 날짜만 쓴다는 이유로 접었다 —
        "지금 계산에 안 쓰이는 필드가 시트의 42.5%(329/775px)를 차지"한다는 근거였다.
@@ -2184,6 +2189,10 @@ function track(ev,force){
 
 /* ═════════ 명리 엔진 ═════════ */
 const STEMS=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+/* [2026-09-19 U12] 관계 상태 값 — 이 셋 말고는 전부 null로 접는다. 선언 구역(여기)에 둔다 — addNode가 부팅 중에 부른다(TDZ).
+   LOVE_OK는 상수를 안 읽는다 — 함수는 호이스팅되지만 const는 아니라서 */
+const LOVE_VALS=['single','dating','married'], LOVE_KO={single:'싱글',dating:'연애 중',married:'결혼'};
+function LOVE_OK(v){return v==='single'||v==='dating'||v==='married';}
 const STEM_EL=['mok','mok','hwa','hwa','to','to','geum','geum','su','su'];
 /* ═══ [F-5-2, 2026-08-27] 오행 색 재배치 — A의 "색상 고정" 결정을 개정한다 ═══
    [A에서 무엇을 전제했나] "오행 색상(hue)은 절대 고정하고 음양은 명도로만 가른다. 채도를
@@ -3451,24 +3460,34 @@ function askHtml(n,isMe){
     if(sex)t+=dStr(askDaeun(n,'재성'),"돈이 크게 도는");   /* 성별이 없으면 아래 「연애·결혼·자식」 한 곳에서만 안내(반복 금지) */
     qs.push(['돈은 언제 들어와요?',t]);
     /* 연애·결혼 */
-    if(!sex)qs.push(['연애·결혼·자식은?',`짝과 자식을 보는 자리는 남녀에 따라 달라서, 성별을 넣으면 알려 드려요 — 10년 단위 큰 흐름(대운)과 돈이 크게 도는 시기도 같이 보여 드려요. ${sexBtn}`]);
+    if(!sex)qs.push(['연애·결혼·자식은?','짝과 자식을 보는 자리는 남녀에 따라 달라서, 위 「성별 넣기」를 하면 바로 보여 드려요.']);
     else{
-      const sg=sex==='남'?'재성':'관성', c2=cnt[sg];
-      let t2=c2===0?'사주에 짝을 뜻하는 기운이 겉에 드러나 있지 않아요 — 인연을 기다리기보다 내가 움직일 때 닿아요.'
-        :c2===1?'짝 자리가 또렷하게 하나 있어요 — 한 사람에게 오래 가는 편이에요.'
-        :'짝을 뜻하는 기운이 여러 겹이라 인연이 많은 편이에요 — 고르는 눈이 중요해요.';
+      /* [U12] 관계 상태별로 — 사용자: "싱글·연애·결혼 세 가지 상태를 확인 못 했으니 상황별로 안내해야". 모르면(null) 여기서 바로 묻는다 */
+      const sg=sex==='남'?'재성':'관성', c2=cnt[sg], st=LOVE_OK(n.love)?n.love:null;
+      const BASE={
+        single:['짝을 뜻하는 기운이 겉에 드러나 있지 않아요 — 인연을 기다리기보다 내가 움직일 때 닿아요.','짝 자리가 또렷하게 하나 있어요 — 만나면 한 사람에게 오래 가는 편이에요.','짝을 뜻하는 기운이 여러 겹이라 인연이 많은 편이에요 — 고르는 눈이 중요해요.'],
+        dating:['연애에 올인하기보다 각자 제 일을 존중할 때 오래가요.','한 사람에게 깊게 가는 편이라, 지금 사람과 길게 갈 힘이 있어요.','사람을 끄는 힘이 커요 — 지금 사람에게 확신을 자주 말로 보여 주세요.'],
+        married:['부부가 각자 제 일을 존중할 때 편한 사이예요.','배우자에게 마음을 오래 두는 편이에요.','사람을 끄는 힘이 있어요 — 부부끼리 새로운 걸 같이 해 보면 오래가요.'],
+        none:['사주에 짝을 뜻하는 기운이 겉에 드러나 있지 않아요 — 인연을 기다리기보다 내가 움직일 때 닿아요.','짝 자리가 또렷하게 하나 있어요 — 한 사람에게 오래 가는 편이에요.','짝을 뜻하는 기운이 여러 겹이라 인연이 많은 편이에요 — 고르는 눈이 중요해요.']};
+      const GOOD={single:'새 인연이 닿기 쉬운 해',dating:'사이가 깊어지고 결혼 이야기가 나오기 쉬운 해',married:'부부 사이가 다시 가까워지는 해',none:'인연이 닿기 쉬운 해'};
+      const SHAKE={single:'은 시작한 인연이 흔들리기 쉬워요',dating:'은 다투기 쉬운 해라 말 한마디를 아끼세요',married:'은 말다툼이 잦아지기 쉬우니 서운한 건 그때그때 푸세요',none:'은 가까운 사이가 흔들리기 쉬우니 말 한마디를 아끼세요'};
+      const k=st||'none';
+      let t2=BASE[k][Math.min(c2,2)];
       const good=askYears(n,t3=>t3.groups.includes(sg)||t3.hits.some(h=>h.pos==='day'&&h.kind!=='chung'));
       const shake=askYears(n,t3=>t3.hits.some(h=>h.pos==='day'&&h.kind==='chung'));
-      t2+=good.length?` 인연이 닿기 쉬운 해: <b>${askYearStr(good)}</b> — 짝이 있다면 사이가 깊어지는 해예요.`:' 앞으로 10년 안엔 인연이 몰리는 해가 따로 없어요 — 지금 곁의 사람에게 쓰세요.';
-      if(shake.length)t2+=` ${askYearStr(shake,2)}은 가까운 사이가 흔들리기 쉬우니 말 한마디를 아끼세요.`;
-      t2+=dStr(askDaeun(n,sg),'인연이 무르익는');
-      qs.push(['연애·결혼은?',t2]);}
+      t2+=good.length?` ${GOOD[k]}: <b>${askYearStr(good)}</b>.`:' 앞으로 10년 안엔 인연이 몰리는 해가 따로 없어요 — 지금 곁의 사람에게 쓰세요.';
+      if(shake.length)t2+=` ${askYearStr(shake,2)}${SHAKE[k]}.`;
+      t2+=dStr(askDaeun(n,sg),st==='married'?'부부 사이가 무르익는':'인연이 무르익는');
+      /* 상태 묻기(모를 때) / 바꾸기(알 때) — 누르면 그 자리에서 저장하고 다시 그린다 */
+      t2+=`<span class="lovepick">${st?`지금 상태: <b>${LOVE_KO[st]}</b> · 바꾸기 `:'지금 어떤 상태예요? 고르면 상황에 맞춰 드려요 '}`
+        +LOVE_VALS.map(v=>`<button type="button" class="estnotebtn${v===st?' on':''}" data-love="${v}" data-n="${n.id}">${LOVE_KO[v]}</button>`).join(' ')+`</span>`;
+      qs.push([st?`연애·결혼은? (${LOVE_KO[st]})`:'연애·결혼은?',t2]);}
     /* 자식 */
     if(sex){
       const cg=sex==='남'?'관성':'식상', c3=cnt[cg];
-      let t3=c3===0?'아이 일에 매이기보다, 자기 일을 하면서 곁을 지키는 부모 쪽이에요.'
+      let t3=(n.love==='single'?'아직 먼 이야기일 수 있지만 — ':'')+(c3===0?'아이 일에 매이기보다, 자기 일을 하면서 곁을 지키는 부모 쪽이에요.'
         :c3===1?'아이 한 명 한 명에게 마음을 깊게 쏟는 편이에요.'
-        :'아이 일에 마음이 많이 가요 — 챙길 게 많은 만큼 기쁨도 커요.';
+        :'아이 일에 마음이 많이 가요 — 챙길 게 많은 만큼 기쁨도 커요.');
       const ys=askYears(n,t4=>t4.groups.includes(cg));
       if(ys.length)t3+=` 아이 일로 바빠지거나 좋은 소식이 오기 쉬운 해: <b>${askYearStr(ys)}</b>.`;
       qs.push(['자식은?',t3]);}
@@ -3485,7 +3504,7 @@ function askHtml(n,isMe){
     if(yt&&yt.hits.some(h=>h.pos==='day'&&h.kind==='chung'))t+=' 올해는 몸의 리듬이 흔들리기 쉬운 해라, 검진은 미루지 마세요.';
     t+=' <span class="askdis">재미로 보는 풀이예요 — 몸이 불편하면 병원이 먼저예요.</span>';
     qs.push(['건강은?',t]); }
-  return `<div class="askbox">`+qs.map(([q,a],i)=>`<div class="rdblk rdfold">${sjHelp('ask:'+i+':'+q,q,`<p>${a}</p>`,null,false)}</div>`).join('')+`</div>`;}
+  return `<div class="askbox">`+(sex?'':`<p class="nowhint">성별이 비어 있어요 — 넣으면 연애·자식 풀이와 10년 흐름(대운)까지 보여 드려요. ${sexBtn}</p>`)+qs.map(([q,a],i)=>`<div class="rdblk rdfold">${sjHelp('ask:'+i+':'+q,q,`<p>${a}</p>`,null,false)}</div>`).join('')+`</div>`;}
 /** 근거 층에 둘 계산 사실 — 기둥과 십신 이름 */
 function nowFactsHtml(n){
   const L=luckNow(); if(!L||!n.birth)return '';
@@ -7925,7 +7944,7 @@ let _boltG=null;function BOLT_G(){if(_boltG)return _boltG;const c=document.creat
   [[48,70],[80,112],[44,172],[72,204],[40,250]].forEach(([a,b])=>x.lineTo(a,b));x.stroke();x.lineWidth=2.5;x.stroke();return _boltG=new THREE.CanvasTexture(c);}
 /** 모든 사람의 은하 구름을 다시 붙인다 — 나(meNode)가 바뀌거나 생일이 바뀌면 관계가 달라진다 */
 function refreshGalaxyClouds(){nodes.forEach(n=>{if(!n.isMe)applyGalaxyClouds(n.mesh,n);});groupInstances.forEach(i=>applyGalaxyClouds(i.mesh,i.ref));}
-function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt,self}){
+function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt,self,love}){
   const el=STEM_EL[stemIdx],info=EL_INFO[el];
   /* [A] map/bumpMap/roughness/metalness를 stemSurface가 한 번에 준다 — 오행별 재질 분리
      (금 매끄럽고 반사 강하게 / 토 거칠고 무광)와 음양 요철이 전부 그 안에 들어 있다. */
@@ -7959,6 +7978,7 @@ function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updat
        보고 참고)를 birth 대신 node 레벨에 둬서 구조적으로 막는다. 복원(applySeed)만
        예외로 self:p.self를 명시해 넘긴다. */
     self:self===undefined?null:self,
+    love:LOVE_OK(love)?love:null,   /* [U12] 관계 상태 — self와 같은 이유로 여기서만 기본값 */
     createdAt:createdAt===undefined?null:createdAt,
     updatedAt:updatedAt===undefined?null:updatedAt};
   mesh.userData.node=node;nodes.push(node);
@@ -8833,7 +8853,8 @@ function applySeed(seed){
       /* [2026-09-17 A8-2] self는 저장본을 복원하는 이 자리에서만 명시적으로 넘긴다 —
          addNode 자체 기본값(null)은 새로 만드는 경로용이고, 여기는 이미 있던 값을 이어받는
          자리라 다르다. p.self가 아예 없는 시드(DEMO_SEED·my-data.js)는 null로 접는다. */
-      self:p.self===undefined?null:p.self});
+      self:p.self===undefined?null:p.self,
+      love:LOVE_OK(p.love)?p.love:null});   /* [U12] */
     byKey.set(p.key,n);});
 
   (seed.links||[]).forEach(([a,b])=>{
@@ -9511,7 +9532,7 @@ const JUSTLOADED_KEY='groupsaju:justloaded';   /* 새로고침 너머로 넘기�
 const BACKUP_APP='group-saju';
 const BACKUP_MAX_CHARS=2*1024*1024; /* 실측 저장 한계 5,177,344바이트 대비 여유(30인=7,931바이트) */
 const BACKUP_MAX_PEOPLE=1000;       /* 폭주 방지. 30인 7.9KB이므로 1000인도 260KB 안팎이다 */
-const SAVE_VER=5;
+const SAVE_VER=6;
 /* ═════ 마이그레이션 [틀 정비 2026-08-28] ═════
    키 'N'이 **vN → v(N+1)** 변환이다. 구조를 바꾸는 사람이 함수를 더하고 SAVE_VER을 올린다.
    규칙 전문은 CLAUDE.md "저장 형식을 바꿀 때는 변환을 함께 넣는다".
@@ -9529,6 +9550,11 @@ const SAVE_VER=5;
    [입력을 고치지 않는다] 각 함수는 **새 객체를 돌려준다.** 체인 중간에서 실패했을 때
    원본이 성해야 loadSave가 'migfail'로 원본을 보존할 수 있다. */
 const MIGRATIONS={
+  /* [v5 → v6, 2026-09-19 U12] **관계 상태(love)**를 사람 레벨에 신설한다 — 'single'|'dating'|'married'|null(모름).
+     사용자: "싱글·연애·결혼 세 가지 상태를 확인하지 못했기 때문에 상황별로 안내해야 하지 않을까". 「궁금한 것」의 연애·결혼 답이
+     상태에 따라 갈린다. null이 정상값이다(아직 안 물은 사람) — 패널이 그 자리에서 세 버튼으로 묻는다. self와 같은 자리(사람 레벨)다. */
+  '5':d=>Object.assign({},d,{v:6,
+    people:(d.people||[]).map(p=>Object.assign({love:null},p))}),
   /* [v4 → v5, 2026-09-17 A8-2] **심리·상황 테스트("스스로 본 모습")**를 신설한다
      (`docs/reports/2026-09-17-A8-1-설계원고.md`). **사람 레벨**에 `self`를 신설한다 —
      `birth` 안이 아니다. 테스트는 태어난 시각과 무관하게 "지금의 나(또는 상대)를 어떻게
@@ -9628,14 +9654,14 @@ function nowISO(){return new Date().toISOString();}
 let demoMode=false;
 const DEMO_SEED={v:SAVE_VER,savedAt:null,
   people:[
-    {key:'d0',name:'나',isMe:true,   birth:{y:1990,m:1,d:1, sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:null}},
+    {key:'d0',name:'나',isMe:true,   birth:{y:1990,m:1,d:1, sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:'남'}},
     {key:'d1',name:'어머니',         birth:{y:1960,m:2,d:2, sijin:5, hour:null,min:null,city:'서울',lon:126.978,sex:'여'}},
     {key:'d2',name:'아버지',         birth:{y:1958,m:3,d:3, sijin:8, hour:null,min:null,city:'부산',lon:129.075,sex:'남'}},
     {key:'d3',name:'동생',           birth:{y:1993,m:4,d:4, sijin:2, hour:null,min:null,city:'서울',lon:126.978,sex:'여'}},
     {key:'d4',name:'친구',           birth:{y:1991,m:5,d:5, sijin:6, hour:null,min:null,city:'대구',lon:128.601,sex:'남'}},
     {key:'d5',name:'선배',           birth:{y:1988,m:6,d:6, sijin:10,hour:null,min:null,city:'인천',lon:126.705,sex:'남'}},
     {key:'d6',name:'동료',           birth:{y:1989,m:7,d:7, sijin:3, hour:null,min:null,city:'광주',lon:126.851,sex:'여'}},
-    {key:'d7',name:'이웃',           birth:{y:1995,m:8,d:8, sijin:12,hour:null,min:null,city:'대전',lon:127.385,sex:null}}],
+    {key:'d7',name:'이웃',           birth:{y:1995,m:8,d:8, sijin:12,hour:null,min:null,city:'대전',lon:127.385,sex:'여'}}],
   links:[],
   groups:[
     {key:'dg1',name:'가족',type:'가족',parent:null,members:['d0','d1','d2','d3'],createdAt:null},
@@ -9676,7 +9702,7 @@ function clearDemo(){
    0,1,2…로 다시 매기므로 배치가 그대로 재현된다. */
 function serializeState(){
   return {v:SAVE_VER,savedAt:nowISO(),
-    people:nodes.map(x=>({key:x.id,name:x.name,isMe:!!x.isMe,birth:x.birth,self:x.self,
+    people:nodes.map(x=>({key:x.id,name:x.name,isMe:!!x.isMe,birth:x.birth,self:x.self,love:x.love||null,
       createdAt:x.createdAt||null,updatedAt:x.updatedAt||null})),
     /* [2026-08-28] 성계마다 선을 긋게 되면서 같은 쌍이 여러 번 나온다. 저장본에는 한 번만
        담는다 — 어차피 불러온 뒤 그룹에서 다시 만든다(rebuildEdges). */
@@ -9858,7 +9884,7 @@ function parseBackup(text){
         counts:Object.assign({},...GROUP5.map(g=>({[g]:p.self.counts[g]}))),
         situation:p.self.situation,at:p.self.at}
       :null;
-    people.push({key:p.key,name,isMe:!!p.isMe,self,
+    people.push({key:p.key,name,isMe:!!p.isMe,self,love:LOVE_OK(p.love)?p.love:null,   /* [U12] 모양이 틀리면 파일을 거부하지 않고 null */
       createdAt:typeof p.createdAt==='string'?p.createdAt:null,
       updatedAt:typeof p.updatedAt==='string'?p.updatedAt:null,
       birth:{y:b.y,m:b.m,d:b.d,
@@ -11948,6 +11974,16 @@ async function sajuSelfTest(){
       rBad.ok&&rBad.data.people[0].self===null,
       rBad.ok?('self='+JSON.stringify(rBad.data.people[0].self)):('실패: '+rBad.why));
   }
+  /* [2026-09-19 U12] 관계 상태 love — v5 → v6 변환, 백업 파싱(이상한 값은 null), 로드된 전원 undefined 아님, 성별 필수(표 입력) */
+  { const m=MIGRATIONS['5']({v:5,people:[{key:'lv1',name:'갑',isMe:true,self:null,birth:{y:2000,m:1,d:1,sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:'남',est:null,dayRule:null}}]});
+    const bk=parseBackup(JSON.stringify({app:BACKUP_APP,v:SAVE_VER,people:[
+      {key:'lv2',name:'을',isMe:true,love:'married',birth:{y:1999,m:5,d:5,sijin:2,hour:null,min:null,city:'서울',lon:126.978,sex:'여',est:null,dayRule:null}},
+      {key:'lv3',name:'병',love:'엉뚱',birth:{y:1999,m:5,d:5,sijin:2,hour:null,min:null,city:'서울',lon:126.978,sex:'남',est:null,dayRule:null}}],links:[],groups:[]}));
+    const undef=nodes.filter(n=>n.love===undefined).length;
+    const pv=ptValidate({name:'정',grp:'',date:'1990-01-01',sex:undefined,time:'',city:''});
+    T('loveField: v5→v6 love:null · 백업 married 유지·엉뚱값 null · 전원 explicit · 성별 없으면 표 저장 막힘',
+      m.v===6&&m.people[0].love===null&&bk.ok&&bk.data.people[0].love==='married'&&bk.data.people[1].love===null&&undef===0&&!pv.ok&&!!pv.errs.sex,
+      'v'+m.v+' · 백업 '+(bk.ok?bk.data.people.map(p=>p.love).join(','):bk.why)+' · undefined '+undef+' · 표 '+(pv.errs.sex||'통과')); }
   /* [2026-09-17 A8-2, A5·A7과 같은 재발 방지] self는 addNode가 기본값을 정하는 구조라(§3-A8-2
      설계 참고) A5·A7의 "생성 경로 셋 중 하나가 빠뜨림" 사고가 구조적으로 안 나야 하지만,
      같은 이름의 안전망을 그대로 남긴다 — 로드된 사람 전원의 self가 undefined가 아닌지 훑는다. */
@@ -12441,6 +12477,10 @@ function showNode(n,groupContext,targetMesh){
     const B=nodes.find(x=>x.id===el.dataset.b);
     if(B){showNode(B);focusNode(B);}});
   pbody.querySelectorAll('[data-edit]').forEach(eb=>eb.onclick=()=>openAddSheet(n)); /* [U11] 「성별 넣기」도 같은 시트 */
+  /* [U12] 관계 상태 — 누르면 저장하고 그 답을 펼친 채로 다시 그린다 */
+  pbody.querySelectorAll('[data-love]').forEach(b=>b.onclick=()=>{
+    const v=b.dataset.love; n.love=(n.love===v)?null:v; n.updatedAt=nowISO();
+    const top=pbody.scrollTop; renderNav(); showNode(n,groupContext,targetMesh); pbody.scrollTop=top;});
   const rb=pbody.querySelector('[data-rel]');
   if(rb)rb.onclick=()=>openRelSheet(n);
   /* [2026-09-17 A5] 시각 추정 손잡이 — sajuTableHtml이 낸 버튼(data-est/data-estclear)을 연결한다 */
@@ -13128,7 +13168,9 @@ const selY=document.getElementById('f-y'),selM=document.getElementById('f-m'),se
    "안 밝힘"도 명시적으로 골라야 의미가 있다. 안 고르면 `sex: null`로 저장하고,
    L2가 그때 "대운은 성별이 있어야 계산됩니다"라고 안내하면 된다.
    [왜 묻는지 화면에 밝힌다] 이유 없이 성별을 물으면 거부감이 생긴다 — .fieldwhy 참고. */
-const SEX_OPTS=[['남','남'],['여','여'],[null,'안 밝힘']];
+/* [2026-09-19 U12] ~~[null,'안 밝힘']~~ — 사용자: "성별은 반드시 받도록 하자". 대운 방향·연애·자식 풀이가 성별 없이는 안 나온다.
+   세 입력 경로(첫 화면·한 명 시트·표)가 모두 고르지 않으면 저장을 막는다. 이미 null로 저장된 사람은 패널이 「성별 넣기」로 안내한다 */
+const SEX_OPTS=[['남','남'],['여','여']];
 /* 미선택 = `undefined`, "안 밝힘"을 **고른 것** = `null`. 화면에서만 갈린다 —
    저장할 때는 둘 다 `sex:null`이 된다(L2에게는 똑같이 "값 없음"이므로). */
 function renderSex(elId,cur,onPick){
@@ -13161,6 +13203,13 @@ function refreshDays(){
   let dh='';for(let d=1;d<=dim_;d++)dh+=`<option value="${d}">${d}일</option>`;
   selD.innerHTML=dh;selD.value=Math.min(cur,dim_);}
 function renderFSex(){renderSex('f-sex',fSex,v=>{fSex=v;});}
+/* [U12] 관계 상태 칩 — 다시 누르면 해제(모름) */
+let fLove=null;
+function renderLoveChips(elId,cur,onPick){
+  const el=document.getElementById(elId); if(!el)return;
+  el.innerHTML=LOVE_VALS.map(v=>`<button type="button" class="sexchip${v===cur?' on':''}" data-v="${v}">${LOVE_KO[v]}</button>`).join('');
+  el.querySelectorAll('.sexchip').forEach(b=>b.onclick=()=>{const v=b.dataset.v===cur?null:b.dataset.v;onPick(v);renderLoveChips(elId,v,onPick);});}
+function renderFLove(){renderLoveChips('f-love',fLove,v=>{fLove=v;});}
 /* ═══ 시각 입력 — 한 명 화면과 첫 화면이 **같은 코드를 쓴다** [2026-08-28] ═══
    두 벌로 갈라지면 한쪽만 고쳤을 때 조용히 어긋난다(도시 목록에 이미 적용한 원칙).
    상태는 `{mode:'exact'|'range'|'none', sijin, hour, min}` 하나로 들고 다닌다.
@@ -13644,6 +13693,7 @@ function resetPersonForm(node){
      구분이 의미가 있는 순간은 처음 입력할 때뿐이고, 거기서만 undefined로 갈라롯다. */
   fSex=(node&&node.birth)?node.birth.sex:undefined;
   renderFSex();
+  fLove=node?(node.love||null):null;renderFLove();   /* [U12] */
   syncCityCustom();
   /* [2026-08-27] 새 그룹 줄 초기화 — 시트를 다시 열 때 지난 입력이 남아 있으면 안 된다 */
   fNewGroups.length=0;
@@ -13853,6 +13903,7 @@ function ptValidate(m){
       +(g.unknown.length>1?' 그룹들을':' 그룹을')+' 새로 만듭니다'
       +(g.ids.length?' (나머지는 기존 그룹)':'');
   r.sex=m.sex;
+  if(m.sex!=='남'&&m.sex!=='여')r.errs.sex='성별을 골라 주세요';   /* [U12] 필수 */
   r.ok=!Object.keys(r.errs).length;
   return r;}
 
@@ -14513,6 +14564,7 @@ function demoPeek(on){
 document.getElementById('ob-start').onclick=()=>{
   const name=document.getElementById('ob-name').value.trim();
   if(!name){alert('이름을 입력해주세요');document.getElementById('ob-name').focus();return;}
+  if(obSex!=='남'&&obSex!=='여'){alert('성별을 골라 주세요');return;}   /* [U12] 필수 */
   let city=obCity.value;
   if(city===CITY_CUSTOM){
     const occ=document.getElementById('ob-city-custom');
@@ -14649,6 +14701,7 @@ document.getElementById('f-newgrp-name').addEventListener('keydown',e=>{
 function savePerson(){
   const name=document.getElementById('f-name').value.trim();
   if(!name){alert('이름을 입력해주세요');return;}
+  if(fSex!=='남'&&fSex!=='여'){alert('성별을 골라 주세요');return;}   /* [U12] 필수 */
   /* [2026-08-27] 경도를 함께 저장한다. 지금은 아무 계산에도 안 쓰이지만, L2(만세력 엔진)의
      진태양시 보정이 이 값을 요구한다 — 그때 사람들의 출생지를 다시 물을 수는 없다.
      목록 밖 도시(직접 입력)와 "모름"은 경도가 null이고, L2는 그때 보정을 건너뛰면 된다. */
@@ -14667,7 +14720,7 @@ function savePerson(){
     dayRule:editTarget?editTarget.birth.dayRule:null};
   let n;
   if(editTarget){
-    n=editTarget;n.name=name;n.birth=birth;
+    n=editTarget;n.name=name;n.birth=birth;n.love=fLove;   /* [U12] */
     n.updatedAt=nowISO();   /* [시각 필드] 수정 때는 이쪽만 바뀐다 */
     updateNodeIdentity(n);
   }else{
@@ -14680,7 +14733,7 @@ function savePerson(){
        [왜 "이 사람이 당신인가요?"를 안 묻나] 두 번째부터는 답이 늘 "아니오"다. 내 정보를
        고치는 경로는 이미 있다(내 카드 → 정보 수정). */
     const t0=nowISO();
-    n=addNode({name,stemIdx:si,birth,isMe:false,createdAt:t0,updatedAt:t0});
+    n=addNode({name,stemIdx:si,birth,isMe:false,createdAt:t0,updatedAt:t0,love:fLove});
     /* [2026-08-28] ~~전원과 관계선~~ — rebuildEdges가 그룹에서 만든다(addEdge 주석 참고) */}
   /* 그룹 멤버십 동기화 (이동 포함) */
   groups.forEach(g=>{
