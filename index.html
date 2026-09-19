@@ -3469,6 +3469,30 @@ function monthsHtml(n){
     +(warns.length?`, 조심할 달은 <b>${warns.join('·')}</b>이에요.`:'.');
   return sjHelp('months',`올해 12달 흐름 (${L.luckYear}년 입춘~)`,
     `<p>${sum}</p><div class="mgrid">${rows}</div><p class="nowhint">운에서 한 달은 달력 1일이 아니라 절기(매달 4~8일쯤)에 바뀌어요.</p>`,null,false);}
+/* ═══ [2026-09-19 U16] 타고난 별(신살) 넷 ═══ 사용자: 권장대로 — "이견이 적은 넷만". ~~형·파·해~~ 는 안 쓰기로 한 결정 그대로.
+   도화·역마·화개 = 년지 또는 일지가 속한 삼합(申子辰·寅午戌·巳酉丑·亥卯未)으로 정한 글자가 **다른 기둥** 지지에 있으면.
+   천을귀인 = 일간 기준(甲戊庚 丑未 · 乙己 子申 · 丙丁 亥酉 · 辛 寅午 · 壬癸 巳卯)이 원국 지지에 있으면. 둘 다 가장 널리 쓰는 기준이다. */
+const SAMHAP_OF=[0,2,1,3,0,2,1,3,0,2,1,3];   /* 지지 → 삼합 묶음: 0 申子辰 · 1 寅午戌 · 2 巳酉丑 · 3 亥卯未 */
+const SS_DOHWA=[9,3,6,0], SS_YEOKMA=[2,8,11,5], SS_HWAGAE=[4,10,1,7];
+const SS_GWIIN=[[1,7],[0,8],[11,9],[11,9],[1,7],[0,8],[1,7],[2,6],[5,3],[5,3]];
+const SS_LINE={도화:'사람을 끄는 매력이 있어요(도화) — 가만히 있어도 눈길이 모이고, 사람 앞에 서는 일에 유리해요.',
+  역마:'한자리에 오래 못 있는 기질이 있어요(역마) — 이동·출장·여행이 많을수록 일이 풀려요.',
+  화개:'혼자 깊이 파고드는 기질이 있어요(화개) — 예술·연구·명상처럼 안으로 깊어지는 일에 끌려요.',
+  천을귀인:'어려울 때 도와줄 사람이 나타나는 복이 있어요(천을귀인) — 막히면 혼자 버티지 말고 손을 내미세요.'};
+/** 사주 한 벌의 신살 — [{name, at:[기둥 이름]}] */
+function shinsalOf(r){
+  if(!r)return [];
+  const P=[['년',r.year],['월',r.month],['일',r.day],['시',r.hour]].filter(x=>x[1]);
+  const out=[];
+  [['도화',SS_DOHWA],['역마',SS_YEOKMA],['화개',SS_HWAGAE]].forEach(([nm,tbl])=>{
+    const at=new Set();
+    [0,2].forEach(bi=>{const base=P.find(x=>x[0]===(bi===0?'년':'일')); if(!base)return;
+      const want=tbl[SAMHAP_OF[base[1][1]]];
+      P.forEach(x=>{if(x!==base&&x[1][1]===want)at.add(x[0]);});});
+    if(at.size)out.push({name:nm,at:[...at]});});
+  const g=SS_GWIIN[r.day[0]], ga=P.filter(x=>g.indexOf(x[1][1])>=0).map(x=>x[0]);
+  if(ga.length)out.push({name:'천을귀인',at:ga});
+  return out;}
 /** 받침에 따라 이에요/예요 */
 function ieyo(w){const c=w.charCodeAt(w.length-1);return(c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28)?'이에요':'예요';}
 /** 「요즘」 이야기 층. isMe면 "당신" */
@@ -3670,6 +3694,9 @@ function nowFactsHtml(n){
   if(du)rows.push(`대운(${du.forward?'순행':'역행'}, ${du.startYears.toFixed(1)}세 시작) — `
     +du.list.slice(0,9).map(d=>{const on=du.cur&&d.k===du.cur.k;return `${on?'<b>':''}${Math.floor(d.from)} ${pillarStr(d.pillar)}${on?'</b>':''}`;}).join(' · '));
   else rows.push('대운 — 성별이 없어 방향을 정할 수 없습니다(양남음녀 순행).');
+  { const sr=sajuOf({y:n.birth.y,m:n.birth.m,d:n.birth.d,hour:Number.isInteger(n.birth.hour)?n.birth.hour:null,min:n.birth.min,lon:n.birth.lon,dayRule:n.birth.dayRule,est:n.birth.est});
+    const ss=shinsalOf(sr);
+    rows.push('타고난 별(신살) — '+(ss.length?ss.map(x=>x.name+'('+x.at.join('·')+'주)').join(' · '):'넷 중 없음')+' · 도화·역마·화개는 년지·일지 삼합 기준, 천을귀인은 일간 기준.'); }
   rows.push('판단은 기운의 세기(억부)만 봅니다 — 계절 보정(조후)은 아직 넣지 않았습니다. 극왕·극약이면 도움·부담을 말하지 않습니다.');
   rows.push('「궁금한 것」 읽는 규칙 — 돈 = 재성 · 짝 = 남자 재성 / 여자 관성 · 자식 = 남자 관성 / 여자 식상 · 공부 = 인성 · 재능 = 식상 · 건강 = 비었거나 넘치는 오행(목 간 · 화 심장 · 토 위장 · 금 폐 · 수 신장).');
   rows.push('새 인연 흐름(짝이 있을 때) — 원국에 짝 기운 정·편 둘 다(재성혼잡·관살혼잡) · 그해 짝 기운이 들어오면서 일지와 충하는 해.');
@@ -12296,6 +12323,10 @@ async function sajuSelfTest(){
       rBad.ok&&rBad.data.people[0].self===null,
       rBad.ok?('self='+JSON.stringify(rBad.data.people[0].self)):('실패: '+rBad.why));
   }
+  /* [2026-09-19 U16] 신살 — 합성 사주로 규칙 고정: 申子辰 일지 子 + 酉 = 도화, 寅 = 역마, 辰 = 화개 · 甲일 丑 = 천을귀인 */
+  { const nm=r=>shinsalOf(r).map(x=>x.name).sort().join(',');
+    const a=nm({year:[0,9],month:[0,2],day:[0,0],hour:[0,4]}), b=nm({year:[0,10],month:[0,1],day:[0,0],hour:null}), c=nm({year:[1,6],month:[1,6],day:[1,6],hour:null});
+    T('shinsalRule: 도화·역마·화개·천을귀인 규칙', a==='도화,역마,화개'&&b==='천을귀인'&&c==='', a+' / '+b+' / '+(c||'없음')); }
   /* [2026-09-19 U16] 직업 목록 25칸 × 6 · 올해 12달(寅~丑) · 오늘 일진(외부 대조: 2026-09-19 丙申, 2000-01-01 戊午) */
   { const cells=Object.keys(JOB_LIST).flatMap(g=>Object.keys(JOB_LIST[g]).map(e=>JOB_LIST[g][e].split(' · ').length));
     const d1=luckNow(Date.UTC(2026,8,19,3)).day, d2=luckNow(Date.UTC(2000,0,1,3)).day;
@@ -12747,7 +12778,7 @@ function showNode(n,groupContext,targetMesh){
      펼침, 개인 ①+②(관심, 40종)+④(넘치는 것, 가변) 펼침. 실측: 펼쳐진 본문이 십신 1종·일간 1글자로만
      정해지는 309자였다(R2 §2-2 ⑤). 해상도 높은 덩이를 앞에 둔다. ③ 여덟 글자·나머지 코너는 계속 접는다. */
   const PAIR_FOLD=['p:여덟 글자로 보면'];
-  const SELF_OPEN=new Set(['n:어떤 사람인가','n:관심이 향하는 곳','n:넘치는 것과 비어 있는 것']);
+  const SELF_OPEN=new Set(['n:어떤 사람인가','n:타고난 별','n:관심이 향하는 곳','n:넘치는 것과 비어 있는 것']);   /* [U16] 타고난 별 펼침 */
   /* [2026-09-17 A8-2] §1-ⓒ 효과① — 상황을 골랐으면 그 코너를 펼친다. SITU_CORNER의 값이
      personReading이 매기는 key(4006행 'n:'+h)와 같은 문자열이라 접힘 목록에서 빼기만 하면 된다. */
   const situOpenKey=n.self&&n.self.situation?SITU_CORNER[n.self.situation]:null;
@@ -12769,7 +12800,12 @@ function showNode(n,groupContext,targetMesh){
     basisFacts.push(`<p><b>${x.h}</b> — ${mm[1]}</p>`);
     return Object.assign({},x,{t:mm[2].replace(/<span class="nicktake-h">[\s\S]*?<\/span>/,'')});});
   /* 「나」 패널은 나를 "이 사람"이라 부르지 않는다 — 읽는 사람이 곧 나다(U10 진단 ③) */
-  const storyRd2=isMe?storyRd.map(x=>Object.assign({},x,{t:String(x.t).replace(/이 사람/g,'당신')})):storyRd;
+  const storyRd1=storyRd.slice();
+  /* [U16] 타고난 별(신살) — personReading 목록에 넣지 않고 여기서 끼운다: 목록 순서를 시각 추정(EST_ITEM_PRIORITY)이 번호로 쓴다 */
+  { const sr=n.birth?sajuOf({y:n.birth.y,m:n.birth.m,d:n.birth.d,hour:Number.isInteger(n.birth.hour)?n.birth.hour:null,min:n.birth.min,lon:n.birth.lon,dayRule:n.birth.dayRule,est:n.birth.est}):null;
+    const ss=shinsalOf(sr);
+    if(ss.length)storyRd1.splice(1,0,{h:'타고난 별',key:'n:타고난 별',t:ss.map(x=>SS_LINE[x.name]).join(' ')}); }
+  const storyRd2=isMe?storyRd1.map(x=>Object.assign({},x,{t:String(x.t).replace(/이 사람/g,'당신')})):storyRd1;
   const rdHtml2=storyRd2.length?yo(plain(readingHtml(storyRd2,selfFold))):'';   /* [U11] 친구 말투 · [U12] 쉬운 말 */
   const main2=(r?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')+rdHtml2+testsSectionHtml(n)+selfSectionHtml(n);   /* [U15] */
   const nowSec=n.birth?`<div class="psec">요즘</div>${nowStoryHtml(n,isMe)}<div class="psec">궁금한 것</div>${askHtml(n,isMe)}`:'';   /* [U12] 궁금한 것 */
