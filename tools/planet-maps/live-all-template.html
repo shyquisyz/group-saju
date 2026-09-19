@@ -1,0 +1,69 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>장신구 한눈에 보기</title>
+<style>:root{color-scheme:dark}body{margin:0;background:#07080d;color:#e9e6dc;font:14px/1.5 Pretendard,system-ui,sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 6px;color:#e8c66a}p{color:#9a97a3;margin:0 0 10px;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;max-width:1150px}.grid.sm{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+.cell{text-align:center;font-size:12px;color:#b9b6c2}.cell canvas{display:block;margin:0 auto 4px;border-radius:14px;background:#0b0c14}.cell b{color:#e8c66a;font-weight:600}
+.legend{font-size:12.5px;color:#b9b6c2;background:#10121b;border-radius:10px;padding:10px 14px;max-width:1120px;line-height:1.9}</style></head><body>
+<h1>행성 + 장신구 한눈에 보기</h1><p>실제 앱처럼 섞어 본 12명. 대부분은 깨끗한 행성이고, 관계가 있는 사람만 장신구가 붙는다. 모두 실제로 움직인다.</p>
+<div class="legend">구름 = 인성 · 오로라 = 식상 · 토성 고리 = 재성 · 먹구름/번개구름 = 충 · 태풍 = 형 · 무지개 고리 = 합 · 별똥별 = 특별히 강한 인연(1~5개) <span style="color:#777">(연결은 아직 제안 단계)</span></div>
+<h2>크게 보기 170px</h2><div class="grid" id="big"></div>
+<h2>실제 초상 크기 110px</h2><div class="grid sm" id="small"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const MAPS=__MAPS__;const CLOUD='__CLOUD__';const HURR='__HURR__';const AURA='__AURA__';
+const loadImg=u=>new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=u;});
+const LPOS=new THREE.Vector3(5,6,8),LDIR=LPOS.clone().normalize();
+__FN_CLOUDS__
+TYPES.dark={top:0x525a6a,bot:0x07080b,flash:0};TYPES.storm={top:0x485063,bot:0x050608,flash:1};
+__FN_AURORA__
+__FN_ICONIC__
+function lights(s){s.add(new THREE.AmbientLight(0x9098b8,.55));const k=new THREE.DirectionalLight(0xfff4e6,1.35);k.position.copy(LPOS);s.add(k);const r=new THREE.DirectionalLight(0x9fc0ff,.5);r.position.set(-6,3,-9);s.add(r);}
+function flicker(t,off){const p=(t+off)%2.2;if(p>.55)return 0;return Math.max(0,Math.sin(p*40.))*((p<.12||(p>.22&&p<.3)||(p>.42&&p<.5))?1:0);}
+const STARCFG=[[[.55,.35],0,.5,1.34,0xffe7a8],[[1.2,-.5],2.6,.42,1.42,0xa8d8ff],[[-.4,-.6],4.4,.56,1.28,0xffc2e2],[[1.0,.8],1.3,.47,1.5,0xc8ffd8],[[.2,-1.1],3.5,.6,1.36,0xfff2c0]];
+const RB={ri:1.42,ro:1.62,tilt:.42,roll:-.55,op:.9,k0:.88,k1:.999};
+const PEOPLE=[
+  {key:'su-mok',fx:[],label:'관계 없음'},
+  {key:'mok-hwa',fx:['white'],label:'구름 (인성)'},
+  {key:'geum-to',fx:['ring'],label:'토성 고리 (재성)'},
+  {key:'hwa-to',fx:[],label:'관계 없음'},
+  {key:'su-hwa-geum',fx:['aurora'],label:'오로라 (식상)'},
+  {key:'to-mok-hwa',fx:['dark'],label:'먹구름 (충)'},
+  {key:'su',fx:['rainbow'],label:'무지개 고리 (합)'},
+  {key:'mok-to',fx:[],label:'관계 없음'},
+  {key:'geum-su',fx:['typhoon'],label:'태풍 (형)'},
+  {key:'hwa-mok-su',fx:['star2'],label:'별똥별 2 (강한 인연)'},
+  {key:'hwa-geum',fx:['storm'],label:'번개구름 (충)'},
+  {key:'mok-hwa-to',fx:['white','star4'],label:'구름 + 별똥별 4'}];
+let RES=null,AURT=null;
+async function build(pp){const S=new THREE.Scene();lights(S);const g=new THREE.Group();g.rotation.x=.25;S.add(g);
+  const im=await loadImg(MAPS[pp.key]);const map=new THREE.Texture(im);map.needsUpdate=true;map.encoding=THREE.sRGBEncoding;map.anisotropy=8;
+  const mat=new THREE.MeshStandardMaterial({map,bumpMap:map,bumpScale:.015,roughness:.8,metalness:0});g.add(new THREE.Mesh(new THREE.SphereGeometry(1,128,96),mat));
+  const mats=[],bolts=[],upd=[];const N=18,G=new THREE.SphereGeometry(1,96,72);
+  for(const fx of pp.fx){
+    if(fx==='white'||fx==='dark'||fx==='storm'){const T=TYPES[fx];const tex=fx==='white'?RES.white:RES.dark;
+      const sh=new THREE.Mesh(new THREE.SphereGeometry(1.004,96,72),cloudShellMat(tex,.1,0,T,.006,true));g.add(sh);mats.push(sh.material);
+      for(let i=0;i<N;i++){const fr=i/(N-1);const m=new THREE.Mesh(G,cloudShellMat(tex,.03+fr*.92,fr,T,.006,false));m.scale.setScalar(1.03+fr*.11);m.renderOrder=10+i;g.add(m);mats.push(m.material);}
+      if(T.flash)for(const [d,sc] of [[FP1,1],[FP2,.8]]){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:BOLT,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));sp.position.copy(d.clone().multiplyScalar(1.08));sp.scale.set(.28*sc,.56*sc,1);sp.renderOrder=40;g.add(sp);bolts.push(sp);}}
+    if(fx==='typhoon'){const C=new THREE.Vector3(.35,.32,.88).normalize();
+      const sh=new THREE.Mesh(new THREE.SphereGeometry(1.004,96,72),typhoonShellMat(RES.hurr,.1,0,C,.35,true));g.add(sh);mats.push(sh.material);
+      for(let i=0;i<N;i++){const fr=i/(N-1);const m=new THREE.Mesh(G,typhoonShellMat(RES.hurr,.03+fr*.92,fr,C,.35,false));m.scale.setScalar(1.025+fr*.065);m.renderOrder=10+i;g.add(m);mats.push(m.material);}}
+    if(fx==='aurora'){const b=limbAurora(AURT);b.renderOrder=20;S.add(b);S.add(limbGlow());upd.push((t,c)=>{b.userData.update(t);b.quaternion.copy(c.quaternion);});}
+    if(fx==='ring'){const r=saturnRing();S.add(r);ringShadowOn(mat,r);upd.push(t=>r.userData.upd(t));}
+    if(fx==='rainbow'){const r=rainbowRing(RB);S.add(r);upd.push(t=>r.userData.upd(t));}
+    if(fx.startsWith('star')){const n=+fx.slice(4);for(let i=0;i<n;i++){const s=shootingStar(...STARCFG[i]);S.add(s);upd.push((t,c)=>s.userData.upd(t,c));}}}
+  const cam=new THREE.PerspectiveCamera(30,1,.1,100);cam.position.set(0,.3,1).normalize().multiplyScalar(2.05/Math.tan(15*Math.PI/180));cam.lookAt(0,0,0);
+  return {S,g,cam,mats,bolts,upd};}
+(async()=>{const cIm=await loadImg(CLOUD),hIm=await loadImg(HURR),aIm=await loadImg(AURA);
+  const ht=new THREE.Texture(hIm);ht.needsUpdate=true;RES={white:cloudHeight(cIm,125,.48,false),dark:cloudHeight(cIm,125,.6,true),hurr:ht};
+  AURT=new THREE.Texture(aIm);AURT.needsUpdate=true;AURT.encoding=THREE.sRGBEncoding;AURT.wrapS=THREE.RepeatWrapping;
+  const items=[];
+  for(const [boxId,px,showLabel] of [['big',170,true],['small',110,false]])for(const pp of PEOPLE){const cell=document.createElement('div');cell.className='cell';const cv=document.createElement('canvas');cv.width=cv.height=px*2;cv.style.width=cv.style.height=px+'px';cell.appendChild(cv);
+    const lb=document.createElement('div');lb.innerHTML=showLabel?(pp.fx.length?'<b>'+pp.label+'</b>':pp.label):'';cell.appendChild(lb);document.getElementById(boxId).appendChild(cell);
+    items.push({ctx:cv.getContext('2d'),px:px*2,...(await build(pp))});}
+  const REN=new THREE.WebGLRenderer({antialias:true});REN.outputEncoding=THREE.sRGBEncoding;REN.setClearColor(0x0b0c14,1);window.__items=items;
+  const t0=performance.now();(function loop(now){const t=(now-t0)/1000;const f1=flicker(t,0),f2=flicker(t,1.1);
+    for(const it of items){it.g.rotation.y=-.9+t*.12;for(const m of it.mats){m.uniforms.time.value=t;if(m.uniforms.flash1){m.uniforms.flash1.value=f1;m.uniforms.flash2.value=f2;}}
+      if(it.bolts.length){it.bolts[0].material.opacity=f1;it.bolts[1].material.opacity=f2;}it.upd.forEach(f=>f(t,it.cam));
+      REN.setSize(it.px,it.px,false);REN.render(it.S,it.cam);it.ctx.drawImage(REN.domElement,0,0);}
+    requestAnimationFrame(loop);})(t0);})();
+</script></body></html>

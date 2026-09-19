@@ -1,0 +1,113 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>무지개 · 고리 · 별똥별 — 영화적 허용</title>
+<style>:root{color-scheme:dark}body{margin:0;background:#07080d;color:#e9e6dc;font:14px/1.5 Pretendard,system-ui,sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 4px;color:#e8c66a}p{color:#9a97a3;margin:0 0 10px;font-size:13px}
+.grid{display:flex;gap:14px;flex-wrap:wrap}.cell{text-align:center;font-size:12px;color:#b9b6c2}.cell canvas{display:block;border-radius:14px;background:#0b0c14;margin-bottom:4px}</style></head><body>
+<h1>무지개 고리 B — 더 지우기 3단계</h1><p>물리적으로 정확하기보다 한눈에 그것으로 읽히게. 무지개는 일곱 색 아치 + 구름 발, 고리는 토성처럼 행성을 가로지르는 띠, 꼬리 대신 행성 둘레를 도는 별똥별(관계 세기 = 별똥별 개수).</p>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const MAPS=__MAPS__;const CLOUDS=__CLOUDS__;
+const loadImg=u=>new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=u;});
+const LPOS=new THREE.Vector3(5,6,8),LDIR=LPOS.clone().normalize();
+function lights(s){s.add(new THREE.AmbientLight(0x9098b8,.5));const k=new THREE.DirectionalLight(0xfff4e6,1.35);k.position.copy(LPOS);s.add(k);const r=new THREE.DirectionalLight(0x9fc0ff,.45);r.position.set(-6,3,-9);s.add(r);}
+async function texOf(src){const im=await loadImg(src);const t=new THREE.Texture(im);t.needsUpdate=true;t.encoding=THREE.sRGBEncoding;t.anisotropy=8;return t;}
+// ── 무지개: 일곱 색 띠가 또렷한 아치 + 양 끝 구름 ──
+function rainbowArch(cloudTex,feet){const g=new THREE.Group();const SEG=160,r0=.68,r1=.95,cy=.2,Z=.66;const pos=[],uv=[],idx=[];
+  // 행성에 붙은 무지개: 양 발이 행성 앞면에 내려앉고, 아치가 윗쪽 가장자리를 넘어 솟는다
+  for(let i=0;i<=SEG;i++){const u=i/SEG,a=Math.PI*u,c=Math.cos(a),s=Math.sin(a);pos.push(c*r0,s*r0+cy,Z,c*r1,s*r1+cy,Z);uv.push(u,0,u,1);if(i<SEG){const k=i*2;idx.push(k,k+1,k+2,k+1,k+3,k+2);}}
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(idx);
+  const m=new THREE.Mesh(geo,new THREE.ShaderMaterial({uniforms:{time:{value:0}},vertexShader:'varying vec2 vU;void main(){vU=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'uniform float time;varying vec2 vU;'+
+      'vec3 band(int i){if(i==6)return vec3(.93,.16,.18);if(i==5)return vec3(1.,.52,.1);if(i==4)return vec3(1.,.86,.15);if(i==3)return vec3(.25,.8,.3);if(i==2)return vec3(.2,.55,1.);if(i==1)return vec3(.3,.3,.85);return vec3(.58,.3,.85);}'+
+      'void main(){float v=clamp(vU.y,0.,.9999)*7.;int i=int(floor(v));float f=fract(v);vec3 c=band(i);'+
+      'float seam=smoothstep(0.,.12,f)*smoothstep(1.,.88,f);c=mix(c*.8,c,seam);'+
+      'float ends=smoothstep(0.,.13,vU.x)*smoothstep(1.,.87,vU.x);float glow=.92+.08*sin(vU.x*20.-time*1.5);'+   // 발은 표면으로 스며들듯 사라짐
+      'gl_FragColor=vec4(c*glow,.85*ends);}',transparent:true,depthWrite:false,side:THREE.DoubleSide}));
+  m.renderOrder=4;g.add(m);
+  for(const x0 of [-1,1]){const fx=x0*(r0+r1)/2;
+    if(feet==='cloud'){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:cloudTex,transparent:true,depthWrite:false}));sp.position.set(fx,cy+.02,Z+.05);sp.scale.set(.5,.3,1);sp.renderOrder=5;g.add(sp);}
+    else{const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:MIST,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:.55}));sp.position.set(fx,cy+.03,Z+.02);sp.scale.set(.42,.22,1);sp.renderOrder=5;g.add(sp);}}
+  g.userData.upd=t=>{m.material.uniforms.time.value=t;};return g;}
+const MIST=(()=>{const c=document.createElement('canvas');c.width=128;c.height=64;const x=c.getContext('2d');const gr=x.createRadialGradient(64,32,0,64,32,60);gr.addColorStop(0,'rgba(255,250,235,.9)');gr.addColorStop(1,'rgba(255,250,235,0)');x.setTransform(1,0,0,.5,0,16);x.fillStyle=gr;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);})();
+// ── 무지개 고리: 토성 고리 모양에 일곱 색 띠 (안쪽 보라 → 바깥 빨강) ──
+function rainbowRing(o){const g=new THREE.RingGeometry(o.ri,o.ro,256,1);
+  const m=new THREE.Mesh(g,new THREE.ShaderMaterial({uniforms:{L:{value:LDIR},ri:{value:o.ri},ro:{value:o.ro},time:{value:0},op:{value:o.op},D:{value:new THREE.Vector2(Math.cos(o.roll),Math.sin(o.roll))},k0:{value:o.k0||0.},k1:{value:o.k1||0.}},
+    vertexShader:'varying vec3 vW;varying vec3 vL;varying vec2 vS;void main(){vL=position;vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;vec4 c=viewMatrix*modelMatrix*vec4(0.,0.,0.,1.);vS=(viewMatrix*w).xy-c.xy;gl_Position=projectionMatrix*viewMatrix*w;}',
+    fragmentShader:'uniform vec3 L;uniform float ri,ro,time,op,k0,k1;uniform vec2 D;varying vec3 vW;varying vec3 vL;varying vec2 vS;'+
+      'vec3 band(int i){if(i==6)return vec3(.93,.16,.18);if(i==5)return vec3(1.,.52,.1);if(i==4)return vec3(1.,.86,.15);if(i==3)return vec3(.25,.8,.3);if(i==2)return vec3(.2,.55,1.);if(i==1)return vec3(.3,.3,.85);return vec3(.58,.3,.85);}'+
+      'void main(){float t=clamp((length(vL.xy)-ri)/(ro-ri),0.,.9999);float v=t*7.;int i=int(floor(v));float f=fract(v);vec3 c=band(i);'+
+      'c=mix(c*.8,c,smoothstep(0.,.12,f)*smoothstep(1.,.88,f));float edge=smoothstep(0.,.04,t)*smoothstep(1.,.96,t);'+
+      'vec3 p=vW;float b=dot(p,L);float d2=dot(p,p)-b*b;float shade=(b<0.&&d2<1.)?.25:1.;'+
+      'float ang=atan(vL.y,vL.x);float fl=.9+.1*sin(ang*6.-time*1.2);float sp=pow(max(0.,sin(ang*40.+time*.9+t*30.)),80.);'+
+      'float ends=k1>0.?smoothstep(k0,k1,abs(dot(normalize(vS),D))):1.;gl_FragColor=vec4((c*fl+vec3(sp)*.7)*shade,op*edge*ends);}',transparent:true,side:THREE.DoubleSide,depthWrite:false}));
+  m.rotation.order='ZYX';m.rotation.set(-Math.PI/2+o.tilt,0,o.roll);m.userData.upd=t=>{m.material.uniforms.time.value=t;};return m;}
+// ── 토성 고리: 비스듬히, 앞은 행성을 가로지르고 뒤는 숨음. 띠 3줄 + 틈, 반투명, 행성 그림자 ──
+function saturnRing(){const ri=1.3,ro=1.9;const g=new THREE.RingGeometry(ri,ro,256,1);
+  const m=new THREE.Mesh(g,new THREE.ShaderMaterial({uniforms:{L:{value:LDIR},ri:{value:ri},ro:{value:ro},time:{value:0}},
+    vertexShader:'varying vec3 vW;varying vec3 vL;void main(){vL=position;vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
+    fragmentShader:'uniform vec3 L;uniform float ri,ro,time;varying vec3 vW;varying vec3 vL;float h(float x){return fract(sin(x*91.7)*43758.5);}'+
+      'void main(){float t=(length(vL.xy)-ri)/(ro-ri);'+
+      // 띠 3줄: 안쪽 옅은 띠 / 가운데 밝은 띠 / 틈 / 바깥 띠
+      'float a=.35*smoothstep(0.,.05,t)*smoothstep(.34,.3,t)+.95*smoothstep(.32,.36,t)*smoothstep(.66,.62,t)+.7*smoothstep(.7,.74,t)*smoothstep(1.,.95,t);'+
+      'vec3 col=mix(vec3(.93,.84,.66),vec3(1.,.95,.84),smoothstep(.3,.6,t));col*=.9+.1*h(floor(t*80.));'+
+      'vec3 p=vW;float b=dot(p,L);float d2=dot(p,p)-b*b;float shade=(b<0.&&d2<1.)?.2:1.;'+
+      'float ang=atan(vL.y,vL.x);float sp=pow(max(0.,sin(ang*55.+time*.8+t*40.)),60.);'+
+      'gl_FragColor=vec4(col*shade+vec3(sp)*.8*shade,a*.9);}',transparent:true,side:THREE.DoubleSide,depthWrite:false}));
+  m.rotation.order='ZYX';m.rotation.set(-Math.PI/2+.12,0,.36);m.userData.upd=t=>{m.material.uniforms.time.value=t;};return m;}
+// 고리가 행성에 드리우는 그림자 띠 (행성 표면에서 고리 평면을 빛 방향으로 거슬러 올라가 고리와 만나면 어둡게)
+function ringShadowOn(planetMat,ringMesh){ringMesh.updateMatrixWorld();const n=new THREE.Vector3(0,0,1).applyQuaternion(ringMesh.quaternion).normalize();
+  planetMat.onBeforeCompile=sh=>{sh.uniforms.rn={value:n};sh.uniforms.Ld={value:LDIR};
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform vec3 rn;uniform vec3 Ld;varying vec3 vWp;')
+      .replace('#include <dithering_fragment>','#include <dithering_fragment>\n{float dn=dot(Ld,rn);if(abs(dn)>1e-3){float s=-dot(vWp,rn)/dn;if(s>0.){vec3 q=vWp+Ld*s;float rr=length(q);float tt=(rr-1.3)/(1.9-1.3);float occ=.35*smoothstep(0.,.05,tt)*smoothstep(.34,.3,tt)+.95*smoothstep(.32,.36,tt)*smoothstep(.66,.62,tt)+.7*smoothstep(.7,.74,tt)*smoothstep(1.,.95,tt);gl_FragColor.rgb*=1.-.55*occ;}}}');};
+  planetMat.needsUpdate=true;}
+// ── 별똥별: 반짝이는 네 갈래 별 머리 + 뒤따르는 빛 꼬리, 행성 둘레를 비스듬히 돈다 ──
+function starTex(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');x.translate(64,64);
+  const g=x.createRadialGradient(0,0,0,0,0,40);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,240,200,.8)');g.addColorStop(1,'rgba(255,220,160,0)');x.fillStyle=g;x.fillRect(-64,-64,128,128);
+  x.fillStyle='rgba(255,255,255,.95)';for(let i=0;i<4;i++){x.rotate(Math.PI/2);x.beginPath();x.moveTo(0,-60);x.quadraticCurveTo(4,-6,0,0);x.quadraticCurveTo(-4,-6,0,-60);x.fill();}
+  return new THREE.CanvasTexture(c);}
+const STAR=starTex();
+function shootingStar(incl,phase,speed,radius,col){const g=new THREE.Group();const N=90;const pos=new Float32Array(N*2*3),uv=new Float32Array(N*2*2),idx=[];
+  for(let i=0;i<N;i++){uv.set([i/(N-1),0,i/(N-1),1],i*4);if(i<N-1){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}}
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));geo.setIndex(idx);
+  const trail=new THREE.Mesh(geo,new THREE.ShaderMaterial({uniforms:{c:{value:new THREE.Color(col)}},vertexShader:'varying vec2 vU;void main(){vU=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'uniform vec3 c;varying vec2 vU;void main(){float head=pow(vU.x,2.2);float side=exp(-pow((vU.y-.5)*3.2,2.));float a=head*side;gl_FragColor=vec4(mix(c,vec3(1.),head*.6)*a*1.6,a);}',
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+  const head=new THREE.Sprite(new THREE.SpriteMaterial({map:STAR,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,color:col}));head.scale.set(.3,.3,1);
+  g.add(trail);g.add(head);const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(incl[0],0,incl[1]));
+  const at=a=>new THREE.Vector3(Math.cos(a)*radius,0,Math.sin(a)*radius).applyQuaternion(q);
+  g.userData.upd=(t,cam)=>{const a0=phase+t*speed;const L=1.7;const camDir=new THREE.Vector3().subVectors(cam.position,new THREE.Vector3()).normalize();
+    for(let i=0;i<N;i++){const u=i/(N-1);const a=a0-L*(1-u);const p=at(a);const d=at(a+.01).sub(p).normalize();const side=new THREE.Vector3().crossVectors(d,camDir).normalize();const w=.006+.045*Math.pow(u,1.8);
+      pos.set([p.x-side.x*w,p.y-side.y*w,p.z-side.z*w,p.x+side.x*w,p.y+side.y*w,p.z+side.z*w],i*6);}
+    geo.attributes.position.needsUpdate=true;geo.computeBoundingSphere();head.position.copy(at(a0));head.material.rotation=t*.8;};
+  return g;}
+const SPECS=[
+  {title:'지난번 "짧게"',key:'su-mok',fx:'rbring',o:{ri:1.42,ro:1.62,tilt:.42,roll:-.55,op:.9,k0:.6,k1:.97}},{title:'더 지움 ①',key:'su-mok',fx:'rbring',o:{ri:1.42,ro:1.62,tilt:.42,roll:-.55,op:.9,k0:.8,k1:.995}},
+  {title:'더 지움 ②',key:'su-mok',fx:'rbring',o:{ri:1.42,ro:1.62,tilt:.42,roll:-.55,op:.9,k0:.88,k1:.999}},{title:'더 지움 ③ (끝만 살짝)',key:'su-mok',fx:'rbring',o:{ri:1.42,ro:1.62,tilt:.42,roll:-.55,op:.9,k0:.93,k1:1.}},
+  {title:'② 토+목·화',key:'to-mok-hwa',fx:'rbring',o:{ri:1.42,ro:1.62,tilt:.42,roll:-.55,op:.9,k0:.88,k1:.999}},{title:'② 금+토',key:'geum-to',fx:'rbring',o:{ri:1.42,ro:1.62,tilt:.42,roll:-.55,op:.9,k0:.88,k1:.999}}];
+let CLOUDT=null;
+function puffTex(){const c=document.createElement('canvas');c.width=512;c.height=300;const x=c.getContext('2d');
+  const P=[[256,150,95],[160,185,70],[352,182,72],[205,120,70],[310,118,66],[95,215,48],[420,212,50],[256,205,80]];
+  for(const pass of [0,1])for(const [px,py,r] of P){const g=x.createRadialGradient(px-r*.25,py-r*.35,r*.1,px,py,r);
+    if(pass===0){g.addColorStop(0,'rgba(150,165,195,1)');g.addColorStop(1,'rgba(150,165,195,0)');x.fillStyle=g;x.beginPath();x.arc(px,py+10,r,0,7);x.fill();}
+    else{g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.6,'rgba(236,240,250,.95)');g.addColorStop(.9,'rgba(200,210,230,.5)');g.addColorStop(1,'rgba(200,210,230,0)');x.fillStyle=g;x.beginPath();x.arc(px,py-6,r*.92,0,7);x.fill();}}
+  const b=x.createLinearGradient(0,150,0,280);b.addColorStop(0,'rgba(120,135,170,0)');b.addColorStop(1,'rgba(120,135,170,.55)');x.globalCompositeOperation='source-atop';x.fillStyle=b;x.fillRect(0,0,512,300);
+  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return t;}
+async function build(spec,portrait){const S=new THREE.Scene();lights(S);const g=new THREE.Group();const map=await texOf(MAPS[spec.key]);
+  const mat=new THREE.MeshStandardMaterial({map,bumpMap:map,bumpScale:.015,roughness:.8,metalness:0});g.add(new THREE.Mesh(new THREE.SphereGeometry(1,128,96),mat));g.rotation.x=.25;S.add(g);const upd=[];
+  if(spec.fx==='rainbow'){const r=rainbowArch(CLOUDT,spec.feet);S.add(r);upd.push(t=>r.userData.upd(t));}
+  if(spec.fx==='rbring'){const r=rainbowRing(spec.o);S.add(r);upd.push(t=>r.userData.upd(t));}
+  if(spec.fx==='ring'){const r=saturnRing();S.add(r);ringShadowOn(mat,r);upd.push(t=>r.userData.upd(t));}
+  if(spec.fx.startsWith('star')){const n=+spec.fx.slice(4);const cfg=[[[.55,.35],0,.5,1.34,0xffe7a8],[[1.2,-.5],2.6,.42,1.42,0xa8d8ff],[[-.4,-.6],4.4,.56,1.28,0xffc2e2],[[1.0,.8],1.3,.47,1.5,0xc8ffd8],[[.2,-1.1],3.5,.6,1.36,0xfff2c0]];
+    for(let i=0;i<n;i++){const s=shootingStar(...cfg[i]);S.add(s);upd.push((t,c)=>s.userData.upd(t,c));}}
+  const zoom=portrait?(spec.fx==='rbring'?2.1:spec.fx==='ring'?2.1:1.85):(spec.fx==='rbring'?2.25:spec.fx==='ring'?2.25:1.95);
+  const cam=new THREE.PerspectiveCamera(30,1,.1,100);cam.position.set(0,.3,1).normalize().multiplyScalar(zoom/Math.tan(15*Math.PI/180));cam.lookAt(0,spec.fx==='rainbow'?.15:0,0);
+  return {S,g,cam,upd};}
+(async()=>{CLOUDT=puffTex();const root=document.getElementById('root');const items=[];
+  const sec=h=>{const d=document.createElement('div');d.innerHTML='<h2>'+h+'</h2>';root.appendChild(d);const gr=document.createElement('div');gr.className='grid';d.appendChild(gr);return gr;};
+  const gBig=sec('크게 보기');const gSmall=sec('실제 초상 크기 132px');
+  for(const sp of SPECS)for(const [box,px,por] of [[gBig,240,false],[gSmall,132,true]]){const cell=document.createElement('div');cell.className='cell';const cv=document.createElement('canvas');cv.width=cv.height=px*2;cv.style.width=cv.style.height=px+'px';cell.appendChild(cv);
+    const lb=document.createElement('div');lb.textContent=sp.title;cell.appendChild(lb);box.appendChild(cell);const r={ctx:cv.getContext('2d'),px:px*2};items.push({r,n:sp.fx.startsWith('star')?+sp.fx.slice(4):0,...(await build(sp,por))});}
+  const REN=new THREE.WebGLRenderer({antialias:true});REN.outputEncoding=THREE.sRGBEncoding;REN.setClearColor(0x0b0c14,1);
+  const t0=performance.now();(function loop(now){const t=(now-t0)/1000;for(const it of items){it.g.rotation.y=-.9+t*.12;it.upd.forEach(f=>f(t,it.cam));REN.setSize(it.r.px,it.r.px,false);REN.render(it.S,it.cam);it.r.ctx.drawImage(REN.domElement,0,0);}requestAnimationFrame(loop);})(t0);window.__items=items;})();
+</script></body></html>
