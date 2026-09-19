@@ -312,6 +312,11 @@
     background:rgba(255,255,255,.07);cursor:pointer;display:flex;align-items:center;gap:5px}
   .mchip .dot{width:8px;height:8px;border-radius:50%}
   .mchip.sunchip{border:1px solid var(--gold)}
+  /* [U34] 빈 성별·시각 묻기 */
+  .maskbox{margin:10px 0 6px;padding:10px 12px;border:1px solid rgba(232,198,106,.55);border-radius:12px;background:rgba(232,198,106,.06)}
+  .mask-row{margin:4px 0;font-size:var(--fs-sm);line-height:1.6}
+  .mask-btns{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px}
+  .mask-btns input[type=time]{font:inherit;font-size:var(--fs-sm);padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink)}
   /* [U27] 중심 바꿔 보기 */
   .cvbox{margin:12px 0 4px;padding:10px 12px;border:1px solid var(--line);border-radius:12px}
   .cvh{font-weight:700;margin-bottom:6px}.cvh small{font-weight:400;color:var(--mut);margin-left:6px}
@@ -3992,7 +3997,7 @@ function askHtml(n,isMe){
       if(sex)tw+=dStr(askDaeun(n,'관성'),'자리를 잡는');
       qs.push(['일·명예는?',tw]); }
     /* 연애·결혼 */
-    if(!sex)qs.push(['연애·결혼·자식은?','짝과 자식을 보는 자리는 남녀에 따라 달라서, 위 「성별 넣기」를 하면 바로 보여 드려요.']);
+    if(!sex)qs.push(['연애·결혼·자식은?','짝과 자식을 보는 자리는 남녀에 따라 달라서, 패널 맨 위에서 성별을 고르면 바로 보여 드려요.']);
     else{
       /* [U12] 관계 상태별로 — 사용자: "싱글·연애·결혼 세 가지 상태를 확인 못 했으니 상황별로 안내해야". 모르면(null) 여기서 바로 묻는다 */
       const sg=sex==='남'?'재성':'관성', c2=cnt[sg], st=LOVE_OK(n.love)?n.love:null;
@@ -4062,7 +4067,8 @@ function askHtml(n,isMe){
   const T=n.tests||{}, topic=(T.concern&&T.concern.picks[0])||(n.self&&n.self.situation)||null, cq=topic?CONCERN_Q[topic]:null;
   const fi=cq?qs.findIndex(x=>x[0].indexOf(cq)===0):-1;
   if(fi>0)qs.unshift(qs.splice(fi,1)[0]);
-  return `<div class="askbox">`+(sex?'':`<p class="nowhint">성별이 비어 있어요 — 넣으면 연애·자식 풀이와 10년 흐름(대운)까지 보여 드려요. ${sexBtn}</p>`)
+  void sexBtn;   /* [U34] 성별 안내는 패널 맨 위 한 곳(missingAskHtml) */
+  return `<div class="askbox">`
     +qs.map(([q,a],i)=>`<div class="rdblk rdfold">${sjHelp('ask:'+i+':'+q,q,`<p>${a}</p>`,null,fi>=0&&i===0?true:false)}</div>`).join('')+`</div>`;}
 /** 근거 층에 둘 계산 사실 — 기둥과 십신 이름 */
 function nowFactsHtml(n){
@@ -13207,6 +13213,11 @@ async function sajuSelfTest(){
       k1.includes('samhap')&&k1.includes('ganhap')&&Object.keys(f1.el).every(e=>e==='su'||f1.el.su>f1.el[e])
       &&!!n2&&n2.far&&!f3.notes.some(n=>n.kind==='banhap')&&/겨울에 태어나 계절은 물의 제철/.test(ss)&&!/겨울에 핀 꽃/.test(ss),
       k1.join('·')+' / 떨어진 반합 '+(n2?'있음':'없음')+' / '+ss.slice(0,40)); }
+  /* [2026-09-20 U34] 빈 성별·시각 묻기 — 둘 다 비면 두 줄 · 다 있으면 없음 · 추정 시각이 있으면 시각은 안 묻는다 */
+  { const B={y:1990,m:5,d:5,hour:null,min:null,sex:null,est:null,city:'서울',lon:126.978};
+    const h0=missingAskHtml({id:'__m0',name:'가',birth:B},false),h1=missingAskHtml({id:'__m1',name:'가',birth:Object.assign({},B,{sex:'여',hour:9,min:0})},false),
+      h2=missingAskHtml({id:'__m2',name:'가',birth:Object.assign({},B,{sex:'남',est:{hour:9,sijin:4}})},false);
+    T('missingAsk: 빈 칸 두 줄 · 다 있으면 없음 · 추정 있으면 시각 안 물음',(h0.match(/mask-row/g)||[]).length===2&&h1===''&&h2==='','두 줄/없음/없음'); }
   /* [2026-09-20 U33] 형 — 표(寅巳·子卯·丑未 형, 午午 자형, 子子 없음) · 충과 겹치면 문장 없음 · 문장은 긴장·마찰 틀 */
   { const ok=hyeongOf(2,5)==='hyeong'&&hyeongOf(0,3)==='hyeong'&&hyeongOf(1,7)==='hyeong'&&hyeongOf(6,6)==='jahyeong'&&hyeongOf(0,0)===null&&hyeongOf(0,6)===null;
     const il=innerHyeongLines({year:[0,2],month:[2,5],day:[8,6],hour:[5,8]});   /* 寅·巳·午·申 — 寅巳·巳申은 형, 寅申은 충이라 뺀다 */
@@ -13648,6 +13659,50 @@ function navWireBack(fallbackFn){
   const pb=pbody.querySelector('#pback');
   if(pb)pb.onclick=()=>{if(!navBack()&&fallbackFn)fallbackFn();};}
 
+/* ═══ [2026-09-20 U34] 빈 성별·시각 먼저 묻기 — 사용자: 권장대로 ═══
+   계기: 「나」의 성별이 비어 있어 대운이 안 나왔다(성별 필수 전에 만든 기록 — 등록 10명 중 6명). 시각은 10명 전원 비어 있다.
+   예전엔 「궁금한 것」 안의 작은 버튼 → 수정 시트뿐이라 눈에 안 띄었다. 이제 인물 패널 맨 위(이름 아래)에서 바로 고르고 바로 저장한다.
+   시각을 "몰라요"로 넘기면 이 기기에서는 다시 묻지 않는다(이 기기만의 편의 — 저장본에 안 넣는다). 추정해 둔 시각이 있으면 묻지 않는다 */
+const ASKSKIP_KEY='groupsaju:askskip';
+function askSkipped(id){try{return (JSON.parse(localStorage.getItem(ASKSKIP_KEY)||'[]')).includes(id);}catch(e){return false;}}
+function askSkip(id){try{const a=JSON.parse(localStorage.getItem(ASKSKIP_KEY)||'[]');if(!a.includes(id)){a.push(id);localStorage.setItem(ASKSKIP_KEY,JSON.stringify(a));}}catch(e){}}
+function missingOf(n){
+  const b=n&&n.birth;if(!b)return {sex:false,time:false};
+  return {sex:b.sex!=='남'&&b.sex!=='여',
+    time:!Number.isInteger(b.hour)&&!(b.est&&Number.isInteger(b.est.hour))&&!askSkipped(n.id)};}
+function missingAskHtml(n,isMe){
+  const m=missingOf(n);if(!m.sex&&!m.time)return '';
+  const who=isMe?'내':bkEsc(n.name)+'의';
+  const rows=[];
+  if(m.sex)rows.push(`<div class="mask-row">${who} <b>성별</b>이 비어 있어요 — 넣으면 10년 흐름(대운)·연애·자식 풀이가 열려요.
+    <span class="mask-btns"><button type="button" class="estnotebtn" data-msex="남">남</button><button type="button" class="estnotebtn" data-msex="여">여</button></span></div>`);
+  if(m.time)rows.push(`<div class="mask-row">${who} <b>태어난 시각</b>을 아시면 넣어 주세요 — 여덟 글자가 모두 채워져 기운의 세기·말년·해마다 풀이가 더 정확해져요.
+    <span class="mask-btns"><input type="time" data-mtime aria-label="태어난 시각"><button type="button" class="estnotebtn" data-mtimesave>저장</button>
+    <button type="button" class="estnotebtn" data-mtimeest>몰라요 — 추정해 보기</button><button type="button" class="estnotebtn" data-mtimeskip>몰라요</button></span></div>`);
+  return `<div class="maskbox">${rows.join('')}</div>`;}
+/** 생년월일 일부만 고쳐 저장 — 수정 시트와 같은 뒷정리(일간·지도·이름표·궤도·고리·저장) */
+function patchBirth(n,patch){
+  n.birth=Object.assign({},n.birth,patch);n.updatedAt=nowISO();
+  updateNodeIdentity(n);layoutGalaxy();rebuildRings();renderNav();saveState();}
+function wireMissingAsk(n,redraw){
+  pbody.querySelectorAll('[data-msex]').forEach(b=>b.onclick=()=>{patchBirth(n,{sex:b.dataset.msex});redraw();});
+  const tIn=pbody.querySelector('[data-mtime]'),tSave=pbody.querySelector('[data-mtimesave]');
+  if(tSave)tSave.onclick=()=>{const v=(tIn&&tIn.value)||'';const mm=/^(\d{1,2}):(\d{2})$/.exec(v);
+    if(!mm){tIn&&tIn.focus();return;}
+    const h=+mm[1],mi=+mm[2];patchBirth(n,{hour:h,min:mi,sijin:hourToSijin(h)});redraw();};
+  const es=pbody.querySelector('[data-mtimeest]');if(es)es.onclick=()=>{askSkip(n.id);estStart(n);};
+  const sk=pbody.querySelector('[data-mtimeskip]');if(sk)sk.onclick=()=>{askSkip(n.id);redraw();};}
+/** 앱을 열 때 「나」의 빈 칸을 한 번(세션당) 묻는다 */
+function nudgeMeMissing(){
+  if(demoMode)return;
+  const me=nodes.find(x=>x.isMe);if(!me)return;
+  const m=missingOf(me);if(!m.sex&&!m.time)return;
+  try{if(sessionStorage.getItem('groupsaju:nudged'))return;sessionStorage.setItem('groupsaju:nudged','1');}catch(e){}
+  const el=document.getElementById('note');if(el&&el.classList.contains('on'))return;   /* 다른 안내가 떠 있으면 덮지 않는다 */
+  const what=[m.sex?'성별':'',m.time?'태어난 시각':''].filter(Boolean).join('·');
+  showNote(`「나」의 <b>${what}</b>이 비어 있어요 — 넣으면 풀이가 훨씬 정확해져요.`,
+    [['지금 넣기',()=>{document.getElementById('note').classList.remove('on');focusNode(me);showNode(me);}],
+     ['나중에',()=>document.getElementById('note').classList.remove('on')]]);}
 function showNode(n,groupContext,targetMesh){
   activeVirtual=false; /* [§5.5] 다른 패널로 넘어감 */
   deselect();selected=n;selectedMesh=targetMesh||n.mesh;
@@ -13804,7 +13859,7 @@ function showNode(n,groupContext,targetMesh){
   pbody.innerHTML=`${backHtml}<div class="phero" style="--pc:${EL_INFO[n.el].css}">${portraitImg(n,'phero-img',true)}
     <div class="phero-t"><div class="phero-tags">${roleTag}<span class="tag">${EL_INFO[n.el].name}</span></div>
     <h2>${r?r.title:`${bkEsc(n.name)}${n.title?'<span class="ttl">('+bkEsc(n.title)+')</span>':''} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
-    ${birthLine}</div></div>${portraitNoteHtml(n,isMe)}${nowSec}${relSec}${selfSec}${basisSec}
+    ${birthLine}</div></div>${missingAskHtml(n,isMe)}${portraitNoteHtml(n,isMe)}${nowSec}${relSec}${selfSec}${basisSec}
     <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">${josa(n.name,'과와')} 다른 사람의 관계 보기</button></div>
     <div class="panelbtns"><button class="pbtn" id="vstoggle">${virtualMembers.some(c=>c.ref===n)?'가상 성계에서 빼기':'가상 성계에 담기'}</button></div>`;
   LiveHero.start(n,pbody.querySelector('.phero-img')); /* [U7-2] 살아 있는 초상 + 나와의 관계 장신구 */
@@ -13825,6 +13880,7 @@ function showNode(n,groupContext,targetMesh){
     const B=nodes.find(x=>x.id===el.dataset.b);
     if(B){focusNode(B);showNode(B);}});
   pbody.querySelectorAll('[data-edit]').forEach(eb=>eb.onclick=()=>openAddSheet(n)); /* [U11] 「성별 넣기」도 같은 시트 */
+  wireMissingAsk(n,()=>{const top=pbody.scrollTop;showNode(n,groupContext,targetMesh);pbody.scrollTop=top;});   /* [U34] */
   pbody.querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>testStart(n,b.dataset.test));   /* [U15] */
   wireLens(()=>showNode(n,groupContext,targetMesh));   /* [U17] 렌즈 — 다시 누르면 닫힘 · [U25] 공통 배선 */
   pbody.querySelectorAll('[data-iljucard]').forEach(b=>b.onclick=()=>openIljuCard(n));   /* [U26] */
@@ -16497,7 +16553,8 @@ maybeOnboard();renderNextStep();
    그쪽에 붙였다가 시연이 아예 안 돌았다(실측: tourTimer null). 문자열이 같다고 같은
    자리가 아니다. */
 if(demoMode){demoBadge();tourStart();}
-setInterval(()=>{try{refreshLuckLook();}catch(e){}},10*60*1000);   /* [U28] 켜 둔 채 절기가 바뀌어도 이번 달 표시가 따라간다 */
+setInterval(()=>{try{refreshLuckLook();}catch(e){}},10*60*1000);
+setTimeout(()=>{try{nudgeMeMissing();}catch(e){}},1500);   /* [U34] 「나」의 빈 성별·시각 — 세션당 한 번 */   /* [U28] 켜 둔 채 절기가 바뀌어도 이번 달 표시가 따라간다 */
 /* ═══ [2026-09-20 U29-2] 적응형 배율 — 사용자: 권장대로 ═══
    폰 GPU가 느리면 배율을 2 → 1.5 → 1로 낮춘다. 부팅 4초 뒤부터 3초 동안 rAF 간격을 모아 **중앙값이 30ms를 넘으면**(33fps 미만)
    한 단계 낮추고 2초 쉰 뒤 다시 잰다(최대 두 단계). 100ms 넘는 간격은 GPU가 아니라 CPU 멈춤(지도 가공·패널 조립)이라 뺀다.
