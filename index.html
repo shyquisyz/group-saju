@@ -4698,7 +4698,17 @@ const V2_TUNABLES={
   /* [U6 2026-09-19] 자전 = 모두 같은 속도, 시간 기준. 구 `spin:.003+random*.004`는 **프레임당** 값이라
      120Hz 폰에서 두 배로 돌고, 사람마다 무작위라 새로고침마다 달랐다. 뜻을 싣지 않는다 —
      기질은 이미 공전 속도가 맡는다. 0.12 rad/s ≈ 52초에 한 바퀴(행성 시안에서 확정한 값). */
-  PLANET_SPIN_RATE: 0.12,
+  PLANET_SPIN_RATE: 0.12,        // [U6-2] 생년월일이 없을 때의 기본값으로만 쓴다
+  /* [U6-2 2026-09-19] ~~모두 같은 속도~~ 뒤집음 — 사용자: "자전속도도 모두 다 다르게, 기울기도 각각 조금씩 다르게.
+     나만의 행성을 만들 수 있게 규칙을 정하는 것". 규칙은 **그 사람 자체**에서만 뽑고, 이미 다른 요소가 쓴 데이터는 피한다
+     (일간 = 공전 속도·거리·크기, 오행 분포 = 지도, 태어난 달 = 계절막).
+     · 자전 속도 = 기운의 세기(신강약) — gangyak()의 돕는 글자 비율 ally/total. 셀수록 빨리 돈다.
+     · 자전축 기울기 = 태어난 계절의 깊이 — 하지·동지에 가까울수록 크게, 춘분·추분 무렵엔 거의 곧게.
+       여름 쪽 반년이면 오른쪽, 겨울 쪽 반년이면 왼쪽으로 기운다(지구 기울기가 계절을 만드는 것과 같은 이치). */
+  PLANET_SPIN_RANGE: [0.06, 0.20], // rad/s. 약 105초 ~ 31초에 한 바퀴. 비율 0 → 0.06, 비율 1 → 0.20
+  PLANET_SPIN_FINE: 0.12,         // [U6-2] 세부 폭(±6%) — 태어난 시각(없으면 날)
+  PLANET_TILT_RANGE: [4, 28],
+  PLANET_LEAN_MAX: 10,             // [U6-2] 앞뒤 기울기 최대(도) — 띠 12칸을 -10°~+10°로 편다      // 도. 춘분·추분 4° ~ 하지·동지 28°(지구 23.4°가 이 안에 든다)
   /* ═══ 행성 공전 속도 = 1~10칸 [2026-08-27] ═══
      **행성은 그동안 로컬 공전을 아예 안 하고 있었다** — orbit.theta가 배치 때 정해진 뒤 한 번도
      안 바뀌었다(실측: 9.6초 동안 0으로 불변). 중심에 매달려 같이 실려 다닐 뿐이라, 그룹을 선택해
@@ -7307,6 +7317,24 @@ function planetScaleOf(n){
 function spinPhase(n){
   if(n.spin0===undefined){let h=0;const s=String(n.id);for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;n.spin0=(h>>>0)/4294967296*Math.PI*2;}
   return n.spin0;}
+/* [U6-2] 그 사람 행성의 자전 속도·축 기울기. 생년월일이 바뀌면 다시 계산하도록 birth로 캐시 키를 만든다. */
+function planetBodyOf(n){
+  const b=n.birth,key=b?[b.y,b.m,b.d,b.hour,b.min,b.lon,b.dayRule].join('|'):'';
+  if(n._bodyKey===key&&n._body)return n._body;
+  const T=V2_TUNABLES;let rate=T.PLANET_SPIN_RATE,tilt=0,lean=0;
+  if(b&&b.y&&b.m&&b.d){
+    try{const r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});
+      /* 앞뒤 기울기 = 태어난 해의 띠(년지 12칸, 입춘 기준은 sajuOf가 이미 처리). 같은 날 다른 해에 난 사람을 가른다 */
+      if(r&&r.year)lean=((r.year[1]-5.5)/5.5)*T.PLANET_LEAN_MAX*Math.PI/180;
+      const g=gangyak(r);if(g&&g.total>0)rate=T.PLANET_SPIN_RANGE[0]+(T.PLANET_SPIN_RANGE[1]-T.PLANET_SPIN_RANGE[0])*(g.ally/g.total);}catch(e){}
+    /* 세부 = 태어난 시각(모르면 태어난 날)로 ±6%. 신강약 비율은 몇 칸뿐이라(실측: 10명 중 4명이 같은 71초) 이걸로 갈라 준다 */
+    const u=Number.isInteger(b.hour)?(b.hour*60+(b.min||0))/1440:(((b.y%60)*0.6180339+(b.d-1)/31)%1); /* 시각 모르면 해·날을 섞는다 */
+    rate*=1+T.PLANET_SPIN_FINE*(u-.5);
+    /* 하지(6/21)에서 떨어진 날수로 계절 위치. cos=1 하지 · -1 동지 · 0 춘분/추분. 절기 표 대신 날짜로 근사(±1일) */
+    const doy=(Date.UTC(b.y,b.m-1,b.d)-Date.UTC(b.y,0,1))/864e5, ph=2*Math.PI*(doy-171)/365.2422, c=Math.cos(ph);
+    const deg=T.PLANET_TILT_RANGE[0]+(T.PLANET_TILT_RANGE[1]-T.PLANET_TILT_RANGE[0])*Math.abs(c);
+    tilt=(c>=0?-1:1)*deg*Math.PI/180;} /* rotation.z 음수 = 화면 오른쪽으로 기움 = 여름 쪽 */
+  n._bodyKey=key;n._body={rate,tilt,lean};return n._body;}
 function memberRungRadius(rung){
   const a=V2_TUNABLES.MEMBER_R_ABS_MIN,b=V2_TUNABLES.MEMBER_R_ABS_MAX,N=V2_TUNABLES.MEMBER_RUNGS;
   return a+(Math.max(1,rung)-1)*(b-a)/(N-1);}
@@ -9927,7 +9955,7 @@ function simulate(){
     inst.rings.forEach(r=>{r.material.opacity=(V2_TUNABLES.RING_OPACITY_BASE+
       (V2_TUNABLES.RING_OPACITY_PEAK-V2_TUNABLES.RING_OPACITY_BASE)*k)*iv;
       r.visible=iv>0.01;});
-    inst.mesh.rotation.y=spinPhase(inst.ref)+t*V2_TUNABLES.PLANET_SPIN_RATE; // [U6] ref와 같은 각 — 같은 사람이라는 인상 강화
+    {const bd=planetBodyOf(inst.ref);inst.mesh.rotation.order='XZY';inst.mesh.rotation.z=bd.tilt;inst.mesh.rotation.x=bd.lean;inst.mesh.rotation.y=spinPhase(inst.ref)+t*bd.rate;} // [U6-2] ref와 같은 속도·기울기 — 같은 사람이라는 인상 강화
     {const sc=planetScaleOf(inst.ref)*(inst.mesh===selectedMesh?1.18:1);inst.mesh.scale.setScalar(sc);} /* [U6] 위계 크기 */
     placeNodeLabel(inst.label,inst.mesh.position,planetScaleOf(inst.ref),iv);
     inst.link.visible=iv>0.01&&(inst.ref.stageVis===undefined||inst.ref.stageVis>0.01);
@@ -9936,7 +9964,7 @@ function simulate(){
     inst.link.geometry.setFromPoints([inst.ref.mesh.position,inst.mesh.position]);
     inst.link.computeLineDistances();});
   nodes.forEach(n=>{
-    n.mesh.rotation.y=spinPhase(n)+t*V2_TUNABLES.PLANET_SPIN_RATE; /* [U6] 시간 기준 · 모두 같은 속도 */
+    {const bd=planetBodyOf(n);n.mesh.rotation.order='XZY';n.mesh.rotation.z=bd.tilt;n.mesh.rotation.x=bd.lean;n.mesh.rotation.y=spinPhase(n)+t*bd.rate;} /* [U6-2] 시간 기준 · 사람마다 속도(신강약)·기울기(계절·띠) — XZY라 자전(Y)이 가장 안쪽: 축이 흔들리지 않고 기운 채로 돈다 */
     if(!n.isMe)n.mesh.scale.setScalar(planetScaleOf(n)*(n.mesh===selectedMesh?1.18:1)); /* [U6] 위계 크기(선택 시 1.18배는 유지) */
     if(n.isMe){ /* §2.1: 본체 항성 — STAR_SCALE, 글로우, 맥동은 유지하되 발광은 [버그 1 수정] 항상 최대 고정 */
       const p=V2_TUNABLES.STAR_SCALE+Math.sin(t*1.8)*.04*(V2_TUNABLES.STAR_SCALE/1.6);n.mesh.scale.set(p,p,p);
