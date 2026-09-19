@@ -241,6 +241,11 @@
   .lifebox{margin:6px 0 12px}.lifesvg{width:100%;max-width:420px;height:auto;display:block;color:var(--mut)}
   .lifelg{display:flex;gap:12px;font-size:var(--fs-sm);margin:4px 0 6px}.lifelg span:last-child{color:var(--mut)}
   .lifebox p{margin:4px 0;line-height:1.65;color:var(--ink);word-break:keep-all}
+  .gtabw{overflow-x:auto;margin:4px 0 8px}.gtab{border-collapse:collapse;font-size:var(--fs-sm);min-width:100%}
+  .gtab th,.gtab td{border:1px solid var(--line);padding:3px 5px;text-align:center;white-space:nowrap;color:var(--mut)}
+  .gtab th{color:var(--ink);font-weight:700}.gtab td:first-child{color:var(--ink);font-weight:700}
+  .gtab td.g{color:var(--gold)}.gtab td.w{color:#ff8a6a}.gtab tr.now td{background:rgba(255,255,255,.06)}
+  .gm.now{border-left:2px solid rgba(232,198,106,.5);padding-left:8px}
   .groles{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
   .grep .gsecp{margin:0 0 6px}.groles span{padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-size:var(--fs-sm);color:var(--ink)}
   .nowbox p.nowtoday{background:rgba(232,198,106,.07);border-radius:8px;padding:8px 10px}
@@ -3988,13 +3993,40 @@ function gReportHtml(A,g){
   /* 사람별 카드 */
   const cards=R.map(o=>{const mm=o.ms.find(z=>z.now);return `<div class="gcard"><div class="gcn">${nm(o)}</div><div class="gcy">올해 · ${NOW_WORD[o.y.groups[0]]}</div>`
     +`<div class="gcm">이번 달 · ${mm?MONTH_WORD[mm.g]:''}${mm&&mm.good?' 😊':''}${mm&&mm.warn?' ⚡':''}</div></div>`;}).join('');
+  /* ═══ [2026-09-19 U24] 유료 수준으로 — 사용자: 권장대로(R5). 목표 가족 4인 3,000자 이상.
+     ① 사람별 12달 표 ② 달마다 한 줄 ③ 사람별 올해 한 줄 + 좋은 달·조심할 달 ④ 우리 궁합 전체 순위(그룹 종류에 맞는 렌즈) */
+  const MONTH_SHORT={비겁:'편',식상:'꺼냄',재성:'돈',관성:'책임',인성:'쉼'};
+  const tab=`<div class="gtabw"><table class="gtab"><tr><th></th>${R.map(o=>`<th>${nm(o)}</th>`).join('')}</tr>`
+    +M.map((m,i)=>`<tr${m.now?' class="now"':''}><td>${m.cal}월</td>${R.map(o=>{const c=o.ms[i];return `<td class="${c&&c.good?'g':''}${c&&c.warn?' w':''}">${c?MONTH_SHORT[c.g]:''}${c&&c.good?' 😊':''}${c&&c.warn?' ⚡':''}</td>`;}).join('')}</tr>`).join('')+`</table></div>`;
+  const mLines=M.map((m,i)=>{const cnt={};R.forEach(o=>{const c=o.ms[i];if(c){cnt[c.g]=(cnt[c.g]||0)+1;}});const dom=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];
+    let t=`<b>${m.cal}월</b> `;
+    if(m.warn.length&&m.good.length)t+=`${nmJ(m.warn,'은는')} 예민, ${nmJ(m.good,'은는')} 좋은 달 — 큰일은 ${nmJ(m.good,'이가')} 앞장서고 ${nmJ(m.warn,'은는')} 쉬게.`;
+    else if(m.warn.length)t+=`${nmJ(m.warn,'이가')} 예민한 달 — 큰 결정·다툼은 피하고 말 한마디 조심.`;
+    else if(m.good.length)t+=`${nmJ(m.good,'이가')} 좋은 달 — ${m.good.length>=Math.ceil(R.length/2)?'같이 뭔가 벌이기 좋아요':'이 사람에게 부탁할 일을 몰아 주세요'}.`;
+    else t+=`무난한 달 — 다 같이 '${NOW_WORD[dom]||''}' 기운이라 평소처럼.`;
+    return `<p class="gsecp gm${m.now?' now':''}">${t}${m.now?' <span class="gwhy">← 이번 달</span>':''}</p>`;}).join('');
+  function names(a){return a.map(nm).join('·');}
+  /* 이름 묶음 + 마지막 이름의 받침에 맞는 조사. 「나」는 내가/나는 */
+  function nmJ(a,pr){const l=a[a.length-1];const head=a.slice(0,-1).map(nm).join('·')+(a.length>1?'·':'');return head+(l.x===me?(pr==='이가'?'내가':'나는'):bkEsc(l.x.name)+particle(l.x.name,pr));}
+  const perLine=R.map(o=>{const first=NOW_YEAR[o.y.groups[0]].split(/(?<=요\.)\s/)[0];const g=o.ms.filter(z=>z.good).map(z=>z.cal+'월'),w=o.ms.filter(z=>z.warn).map(z=>z.cal+'월');
+    return `<p class="gsecp"><b>${nm(o)}</b> 올해는 '${NOW_WORD[o.y.groups[0]]}'의 해 — ${first}${g.length?` 좋은 달 ${g.slice(0,3).join('·')}`:''}${w.length?` · 조심할 달 ${w.slice(0,2).join('·')}`:''}.</p>`;}).join('');
+  const lensOf=g.type==='부부'?'배우자':g.type==='연인'?'애인':g.type==='동료'?'동업자':'친구';
+  const prs=[];for(let i=0;i<R.length;i++)for(let j=i+1;j<R.length;j++){const a=R[i].x,b=R[j].x,hc=(hapChung(a,b)||{}).kind,rel=relation(a.el,b.el);
+    const why=hc==='chung'?'태어난 날 글자가 부딪히는 짝':hc==='ganhap'?'태어난 날 글자가 끌리는 짝':hc==='yukhap'?'태어난 날 글자가 붙는 짝':rel.kind==='saeng'?'한쪽이 북돋는 사이':rel.kind==='bi'?'같은 결이라 말이 통하는 사이':'서로 다그치며 단련하는 사이';
+    prs.push({a:R[i],b:R[j],sc:lensScore(a,b,lensOf),why});}
+  prs.sort((x,y)=>y.sc-x.sc);
+  const rank=prs.map((pr,i)=>`<p class="gsecp">${i+1}. <b>${nm(pr.a)}·${nm(pr.b)}</b> ${pr.sc}점 — ${pr.why}</p>`).join('');
+  const deep=`<div class="gsub">사람별 12달</div>${tab}`
+    +`<div class="gsub">달마다 한 줄</div>${mLines}`
+    +`<div class="gsub">사람별 올해</div>${perLine}`
+    +(prs.length?`<div class="gsub">우리 궁합 순위 <span class="gwhy" style="display:inline">${lensOf} 기준 · 재미로 보는 점수</span></div>${rank}`:'');
   const ys=gSecYear(A.ms);
   return `<div class="grep"><div class="greph">${bkEsc(g.name)} · ${L.luckYear} 보고서</div>`
     +(ys?ys.html:'')
     +(gFocusHtml(A,g,R,nm,me)||(lines.length?`<div class="gsub">올해 순위</div><div class="grank">${lines.map(l=>`<p>${l}</p>`).join('')}</div>`:''))   /* [U20] 종류별 초점 */
     +`<div class="gsub">이번 달 우리</div><p class="gsecp">${monthL}</p>`
     +(pairs.length?`<div class="gsub">누가 누구를 챙기면 좋을까</div>${pairs.map(t=>`<p class="gsecp">${t}</p>`).join('')}`:'')
-    +`<div class="gsub">우리의 12달</div><p class="gsecp">${mSum}.</p><div class="mgrid">${mg}</div>`
+    +`<div class="gsub">우리의 12달</div><p class="gsecp">${mSum}.</p><div class="mgrid">${mg}</div>`+deep   /* [U24] */
     +gRoleHtml(A.ms,x=>x===me?'나':bkEsc(x.name))   /* [U18] 우리 역할 · 짝 */
     +gSceneHtml(A,g,x=>x===me?'나':bkEsc(x.name))   /* [U19] 만약 우리가 ○○한다면 */
     +`</div>`;}   /* [U22] ~~사람별 올해 카드~~ — 맨 위 「올해 과제」·12달과 같은 내용이었다 */
@@ -9502,7 +9534,7 @@ function showVirtualSlot(){
   bindInsight(pbody); /* [4번 1단계] "외 N쌍" 펼치기 */
   pbody.querySelectorAll('.mchip').forEach(el=>el.onclick=e=>{
     if(e.target.classList.contains('vmremove'))return;
-    const n=nodes.find(x=>x.id===el.dataset.id);if(n){showNode(n);focusNode(n);}});
+    const n=nodes.find(x=>x.id===el.dataset.id);if(n){focusNode(n);showNode(n);}});
   pbody.querySelectorAll('.vmremove').forEach(el=>el.onclick=e=>{
     e.stopPropagation();
     const n=nodes.find(x=>x.id===el.dataset.id);if(n)removeFromVirtualSlot(n);});
@@ -10209,7 +10241,7 @@ function renderTagbar(){
     const n=nodes.find(x=>x.id===el.dataset.n);
     const gid=el.dataset.g;
     const g=gid===UNCLASSIFIED_GROUP.id?UNCLASSIFIED_GROUP:groups.find(x=>x.id===gid);
-    if(n){const m=g?meshForMemberInGroup(n,g):n.mesh;showNode(n,g,m);focusNode(n,m);}});
+    if(n){const m=g?meshForMemberInGroup(n,g):n.mesh;focusNode(n,m);showNode(n,g,m);}});
   /* [★ 저장 지점, 2026-08-28] **여기 하나로 모은다.** 사람·그룹이 바뀌는 경로가 전부
      renderNav를 지나가므로(추가·수정·삭제·그룹 만들기·소속 변경·첫 화면 완료),
      변경 지점 여섯 곳에 각각 붙이는 것보다 **빠뜨릴 수 없다**는 게 결정적이다.
@@ -11230,7 +11262,7 @@ function showHome(){
     +`<button type="button" class="home-new" id="home-newg">+ 새 그룹</button></div></div>`;
   pbody.querySelectorAll('[data-home-n]').forEach(el=>el.onclick=()=>{
     const n=nodes.find(x=>x.id===el.dataset.homeN);
-    if(n){showNode(n);focusNode(n,n.mesh);}});
+    if(n){focusNode(n,n.mesh);showNode(n);}});
   pbody.querySelectorAll('[data-home-g]').forEach(el=>el.onclick=()=>{
     const g=groups.find(x=>x.id===el.dataset.homeG);
     if(g)selectGroup(g);});
@@ -11461,7 +11493,7 @@ function showGroup(g){
     navPrependBack('은하 전체',()=>selectGroup(null));
     panel.classList.add('open');
     pbody.querySelectorAll('.mchip').forEach(el=>el.onclick=()=>{
-      const n=nodes.find(x=>x.id===el.dataset.id);if(n){showNode(n);focusNode(n);}});
+      const n=nodes.find(x=>x.id===el.dataset.id);if(n){focusNode(n);showNode(n);}});
     return;}
   const mchips=A.ms.map(n=>`<span class="mchip${n===A.sun?' sunchip':''}" data-id="${n.id}">
     <span class="dot" style="background:${EL_INFO[n.el].css}"></span>${n===A.sun?'☀ ':''}${bkEsc(n.name)}</span>`).join('');
@@ -11527,7 +11559,7 @@ function showGroup(g){
      인스턴스(주 또는 추가)로 정확히 가야 한다. meshForMemberInGroup이 그 인스턴스를 골라준다. */
   pbody.querySelectorAll('.mchip').forEach(el=>el.onclick=()=>{
     const n=nodes.find(x=>x.id===el.dataset.id);
-    if(n){const m=meshForMemberInGroup(n,g);showNode(n,g,m);focusNode(n,m);}});}
+    if(n){const m=meshForMemberInGroup(n,g);focusNode(n,m);showNode(n,g,m);}});}
 
 /* [v2 §5.4] 3명 이상 "관계 보기" — showGroup과 달리 저장된 그룹이 아니라 즉석 선택이라 g.type이
    없다. analyzeGroup은 {id,members} 모양만 있으면 되므로 임시 wrapper로 넘긴다(엔진 변경 없음).
@@ -11560,7 +11592,7 @@ function showRelationView(members){
   panel.classList.add('open');
   navPrependBack('은하 전체',()=>selectGroup(null));
   pbody.querySelectorAll('.mchip').forEach(el=>el.onclick=()=>{
-    const n=nodes.find(x=>x.id===el.dataset.id);if(n){showNode(n);focusNode(n);}});
+    const n=nodes.find(x=>x.id===el.dataset.id);if(n){focusNode(n);showNode(n);}});
   document.getElementById('relsavebtn').onclick=()=>openGrpSheet(A.ms.map(n=>n.id));
   /* [§5.5 4단계] §5.4에서 비워뒀던 자리 — 이제 §5.5가 있으니 채운다 */
   document.getElementById('relvsbtn').onclick=()=>{addAllToVirtualSlot(A.ms);showVirtualSlot();};}
@@ -12082,7 +12114,7 @@ canvas.addEventListener('click',e=>{
     const n=hit.object.userData.node;
     const ctx=hit.object.userData.instanceGroup; /* [§7.4] 추가 인스턴스만 태깅돼 있음 — 주 인스턴스는
       undefined라 showNode가 activeGroup으로 자연히 폴백(하위호환) */
-    showNode(n,ctx,hit.object);focusNode(n,hit.object);}
+    focusNode(n,hit.object);showNode(n,ctx,hit.object);}
   else if(activeGroup){showGroup(activeGroup);deselect();fitGroup(activeGroup);}
   else if(innerWidth>=768){showHome();deselect();fitGalaxy();} /* 데스크톱: 패널은 열어 둔 채 홈으로(2026-09-17 ~~빈 본문 + 트리~~) */
   else{activeVirtual=false;panel.classList.remove('open','tall');deselect();fitGalaxy();}});
@@ -12742,6 +12774,14 @@ async function sajuSelfTest(){
     const seat=personReading({birth:{y:1986,m:5,d:16,hour:null}}).find(x=>x.h==='자리마다 놓인 기운').t;
     T('consistency: 일간×격 40칸 · 壬×관성=둑 · 지키는 자리+프리랜서형 0 · 약한데 자리 셈이면 꼬리',
       cells&&/둑/.test(job)&&bad===0&&/발 딛는 자리는 단단한데/.test(seat), '충돌 '+bad+'건'); }
+  /* [2026-09-19 U24] 그룹을 열어 둔 채 다른 그룹 사람의 관계 줄을 누르면 그룹 패널이 사람 패널을 덮어썼다 —
+     ~~showNode→focusNode~~ 순서였는데 focusNode가 그룹을 바꾸며 showGroup을 불렀다. 호출 10곳을 focusNode→showNode로. */
+  { const gA=groups.find(g=>g.type==='동료')||groups[1], gB=groups[0];
+    const oB=effectiveMembers(gB).find(x=>!x.isMe);
+    let ok=false, h='';
+    if(gA&&gB&&gA!==gB&&oB){selectGroup(gA);showNode(oB);const row=pbody.querySelector('.rel-item');
+      if(row){row.click();h=(pbody.querySelector('h2')||{}).textContent||'';const B=nodes.find(x=>x.id===row.dataset.b);ok=!!B&&h.indexOf(B.name)===0;}}
+    T('relRowCrossGroup: 다른 그룹을 연 채 관계 줄을 눌러도 그 사람 패널', ok, h.slice(0,30)); }
   /* [2026-09-19 U19] 만약 우리가 ○○한다면 — 네 상황 모두 역할·빈 자리가 나온다 */
   { const g0=groups.find(g=>(g.analysis||analyzeGroup(g)).ms.filter(x=>x.birth).length>=2); let ok=!!g0, det='';
     if(g0){const A=g0.analysis||analyzeGroup(g0);Object.keys(GSCENE).forEach(k=>{gLensPick[g0.id]=k;const d=document.createElement('div');d.innerHTML=gSceneHtml(A,g0,x=>x.name);
@@ -13310,7 +13350,7 @@ function showNode(n,groupContext,targetMesh){
      안 바뀌었고, 그것을 보여 주는 화면만 바뀌었다. */
   pbody.querySelectorAll('.rel-item').forEach(el=>el.onclick=()=>{
     const B=nodes.find(x=>x.id===el.dataset.b);
-    if(B){showNode(B);focusNode(B);}});
+    if(B){focusNode(B);showNode(B);}});
   pbody.querySelectorAll('[data-edit]').forEach(eb=>eb.onclick=()=>openAddSheet(n)); /* [U11] 「성별 넣기」도 같은 시트 */
   pbody.querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>testStart(n,b.dataset.test));   /* [U15] */
   pbody.querySelectorAll('[data-lens]').forEach(b=>b.onclick=()=>{   /* [U17] 렌즈 — 다시 누르면 닫힘 */
@@ -13417,7 +13457,7 @@ function showEdge(e){
   wirePairCard(e.a,e.b,pbody);
   pbody.querySelectorAll('.pairname').forEach(b=>b.onclick=()=>{
     const t=nodes.find(x=>x.id===b.dataset.go);
-    if(t){showNode(t);focusNode(t);}});
+    if(t){focusNode(t);showNode(t);}});
   panel.classList.add('open');}
 
 /** 두 사람 관계의 세 문단. 소제목 형식은 개인 해석과 같다 */
@@ -15403,7 +15443,7 @@ function tourTick(){
     /* 나 말고 그 성계의 다른 사람 하나 — "나"는 어느 성계에서나 중심이라 덜 새롭다 */
     const ms=effectiveMembers(g).filter(x=>!x.isMe);
     const person=ms[tourGi%Math.max(1,ms.length)];
-    if(person){const mesh=meshForMemberInGroup(person,g);showNode(person,g,mesh);focusNode(person,mesh);}
+    if(person){const mesh=meshForMemberInGroup(person,g);focusNode(person,mesh);showNode(person,g,mesh);}
   }else{
     selectGroup(null);
     tourGi++;
@@ -15664,7 +15704,7 @@ function savePerson(){
     renderNextStep();return;}
   closeSheets();
   if(activeGroup){showGroup(activeGroup);fitGroup(activeGroup);}
-  else{selectGroup(null);showNode(n);focusNode(n);}
+  else{selectGroup(null);focusNode(n);showNode(n);}
   renderNextStep();}   /* 둘째가 들어오면 안내 카드와 ＋ 강조가 여기서 꺼진다 */
 document.getElementById('addbtn').onclick=()=>savePerson();
 document.getElementById('pt-save').onclick=ptSave;
