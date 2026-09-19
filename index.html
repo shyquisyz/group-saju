@@ -220,6 +220,7 @@
   .askbox .sjhelp-body p{font-size:var(--fs-base);line-height:1.7;color:var(--ink);word-break:keep-all;margin:4px 0 6px}
   .askdis{display:block;margin-top:6px;font-size:var(--fs-sm);color:var(--mut)}
   .lovepick{display:block;margin-top:8px;font-size:var(--fs-sm);color:var(--mut)}
+  .askturn{display:block;margin-top:6px}
   .lovepick .estnotebtn.on{color:var(--ink);border-color:var(--ink)}
   .basis{margin:22px 0 6px;border-top:1px solid var(--line);padding-top:8px}
   .basis .sjhelp-body{color:var(--mut)}
@@ -3478,6 +3479,21 @@ function askHtml(n,isMe){
       t2+=good.length?` ${GOOD[k]}: <b>${askYearStr(good)}</b>.`:' 앞으로 10년 안엔 인연이 몰리는 해가 따로 없어요 — 지금 곁의 사람에게 쓰세요.';
       if(shake.length)t2+=` ${askYearStr(shake,2)}${SHAKE[k]}.`;
       t2+=dStr(askDaeun(n,sg),st==='married'?'부부 사이가 무르익는':'인연이 무르익는');
+      /* [2026-09-19 U13] 사용자: "연애나 결혼 중이어도 이별하고 새 상대가 생길 수 있는 사주가 있을 수 있지 않나 — 다 표기해도 좋겠다".
+         짝이 있는 사람(연애 중·결혼·모름)에게만. 근거 둘 — 명리에서 널리 쓰는 것만:
+         ① 원국에 짝 기운이 **정·편 둘 다**(남 정재+편재 · 여 정관+편관 — 재성혼잡·관살혼잡) → 인연이 여러 번 오는 사주
+         ② 그해 짝 기운이 들어오면서 **짝 자리(일지)와 충**하는 해
+         ~~②에 "편(바깥 인연) 쪽으로 들어오는 해"도 넣었다~~ — 실측(무작위 2,000명, 10년) 100%가 걸려 뜻이 없었다.
+         충만 남기면 ② 24.1% · ① 15.1% — 셋 중 한 명꼴이라 받는 사람에게 의미가 있다.
+         겁주지 않는다 — "흐름이 있다는 뜻이지 꼭 그렇게 된다는 뜻은 아니다"를 붙인다. */
+      if(st!=='single'){
+        const c10=personGroupCounts(n).cnt10, PY=sex==='남'?4:6, JG=sex==='남'?5:7;
+        const mixed=c10[PY]>0&&c10[JG]>0;
+        const turn=askYears(n,t5=>t5.groups.includes(sg)&&t5.hits.some(h=>h.pos==='day'&&h.kind==='chung'));
+        if(mixed||turn.length){
+          t2+=' <span class="askturn">'+(mixed?'사주에 짝을 뜻하는 기운이 두 갈래로 있어서, 지금 관계가 있어도 다른 인연이 눈에 들어오는 때가 와요. ':'')
+            +(turn.length?`특히 <b>${askYearStr(turn,2)}</b>은 지금 관계가 흔들리면서 새 사람이 눈에 들어오기 쉬운 해예요. `:'')
+            +'흐름이 있다는 뜻이지 꼭 그렇게 된다는 뜻은 아니에요 — 알고 있으면 지나가기 쉬워요.</span>';}}
       /* 상태 묻기(모를 때) / 바꾸기(알 때) — 누르면 그 자리에서 저장하고 다시 그린다 */
       t2+=`<span class="lovepick">${st?`지금 상태: <b>${LOVE_KO[st]}</b> · 바꾸기 `:'지금 어떤 상태예요? 고르면 상황에 맞춰 드려요 '}`
         +LOVE_VALS.map(v=>`<button type="button" class="estnotebtn${v===st?' on':''}" data-love="${v}" data-n="${n.id}">${LOVE_KO[v]}</button>`).join(' ')+`</span>`;
@@ -3519,6 +3535,7 @@ function nowFactsHtml(n){
   else rows.push('대운 — 성별이 없어 방향을 정할 수 없습니다(양남음녀 순행).');
   rows.push('판단은 기운의 세기(억부)만 봅니다 — 계절 보정(조후)은 아직 넣지 않았습니다. 극왕·극약이면 도움·부담을 말하지 않습니다.');
   rows.push('「궁금한 것」 읽는 규칙 — 돈 = 재성 · 짝 = 남자 재성 / 여자 관성 · 자식 = 남자 관성 / 여자 식상 · 공부 = 인성 · 재능 = 식상 · 건강 = 비었거나 넘치는 오행(목 간 · 화 심장 · 토 위장 · 금 폐 · 수 신장).');
+  rows.push('새 인연 흐름(짝이 있을 때) — 원국에 짝 기운 정·편 둘 다(재성혼잡·관살혼잡) · 그해 짝 기운이 들어오면서 일지와 충하는 해.');
   return `<div class="basisrow"><div class="basish">운의 흐름</div>${rows.map(r=>`<p>${r}</p>`).join('')}</div>`;}
 /** 그룹 「올해 우리는」 */
 function gSecYear(ms){
