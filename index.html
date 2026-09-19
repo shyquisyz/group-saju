@@ -1436,6 +1436,7 @@
   .phero-t h2{margin:0}
   .phero-t p{margin:0}
   .phero-tags{display:flex;flex-wrap:wrap;gap:6px}
+  .phero-note{margin:2px 0 6px} /* [2026-09-19] 초상 설명 — 기본 접힘 */
   .phero-tags .tag,.home-me-t .tag{white-space:nowrap;align-self:flex-start}
   .noimg{display:inline-block;opacity:.6}
   .home{display:flex;flex-direction:column;gap:6px;padding-top:4px}
@@ -6963,7 +6964,8 @@ function planetMapInfo(n){
   const season=(b.m===12||b.m<=2)?'winter':(b.m===7||b.m===8)?'summer':'';
   let h=2166136261;const sd=[b.y,b.m,b.d,b.hour,b.min].join('|');
   for(let i=0;i<sd.length;i++){h^=sd.charCodeAt(i);h=Math.imul(h,16777619);}
-  return {key,season,seed:h>>>0,id:key+'|'+(h>>>0)+'|'+season};}
+  return {key,season,seed:h>>>0,id:key+'|'+(h>>>0)+'|'+season,
+    why:{c,main,tops,de,mb,mbIdx:r.month?r.month[1]:null,dayStem:r.day[0],noHour:!r.hour}};}
 /* 바다 반사용 하늘(한 번만 굽는다) — U5 시안 portrait-fx.js skyEnv */
 function pSkyEnv(rdr){
   rdr=rdr||renderer;if(_pSkyEnv.has(rdr))return _pSkyEnv.get(rdr);
@@ -7019,6 +7021,38 @@ function pPrepMap(im,key){
   const metal=key.split('-').indexOf('geum')>=0?mk((r,g,b)=>{const mx=Math.max(r,g,b),mn=Math.min(r,g,b);return((mx-mn)/(mx+1)<.3&&mx>=55&&(r-b)<50&&!(b>r+30))?255:0;}):null;
   const water=mk((r,g,b)=>(b>r+30&&b>=g-10)?255:0);
   return {map:c,metal:metal,water:water};}
+/* ═══ [2026-09-19] 초상 설명 한 줄 — "나는 수(壬)인데 왜 행성은 토·화·금인가" ═══
+   계기(사용자 지적): 일간이 수인데 여덟 글자에서 수가 1글자뿐이면 지도에 수가 안 들어가 주황·회색 행성이 나온다 —
+   해설 첫머리("큰물·바다")와 초상이 서로 딴말을 하는 것처럼 보였다.
+   [잇는 말] 일간 = 그 사람 자신(은하의 색도 이것), 행성 겉모습 = 그 사람이 놓인 땅과 날씨(여덟 글자 전체).
+   규칙은 planetMapInfo 그대로 읽어 온다 — 여기서 다시 계산하지 않는다(갈라지지 않게). 기본은 접힘. */
+function portraitNoteHtml(n,isMe){
+  const info=planetMapInfo(n);if(!info||!info.why)return '';
+  const w=info.why,c=w.c,EL=['mok','hwa','to','geum','su'];
+  const ga=t=>{const k=String(t).replace(/<[^>]+>/g,'').slice(-1).charCodeAt(0)-0xAC00;return t+((k>=0&&k<11172&&k%28)?'이':'가');};
+  const parts=info.key.split('-');
+  const cnt=EL.map(e=>`<b style="color:${EL_INFO[e].css}">${EL_KO[e]} ${c[e]||0}</b>`).join(' · ');
+  const who=isMe?'나':'이 사람',whoGa=isMe?'내가':'이 사람이',whoEul=isMe?'나를':'이 사람을';
+  const self=`${STEMS[w.dayStem]}${EL_KO[w.de]}(${stemThing(w.dayStem)})`;
+  const total=EL.reduce((a,e)=>a+(c[e]||0),0);
+  let base;
+  if(parts.length===1)base=`<b>${ga(EL_KO[w.main])}</b> ${c[w.main]}글자로 압도적이라 행성 전체가 ${EL_KO[w.main]}의 모습입니다.`;
+  else if(w.tops.length===1)base=`가장 많은 <b>${EL_KO[w.main]}</b>(${c[w.main]}글자)가 바탕이 됐습니다.`;
+  else{const tie=w.tops.map(e=>EL_KO[e]).join('·');
+    base=w.main===w.de?`${ga(tie)} ${c[w.main]}글자씩 같아, ${who}의 오행을 따라 <b>${ga(EL_KO[w.main])}</b> 바탕이 됐습니다.`
+      :w.main===w.mb?`${ga(tie)} ${c[w.main]}글자씩 같아, 태어난 달(${BRANCHES[w.mbIdx]}·${EL_KO[w.mb]})을 따라 <b>${ga(EL_KO[w.main])}</b> 바탕이 됐습니다.`
+      :`${ga(tie)} ${c[w.main]}글자씩 같아, 목·화·토·금·수 순서로 <b>${ga(EL_KO[w.main])}</b> 바탕이 됐습니다.`;}
+  const sec=parts.length>1?` 그다음 많은 <b>${ga(parts.slice(1).map(e=>EL_KO[e]).join('·'))}</b> 함께 보입니다.`:'';
+  const selfLine=parts.indexOf(w.de)>=0
+    ?`${who} 자신은 일간 <b>${self}</b>이고, 그 오행도 겉모습에 드러나 있습니다.`
+    :`${who} 자신은 일간 <b>${self}</b>입니다. 그런데 ${EL_KO[w.de]}${'목금'.includes(EL_KO[w.de])?'은':'는'} ${total}글자 중 ${c[w.de]||0}글자뿐이라 겉모습에는 드러나지 않습니다 — `
+      +`은하에서 ${whoEul} 나타내는 색은 일간을 따르므로 ${EL_INFO[w.de].planet}으로 보입니다.`;
+  const body=`<p>행성의 색과 지형은 <b>${who} 자신(일간)</b>이 아니라, ${whoGa} 놓인 <b>땅과 날씨 — 사주 글자 전체</b>를 그린 것입니다.</p>`
+    +`<p>${cnt}${w.noHour?' (태어난 시각을 몰라 '+total+'글자로 셉니다)':''}</p>`
+    +`<p>${base}${sec}</p><p>${selfLine}</p>`
+    +(info.season?`<p>${info.season==='winter'?'겨울(12~2월)':'한여름(7~8월)'}에 태어나 행성 가장자리에 ${info.season==='winter'?'푸른':'붉은'} 계절막이 씌워져 있습니다.</p>`:'');
+  const label=`왜 이런 모습일까 — ${ga(parts.map(e=>EL_KO[e]).join('·'))}${parts.length===1?' 압도적인':' 많은'} 사주`;
+  return `<div class="phero-note">${sjHelp('pnote',label,body,null,false)}</div>`;}
 async function renderPortrait2(info){
   const F=(await pFacing())[info.key];if(!F)return '';
   const im=await pLoadImg(PMAP_BASE+info.key+'.jpg');
@@ -11671,7 +11705,7 @@ function showNode(n,groupContext,targetMesh){
   pbody.innerHTML=`${backHtml}<div class="phero" style="--pc:${EL_INFO[n.el].css}">${portraitImg(n,'phero-img')}
     <div class="phero-t"><div class="phero-tags">${roleTag}<span class="tag">${EL_INFO[n.el].name}</span></div>
     <h2>${r?r.title:`${bkEsc(n.name)} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
-    ${birthLine}</div></div>${relSec}${selfSec}
+    ${birthLine}</div></div>${portraitNoteHtml(n,isMe)}${relSec}${selfSec}
     <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">${bkEsc(n.name)}와 다른 사람의 관계 보기</button></div>
     <div class="panelbtns"><button class="pbtn" id="vstoggle">${virtualMembers.some(c=>c.ref===n)?'가상 성계에서 빼기':'가상 성계에 담기'}</button></div>`;
   LiveHero.start(n,pbody.querySelector('.phero-img')); /* [U7-2] 살아 있는 초상 + 나와의 관계 장신구 */
