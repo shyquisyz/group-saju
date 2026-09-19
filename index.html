@@ -8249,6 +8249,14 @@ function pSeasonFilm(season){
    같은 지도를 정지 초상·살아 있는 초상·은하가 각각 다시 가공하고 있었다. 키는 **그림 주소**
    (옛 map/과 map4/에 같은 오행 목록 이름이 있을 수 있다 — to-hwa-geum). 캔버스는 읽기만 하므로 나눠 써도 된다 */
 const _prepCache=new Map();
+/* [2026-09-20 폰 속도] 부팅 때 지도 10장이 한꺼번에 도착해 가공(pPrepMap)이 연달아 돌며 화면이 1초 넘게 멈췄다(실측 10×108ms).
+   은하용 가공은 이 줄에 세워 하나씩 돌리고 사이에 32ms 쉰다 — 총 시간은 같지만 프레임이 사이사이 그려져 멈춤이 안 보인다.
+   초상(renderPortrait2·LiveHero)은 줄을 안 선다 — 사용자가 지금 보는 사람이라 바로 가공한다(캐시가 있으면 여기서도 즉시). */
+let _prepChain=Promise.resolve();
+function pPrepQueued(im,key){
+  if(im&&im.src&&_prepCache.has((im.src||'')+'|'+key))return Promise.resolve(pPrepMap(im,key));
+  const job=_prepChain.then(()=>new Promise(r=>setTimeout(r,32))).then(()=>pPrepMap(im,key));
+  _prepChain=job.catch(()=>{});return job;}
 function pPrepMap(im,key){
   const ck=(im&&im.src||'')+'|'+key;
   if(im&&im.src&&_prepCache.has(ck))return _prepCache.get(ck);
@@ -8269,9 +8277,17 @@ function pPrepMapRaw(im,key){
       if(!n)continue;sr/=n;sg/=n;sb/=n;
       for(let xx=0;xx<W;xx++){const i=(y*W+xx)*4;if(white(i)){d[i]=sr;d[i+1]=sg;d[i+2]=sb;}}}
     x.putImageData(img,0,0);}
+  return Object.assign({map:c},pDerivedMaps(c,key));}
+/* [2026-09-20 폰 속도] 파생 지도 다섯(금속·바다·용암·요철·높이)은 **절반 크기(512×256)**로 만든다.
+   은하는 어차피 절반으로 줄여 썼고(galaxyMapTex의 half), 초상은 512px 렌더라 그 이상은 눈에 안 띈다.
+   픽셀 반복이 4분의 1 — 실측(데스크톱, 1024×512 지도) 108ms → 아래 보고서의 값. 번짐 반경은 절반으로 맞춰 모양을 유지한다. */
+function pDerivedMaps(src,key){
+  const W=src.width>>1,H=src.height>>1;
+  const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(src,0,0,W,H);
+  const d=x.getImageData(0,0,W,H).data;
   const mk=(f)=>{const m=document.createElement('canvas');m.width=W;m.height=H;const mx=m.getContext('2d'),md=mx.createImageData(W,H);
     let any=0;for(let i=0;i<d.length;i+=4){const v=f(d[i],d[i+1],d[i+2]);md.data[i]=md.data[i+1]=md.data[i+2]=v;md.data[i+3]=255;if(v>128)any++;}
-    mx.putImageData(md,0,0);const b=document.createElement('canvas');b.width=W;b.height=H;const bx=b.getContext('2d');bx.filter='blur(1.5px)';bx.drawImage(m,0,0);
+    mx.putImageData(md,0,0);const b=document.createElement('canvas');b.width=W;b.height=H;const bx=b.getContext('2d');bx.filter='blur(1px)';bx.drawImage(m,0,0);
     return any/(W*H)>.002?b:null;};
   /* 금: U5 facing.py classify(geum=True)와 같은 문턱 — 채도 <.3 · 밝기 >=55 · (R-B) <50, 바다(파랑)는 뺀다 */
   const metal=key.split('-').indexOf('geum')>=0?mk((r,g,b)=>{const mx=Math.max(r,g,b),mn=Math.min(r,g,b);return((mx-mn)/(mx+1)<.3&&mx>=55&&(r-b)<50&&!(b>r+30))?255:0;}):null;
@@ -8281,13 +8297,13 @@ function pPrepMapRaw(im,key){
      색이 용암과 겹쳐(사막 중앙값 230/145/60 · 용암 245/124/36) 사막 지도에서 15%가 용암으로 빛났다(갈무리로 확인).
      용암은 검은 화산 지각에 둘러싸여 있다는 점을 쓴다 — 18px 흐림(박스 반경 32 상당)의 밝기가 120 미만인 곳만.
      실측(map5 50장): 불 없는 지도의 오판 최대 0.91% · 평균 0.21%, 불 지도 용암 평균 1.45% 유지. */
-  const ctxL=document.createElement('canvas');ctxL.width=W;ctxL.height=H;const cL=ctxL.getContext('2d');cL.filter='grayscale(1) blur(18px)';cL.drawImage(c,0,0);
+  const ctxL=document.createElement('canvas');ctxL.width=W;ctxL.height=H;const cL=ctxL.getContext('2d');cL.filter='grayscale(1) blur(9px)';cL.drawImage(c,0,0); /* 절반 크기라 9px = 원본 18px */
   const dL=cL.getImageData(0,0,W,H).data;
   const lv=document.createElement('canvas');lv.width=W;lv.height=H;const lx=lv.getContext('2d'),li=lx.createImageData(W,H);let lavaAny=0;
   for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2];if(r>200&&b<90&&r-b>150&&g>60&&(r+g)>330&&dL[i]<120){li.data[i]=r;li.data[i+1]=g;li.data[i+2]=b;lavaAny++;}li.data[i+3]=255;}
   lx.putImageData(li,0,0);let lava=null;
   if(lavaAny/(W*H)>.001){lava=document.createElement('canvas');lava.width=W;lava.height=H;const lbx=lava.getContext('2d');
-    lbx.filter='blur(2px)';lbx.drawImage(lv,0,0);lbx.filter='none';lbx.globalCompositeOperation='lighter';lbx.drawImage(lv,0,0);}
+    lbx.filter='blur(1px)';lbx.drawImage(lv,0,0);lbx.filter='none';lbx.globalCompositeOperation='lighter';lbx.drawImage(lv,0,0);}
   /* 노멀맵 — 밝기 = 높이(바다는 0.3배로 낮춘다), 좌우는 이어 붙여 이음새가 안 생기게 */
   const hgt=new Float32Array(W*H);
   for(let j=0;j<W*H;j++){const r=d[j*4],g=d[j*4+1],b=d[j*4+2];let v=(.3*r+.59*g+.11*b)/255;if(b>r+30&&b>=g-10)v*=.3;hgt[j]=v;}
@@ -8304,8 +8320,8 @@ function pPrepMapRaw(im,key){
       let v=(b>r+30&&b>=g-10)?0:Math.min(1,.25+.9*((.3*r+.59*g+.11*b)/255));v*=pole;
       hd.data[i]=hd.data[i+1]=hd.data[i+2]=Math.round(v*255);hd.data[i+3]=255;}}
   hx.putImageData(hd,0,0);const height=document.createElement('canvas');height.width=W;height.height=H;
-  {const bx=height.getContext('2d');bx.filter='blur(3px)';bx.drawImage(hc,0,0);}
-  return {map:c,metal:metal,water:water,lava:lava,normal:nc,height:height};}
+  {const bx=height.getContext('2d');bx.filter='blur(1.5px)';bx.drawImage(hc,0,0);}
+  return {metal:metal,water:water,lava:lava,normal:nc,height:height};}
 /* ═══ [2026-09-19] 초상 설명 한 줄 — "나는 수(壬)인데 왜 행성은 토·화·금인가" ═══
    계기(사용자 지적): 일간이 수인데 여덟 글자에서 수가 1글자뿐이면 지도에 수가 안 들어가 주황·회색 행성이 나온다 —
    해설 첫머리("큰물·바다")와 초상이 서로 딴말을 하는 것처럼 보였다.
@@ -8387,8 +8403,8 @@ function queuePortrait2(info){
 const _gMapTex=new Map();
 let _gDispGeo=null;function galaxyDispGeo(){return _gDispGeo||(_gDispGeo=new THREE.SphereGeometry(1,128,96));} /* 11명×(본체·용암·바다) ≈ 40만 정점 — 160×120이면 63만이라 폰 부담 */
 function galaxyMapTex(info){
-  if(!_gMapTex.has(info.key))_gMapTex.set(info.key,pLoadImg(info.src).then(im=>{
-    const P=pPrepMap(im,info.prep),W=V2_TUNABLES.GALAXY_MAP_PX;
+  if(!_gMapTex.has(info.key))_gMapTex.set(info.key,pLoadImg(info.src).then(im=>pPrepQueued(im,info.prep)).then(P=>{   /* [2026-09-20 폰 속도] 줄 서서 가공 */
+    const W=V2_TUNABLES.GALAXY_MAP_PX;
     const shrink=cv=>{const c=document.createElement('canvas');c.width=W;c.height=W/2;const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(cv,0,0,W,W/2);return c;};
     const half=cv=>{const c=document.createElement('canvas');c.width=W/2;c.height=W/4;const x=c.getContext('2d');x.drawImage(cv,0,0,W/2,W/4);return c;};
     const map=new THREE.CanvasTexture(shrink(P.map));map.anisotropy=4;
@@ -8399,11 +8415,24 @@ function galaxyMapTex(info){
     .catch(e=>{console.warn('[은하 행성 지도] 받지 못했다',info.key,e);_gMapTex.delete(info.key);return null;}));
   return _gMapTex.get(info.key);}
 /** mesh = 은하에 떠 있는 행성(본체·인스턴스·클론), ref = 그 사람, holder = glow/innerTree를 들고 있는 객체(없으면 mesh 자식에서 찾는다) */
+/* [2026-09-20 폰 속도] 지도가 올 행성(생년월일 있음)은 일간 표면을 **만들지 않는다.** 부팅 실측(10명): stemSurface 219ms · 속 물체(makeShapes) 77ms ·
+   발광 지도 87ms — 전부 지도가 오면 applyGalaxyMap이 떼어 버리던 것이다. 지도가 올 때까지는 오행 색 민무늬로 두고(부팅 직후 잠깐, 행성은 수 px),
+   지도를 못 받으면(오프라인 등) 그때 stemLook으로 만든다. 생년월일 없는 사람은 지금처럼 바로 일간 표면. */
+function stemLook(mesh,stemIdx,isMe,holder){
+  const info=EL_INFO[STEM_EL[stemIdx]];
+  mesh.children.filter(c=>c.type==='Group').forEach(c=>mesh.remove(c));
+  mesh.material.setValues(Object.assign({},stemSurface(stemIdx),{emissive:stemEmissiveColor(stemIdx,info),emissiveIntensity:stemEmissive(stemIdx),transparent:true}));mesh.material.needsUpdate=true;
+  if(!isMe){applyShell(mesh,stemIdx);const sh=makeShapes(stemIdx);if(sh){mesh.add(sh);if(holder&&'innerTree'in holder)holder.innerTree=sh;}}}
+function stemMatProps(stemIdx,mapped){ /* 지도가 올 행성이면 민무늬 자리표시, 아니면 일간 표면 */
+  const info=EL_INFO[STEM_EL[stemIdx]];
+  return Object.assign({},mapped?{color:new THREE.Color(info.css),roughness:.8,metalness:0}:stemSurface(stemIdx),
+    {emissive:stemEmissiveColor(stemIdx,info),emissiveIntensity:stemEmissive(stemIdx),transparent:true});}
 function applyGalaxyMap(mesh,ref,holder){
   const info=planetMapInfo(ref);if(!info)return;
   const isMe=!!ref.isMe,id=info.id;mesh.userData.gmapId=id;
   galaxyMapTex(info).then(T=>{
-    if(!T||mesh.userData.gmapId!==id)return;
+    if(mesh.userData.gmapId!==id)return;
+    if(!T){stemLook(mesh,ref.stemIdx,isMe,holder);return;}   /* [2026-09-20] 지도를 못 받으면 그제야 일간 표면 */
     /* 일간 전용 장식 떼기 — 속 물체(Group)와 丙 코로나(나는 항성 글로우라 남긴다) */
     mesh.children.filter(c=>c.type==='Group').forEach(c=>mesh.remove(c));
     if(holder&&'innerTree'in holder)holder.innerTree=null;
@@ -8432,12 +8461,14 @@ function applyGalaxyMap(mesh,ref,holder){
     if(T.water){const o=new THREE.Mesh(mesh.geometry,new THREE.MeshStandardMaterial({map:T.map,metalness:.1,roughness:.08,envMap:pSkyEnv(),envMapIntensity:V2_TUNABLES.PORTRAIT_REFLECT,
       alphaMap:T.water,transparent:true,alphaTest:.5,depthWrite:false,color:new THREE.Color(.85,.95,1.08)}));o.scale.setScalar(1.004);follow(o);} /* 해수면 — 변위 없음 */
     });}
-function portraitImg(n,cls){
+function portraitImg(n,cls,lazy){
   const info=planetMapInfo(n);
   if(info){
     const done=_p2Cache.get(info.id);
     if(done)return `<img class="${cls}" src="${done}" alt="" draggable="false">`;
-    queuePortrait2(info);
+    /* [2026-09-20 폰 속도] lazy = 인물 패널 머리 초상. 살아 있는 초상(LiveHero)이 첫 프레임에 덮어 버리므로 정지 초상(실측 105ms)을
+       미리 굽지 않는다 — LiveHero가 못 만들면 그쪽에서 queuePortrait2를 불러 채운다. 목록·홈의 작은 초상은 지금처럼 바로 굽는다 */
+    if(!lazy)queuePortrait2(info);
     return `<img class="${cls}" data-p2="${info.id}" src="${planetPortrait(n)||P2_BLANK}" alt="" draggable="false">`;}
   const u=planetPortrait(n);
   return u?`<img class="${cls}" src="${u}" alt="" draggable="false">`
@@ -8670,6 +8701,9 @@ async function build(n,force){
   return {S,cam,mats,bolts,upd,fx};}
 function stop(){if(cur){cancelAnimationFrame(cur.raf);if(cur.cv&&cur.cv.parentNode)cur.cv.parentNode.removeChild(cur.cv);
   if(cur.img){cur.img.style.visibility='';if(cur.shift)cur.img.style.marginLeft='';}cur.scene&&cur.scene.S.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});cur=null;}}
+/* [2026-09-20 폰 속도] 살아 있는 초상을 못 만드는 모든 길에서 정지 초상을 대신 굽는다(portraitImg lazy 주석).
+   WebGL 문맥을 더 못 만드는 폰(iOS는 문맥 수 제한)에서 renderer 생성이 던지던 것도 여기서 받는다 */
+function fallback(n){const info=planetMapInfo(n);if(info&&!_p2Cache.has(info.id))queuePortrait2(info);}
 async function start(n,img,force){
   stop();if(!img||!planetMapInfo(n))return;
   const token={};cur=token;
@@ -8677,9 +8711,11 @@ async function start(n,img,force){
   const cv=document.createElement('canvas');const dpr=Math.min(2,window.devicePixelRatio||1);
   cv.width=cv.height=Math.round(size*dpr);cv.className='phero-live';
   const par=img.parentNode;par.style.position='relative';
-  if(!R){R=new THREE.WebGLRenderer({alpha:true,antialias:true,premultipliedAlpha:true});R.outputEncoding=THREE.sRGBEncoding;R.setClearColor(0x000000,0);}
-  let sc;try{sc=await build(n,force);}catch(e){console.warn('[살아 있는 초상] 만들지 못했다',e);return;}
-  if(cur!==token||!sc||!img.isConnected)return;
+  if(!R){try{R=new THREE.WebGLRenderer({alpha:true,antialias:true,premultipliedAlpha:true});R.outputEncoding=THREE.sRGBEncoding;R.setClearColor(0x000000,0);}
+    catch(e){R=null;console.warn('[살아 있는 초상] 렌더러를 못 만들었다 — 정지 초상으로',e);fallback(n);return;}}
+  let sc;try{sc=await build(n,force);}catch(e){console.warn('[살아 있는 초상] 만들지 못했다',e);fallback(n);return;}
+  if(cur!==token)return;
+  if(!sc||!img.isConnected){fallback(n);return;}
   /* 고리·무지개·별똥별·오로라는 초상 밖으로 나온다 — 패널 왼쪽 끝에 잘리지 않게 그만큼만 초상을 오른쪽으로 민다(실측: 고리 왼쪽 33px 잘림) */
   const wide=sc.fx.some(f=>f==='ring'||f==='rainbow'||f==='aurora'||f.startsWith('star'));
   const spill=(size-(box.width||132))/2;
@@ -8731,8 +8767,8 @@ function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updat
   const el=STEM_EL[stemIdx],info=EL_INFO[el];
   /* [A] map/bumpMap/roughness/metalness를 stemSurface가 한 번에 준다 — 오행별 재질 분리
      (금 매끄럽고 반사 강하게 / 토 거칠고 무광)와 음양 요철이 전부 그 안에 들어 있다. */
-  const mat=new THREE.MeshStandardMaterial(Object.assign({},stemSurface(stemIdx),
-    {emissive:stemEmissiveColor(stemIdx,info),emissiveIntensity:stemEmissive(stemIdx),transparent:true})); /* [F-5-3] 일간별 발광 */
+  const mapped=!!planetMapInfo({birth});   /* [2026-09-20 폰 속도] 지도가 올 행성이면 일간 표면을 건너뛴다 — stemMatProps 주석 */
+  const mat=new THREE.MeshStandardMaterial(stemMatProps(stemIdx,mapped)); /* [F-5-3] 일간별 발광 */
   const mesh=new THREE.Mesh(sphereGeo,mat);
   mesh.position.copy(pos||new THREE.Vector3((Math.random()-.5)*10,(Math.random()-.5)*6,(Math.random()-.5)*10));
   /* §2.9 항성:행성 4~8:1 — isMe는 simulate()의 맥동이 매 프레임 STAR_SCALE로 덮어쓰므로
@@ -8744,7 +8780,7 @@ function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updat
   /* [F-5-4] 항성은 글로우, 丙(태양)은 코로나. 그 외에는 없다 — §2.9 개정 "글로우는 항성과 丙에만" */
   const glow=isMe?makeGlow(info.css,V2_TUNABLES.STAR_GLOW_BASE):makeCorona(stemIdx,info);
   if(glow)mesh.add(glow);
-  if(!isMe){applyShell(mesh,stemIdx);const sh=makeShapes(stemIdx);if(sh)mesh.add(sh);} /* [F-5 甲·丁·戊] */
+  if(!isMe&&!mapped){applyShell(mesh,stemIdx);const sh=makeShapes(stemIdx);if(sh)mesh.add(sh);} /* [F-5 甲·丁·戊] · [2026-09-20] 지도가 오면 안 만든다 */
   const sub=`${STEMS[stemIdx]} · ${info.planet}`;
   /* §2.9 밀도 보정 (d), [버그 2 수정] 지시선 폐기: 라벨을 mesh의 자식으로 두지 않는다.
      자식이면 라벨도 PLANET_SCALE(0.25)까지 함께 줄어들어 글자를 읽을 수 없게 된다.
@@ -9102,12 +9138,12 @@ function syncInstanceRings(inst){
     return clone;});}
 function createGroupInstance(ref,group){
   const info=EL_INFO[ref.el];
-  const mat=new THREE.MeshStandardMaterial(Object.assign({},stemSurface(ref.stemIdx),
-    {emissive:stemEmissiveColor(ref.stemIdx,info),emissiveIntensity:stemEmissive(ref.stemIdx),transparent:true})); /* [F-5-3] */
+  const mapped=!!planetMapInfo(ref);   /* [2026-09-20 폰 속도] 원본과 같은 규칙 — 지도가 오면 일간 표면을 안 만든다 */
+  const mat=new THREE.MeshStandardMaterial(stemMatProps(ref.stemIdx,mapped)); /* [F-5-3] */
   const mesh=new THREE.Mesh(sphereGeo,mat);
   mesh.scale.setScalar(V2_TUNABLES.PLANET_SCALE);
   {const co=makeCorona(ref.stemIdx,info);if(co)mesh.add(co);} /* [F-5-4] */
-  {applyShell(mesh,ref.stemIdx);const sh=makeShapes(ref.stemIdx);if(sh)mesh.add(sh);} /* [F-5 甲·丁·戊] */
+  if(!mapped){applyShell(mesh,ref.stemIdx);const sh=makeShapes(ref.stemIdx);if(sh)mesh.add(sh);} /* [F-5 甲·丁·戊] · [2026-09-20] 지도가 오면 안 만든다 */
   applyGalaxyMap(mesh,ref,null); /* [2026-09-19] 원본과 같은 지도 */
   setTimeout(()=>applyGalaxyClouds(mesh,ref),0); /* 같은 사람 — 같은 장신구 */
   mesh.userData.node=ref;
@@ -9458,14 +9494,14 @@ function makeCometTail(css,length){
    ([F-1] 구 문구는 "항성·분신에만"이었다.) 고리(rings)는 다음 단계에서 채운다. */
 function createVirtualClone(ref){
   const info=EL_INFO[ref.el];
-  const mat=new THREE.MeshStandardMaterial(Object.assign({},stemSurface(ref.stemIdx),
-    {emissive:stemEmissiveColor(ref.stemIdx,info),emissiveIntensity:stemEmissive(ref.stemIdx),transparent:true})); /* [F-5-3] */
+  const mapped=!!planetMapInfo(ref);   /* [2026-09-20 폰 속도] 원본과 같은 규칙 — 지도가 오면 일간 표면을 안 만든다 */
+  const mat=new THREE.MeshStandardMaterial(stemMatProps(ref.stemIdx,mapped)); /* [F-5-3] */
   const mesh=new THREE.Mesh(sphereGeo,mat);
   mesh.scale.setScalar(V2_TUNABLES.PLANET_SCALE);
   mesh.userData.node=ref; /* [§5.5 4단계] 클릭 레이캐스트가 기존 행성과 동일하게 처리되도록 — 클론을
     클릭하면 원본(ref)의 showNode 패널이 뜬다(§7.4: 데이터는 하나, "이 사람" 자체를 보여주므로 자연스러움) */
   {const co=makeCorona(ref.stemIdx,info);if(co)mesh.add(co);} /* [F-5-4] 丙이면 클론도 탄다 */
-  {applyShell(mesh,ref.stemIdx);const sh=makeShapes(ref.stemIdx);if(sh)mesh.add(sh);} /* [F-5 甲·丁·戊] */
+  if(!mapped){applyShell(mesh,ref.stemIdx);const sh=makeShapes(ref.stemIdx);if(sh)mesh.add(sh);} /* [F-5 甲·丁·戊] · [2026-09-20] 지도가 오면 안 만든다 */
   applyGalaxyMap(mesh,ref,null); /* [2026-09-19] 원본과 같은 지도 */
   scene.add(mesh);
   const label=makeLabel(ref.name,ref.sub);scene.add(label);
@@ -13373,7 +13409,7 @@ function showNode(n,groupContext,targetMesh){
 
   /* [2026-09-17] 머리를 **초상 + 이름**으로 — 사용자: "행성을 눌러도 프로필 이미지처럼 넉넉하게".
      태그·제목·생년월일 줄은 그대로 오른쪽 칸으로 옮겼다(내용은 무변경). */
-  pbody.innerHTML=`${backHtml}<div class="phero" style="--pc:${EL_INFO[n.el].css}">${portraitImg(n,'phero-img')}
+  pbody.innerHTML=`${backHtml}<div class="phero" style="--pc:${EL_INFO[n.el].css}">${portraitImg(n,'phero-img',true)}
     <div class="phero-t"><div class="phero-tags">${roleTag}<span class="tag">${EL_INFO[n.el].name}</span></div>
     <h2>${r?r.title:`${bkEsc(n.name)} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
     ${birthLine}</div></div>${portraitNoteHtml(n,isMe)}${nowSec}${relSec}${selfSec}${basisSec}
