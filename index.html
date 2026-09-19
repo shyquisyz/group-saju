@@ -221,6 +221,12 @@
   .askdis{display:block;margin-top:6px;font-size:var(--fs-sm);color:var(--mut)}
   .lovepick{display:block;margin-top:8px;font-size:var(--fs-sm);color:var(--mut)}
   .askturn{display:block;margin-top:6px}
+  .nowbox p.nowtest{border-left:2px solid rgba(232,198,106,.4);padding-left:9px}
+  .testcount{font-weight:400;color:var(--mut);margin-left:6px}
+  .testlist{margin:6px 0 14px}
+  .testrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .testt{font-size:var(--fs-base);color:var(--ink);flex:1 1 auto}
+  .testr{flex-basis:100%;order:3;font-size:var(--fs-sm);color:var(--mut)}
   .lovepick .estnotebtn.on{color:var(--ink);border-color:var(--ink)}
   .basis{margin:22px 0 6px;border-top:1px solid var(--line);padding-top:8px}
   .basis .sjhelp-body{color:var(--mut)}
@@ -2194,6 +2200,58 @@ const STEMS=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
    LOVE_OK는 상수를 안 읽는다 — 함수는 호이스팅되지만 const는 아니라서 */
 const LOVE_VALS=['single','dating','married'], LOVE_KO={single:'싱글',dating:'연애 중',married:'결혼'};
 function LOVE_OK(v){return v==='single'||v==='dating'||v==='married';}
+/* ═══ 테스트 늘리기 · 할수록 개인화 [2026-09-19 U15] ═══ 사용자: "심리 테스트나 상황 테스트 같은 거 추가해서 할 때마다 개인화 강화".
+   짧은 테스트 셋(요즘 고민 2 · 힘들 때 5 · 사랑할 때 4) — 보기마다 값(주제·단계·갈래)이 붙고, 답은 node.tests[id].picks에 **값 그대로** 저장한다.
+   화면 문장은 저장값에서 그때그때 만든다(원고를 고쳐도 저장본은 안 바뀐다). 답은 사주 계산을 바꾸지 않는다 — 문장 고르기에만 쓴다(A8과 같은 원칙).
+   선언 구역에 둔다 — addNode가 부팅 중에 testsClean을 부른다(TDZ). testsClean은 함수라 호이스팅되지만 TEST_DEFS를 읽으므로 여기 있어야 한다. */
+const TEST_DEFS={
+  concern:{title:'요즘 고민',intro:'두 가지만 물을게요. 답에 따라 「요즘」과 「궁금한 것」이 그 고민 쪽으로 맞춰져요.',
+    qs:[{q:'요즘 가장 신경 쓰이는 건',opts:[['일','일'],['돈','돈'],['연애','연애'],['가족','가족'],['건강','건강'],['공부','공부']]},
+        {q:'그 일은 지금',opts:[['start','뭔가 새로 시작하려는 중'],['hold','한창 버티는 중'],['end','정리하거나 끝내려는 중']]}]},
+  stress:{title:'힘들 때 나는',intro:'다섯 장면에서 가장 가까운 걸 골라 주세요. 힘든 해에 맞는 팁이 달라져요.',
+    qs:[{q:'크게 혼난 날 퇴근길엔',opts:[['비겁','혼자 걷거나 운동을 해요'],['식상','친구한테 전화해서 다 쏟아내요'],['재성','맛있는 걸 사 먹거나 쇼핑을 해요']]},
+        {q:'일이 꼬이면 제일 먼저',opts:[['관성','할 일 목록부터 다시 정리해요'],['인성','일단 자고 내일 생각해요'],['비겁','직접 붙잡고 끝까지 풀어요']]},
+        {q:'속상한 일이 있으면',opts:[['식상','글이나 말로 풀어내요'],['인성','믿는 사람한테 조언을 구해요'],['관성','아무 일 없던 듯 일에 몰두해요']]},
+        {q:'지칠 때 가장 끌리는 건',opts:[['비겁','사람 없는 곳에서 혼자'],['식상','사람들이랑 떠들썩하게'],['인성','푹 쉬면서 챙김받기']]},
+        {q:'스트레스를 풀고 나면 남는 건',opts:[['재성','영수증'],['관성','정리된 방'],['식상','새로 만든 무언가']]}]},
+  love:{title:'사랑할 때 나는',intro:'네 장면만 골라 주세요. 「연애·결혼」 답에 연애하는 방식이 더해져요.',
+    qs:[{q:'마음에 드는 사람이 생기면',opts:[['비겁','먼저 다가가요'],['식상','티 나게 표현해요'],['재성','챙겨 주면서 다가가요'],['관성','신중하게 지켜봐요']]},
+        {q:'연인과 다투면',opts:[['식상','바로 말로 풀어요'],['인성','시간을 두고 식혀요'],['관성','규칙을 정하자고 해요']]},
+        {q:'연애할 때 가장 중요한 건',opts:[['비겁','서로의 공간'],['식상','재미와 설렘'],['관성','믿음과 약속'],['인성','편안함']]},
+        {q:'기념일엔',opts:[['식상','직접 만든 선물'],['재성','실용적인 선물'],['인성','조용히 둘이서']]}]}};
+const TEST_IDS=['concern','stress','love'];
+/** 저장본·백업에서 온 tests를 다듬는다 — 모르는 테스트·모르는 값은 버리고, 남는 게 없으면 null */
+function testsClean(t){
+  if(!t||typeof t!=='object')return null;
+  const out={};
+  ['concern','stress','love'].forEach(id=>{
+    const v=t[id]; if(!v||!Array.isArray(v.picks))return;
+    const def=TEST_DEFS[id]; if(!def||v.picks.length>def.qs.length)return;
+    const ok=v.picks.every((pk,i)=>pk===null||def.qs[i].opts.some(o=>o[0]===pk));
+    if(ok)out[id]={picks:v.picks.slice(),at:typeof v.at==='string'?v.at:null};});
+  return Object.keys(out).length?out:null;}
+/** 갈래 답에서 1순위 하나(동점이면 앞선 답) — 전부 "모르겠어요"면 null */
+function testTop(picks){
+  const c={};let best=null;
+  (picks||[]).forEach(k=>{if(!k)return;c[k]=(c[k]||0)+1;if(!best||c[k]>c[best])best=k;});
+  return best;}
+const STRESS_TIP={
+  비겁:'힘들 땐 혼자 끙끙 풀어내는 쪽이에요. 버티는 힘은 좋은데, 다 풀고 나서야 주변이 알게 돼요 — 한 명한테만은 미리 말해 두세요.',
+  식상:'힘들 땐 말로 쏟아내야 풀리는 쪽이에요. 들어 줄 사람 한 명이 약이에요 — 다만 같은 얘기를 여러 번 하면 상처가 덧나요.',
+  재성:'힘들 땐 사거나 먹으면서 푸는 쪽이에요. 기분은 빨리 돌아오는데 카드 명세서가 늦게 와요 — 푸는 예산을 미리 정해 두세요.',
+  관성:'힘들 땐 정리하고 할 일을 붙잡으면서 버티는 쪽이에요. 무너지지 않는 대신 쉬는 법을 잊기 쉬워요 — 쉬는 것도 일정에 넣으세요.',
+  인성:'힘들 땐 자고 기대면서 회복하는 쪽이에요. 충전은 확실한데 그동안 일이 쌓여요 — 쉬는 기간을 정해 두면 죄책감이 덜해요.'};
+const LOVE_TIP={
+  비겁:'사랑할 때도 내 공간이 필요한 쪽이에요 — "혼자 있는 시간"을 미리 말해 두면 오해가 줄어요.',
+  식상:'사랑을 말과 표현으로 하는 쪽이에요 — 표현이 적은 상대라면 말보다 행동을 봐 주세요.',
+  재성:'사랑을 챙김으로 보여 주는 쪽이에요 — 챙긴 만큼 안 돌아오면 서운함이 쌓이니, 받고 싶은 걸 말로 하세요.',
+  관성:'사랑에서 믿음과 약속이 제일인 쪽이에요 — 작은 약속 어김을 크게 느끼기 쉬우니, 한 번은 넘겨 주세요.',
+  인성:'사랑에서 편안함을 찾는 쪽이에요 — 기대는 만큼 상대 얘기도 들어 주면 오래가요.'};
+/* 고민 주제 → 그 주제를 뜻하는 갈래(연애는 성별에 따라 짝 기운). 건강은 갈래가 아니라 「건강은?」 답으로 잇는다 */
+const CONCERN_GRP={일:['관성','식상'],돈:['재성'],가족:['인성','비겁'],공부:['인성']};
+const CONCERN_Q={일:null,돈:'돈은 언제 들어와요?',연애:'연애·결혼',가족:null,건강:'건강은?',공부:'공부·재능은?'};
+const PHASE_MATCH={start:'시작하려던 거라면 올해가 때예요.',hold:'버티고 있다면 올해 안에 풀릴 틈이 보여요.',end:'정리하려던 거라면 올해 매듭짓기 좋아요.'};
+const PHASE_MISS={start:'시작은 서두르지 말고 준비하는 해로 쓰세요.',hold:'지금은 버티는 게 맞는 해예요 — 판을 키우진 마세요.',end:'정리는 해도 되지만 새로 벌이진 마세요.'};
 const STEM_EL=['mok','mok','hwa','hwa','to','to','geum','geum','su','su'];
 /* ═══ [F-5-2, 2026-08-27] 오행 색 재배치 — A의 "색상 고정" 결정을 개정한다 ═══
    [A에서 무엇을 전제했나] "오행 색상(hue)은 절대 고정하고 음양은 명도로만 가른다. 채도를
@@ -3385,6 +3443,23 @@ function nowStoryHtml(n,isMe){
   const ORD=['day','year','month','hour'];
   y.hits.slice().sort((a,b)=>ORD.indexOf(a.pos)-ORD.indexOf(b.pos)).slice(0,2).forEach(h=>{t+=' '+NOW_HIT[h.pos][h.kind];});
   ps.push(`<p>${t}</p>`);
+  /* [U15] 요즘 고민(테스트) — 고민 주제가 올해 기운과 맞는지. 성향 테스트의 "마음 쓰이는 일"(self.situation)도 주제로 받는다 */
+  { const T=n.tests||{}, cp=T.concern?T.concern.picks:null;
+    const topic=(cp&&cp[0])||(n.self&&n.self.situation)||null, phase=cp?cp[1]:null;
+    if(topic){
+      const sx=n.birth.sex, grps=topic==='연애'?(sx==='남'?['재성']:sx==='여'?['관성']:null):CONCERN_GRP[topic];
+      let tc='';
+      if(grps){
+        const hit=y.groups.some(g=>grps.indexOf(g)>=0);
+        tc=hit?`고민이 ${topic}이라고 했죠 — 마침 올해가 ${topic} 쪽 기운이 들어오는 해예요.`+(phase?' '+PHASE_MATCH[phase]:'')
+             :`고민이 ${topic}이라고 했죠 — 올해 기운은 ${topic}보다 '${NOW_WORD[g1]}' 쪽이라, ${topic}은 큰 승부보다 지키는 쪽이 맞아요.`+(phase?' '+PHASE_MISS[phase]:'')
+               +(nx=>nx?` 대신 <b>${nx.Y}년</b>부터 ${topic} 쪽 기운이 들어와요.`:'')(askYears(n,t6=>t6.groups.some(g=>grps.indexOf(g)>=0)).find(o=>o.Y>L.luckYear));   /* 「궁금한 것」과 어긋나지 않게 다음 해를 잇는다 */}
+      else if(topic==='건강')tc='고민이 건강이라고 했죠 — 아래 「건강은?」에 몸의 약한 고리를 짚어 뒀어요.';
+      if(tc)ps.push(`<p class="nowtest">${tc}</p>`);}
+    /* [U15] 힘들 때 나는 — 올해가 버거운 해면 앞에 "올해처럼 버거운 해엔 특히" */
+    const st=T.stress?testTop(T.stress.picks):null;
+    if(st){const heavy=y.helps&&y.helps.every(h=>!h);
+      ps.push(`<p class="nowtest">${heavy?'올해처럼 버거운 해엔 특히 — ':''}${STRESS_TIP[st]}</p>`);}}
   /* 이번 달 — 달의 주도권은 지지(계절)라 지지 갈래로 고른다 */
   let tm=NOW_MONTH[m.groups[1]];
   const mh=m.hits.find(h=>h.pos==='day'); if(mh)tm+=' '+NOW_MONTH_HIT[mh.kind];
@@ -3504,6 +3579,8 @@ function askHtml(n,isMe){
       /* 상태 묻기(모를 때) / 바꾸기(알 때) — 누르면 그 자리에서 저장하고 다시 그린다 */
       t2+=`<span class="lovepick">${st?`지금 상태: <b>${LOVE_KO[st]}</b> · 바꾸기 `:'지금 어떤 상태예요? 고르면 상황에 맞춰 드려요 '}`
         +LOVE_VALS.map(v=>`<button type="button" class="estnotebtn${v===st?' on':''}" data-love="${v}" data-n="${n.id}">${LOVE_KO[v]}</button>`).join(' ')+`</span>`;
+      { const lt=n.tests&&n.tests.love?testTop(n.tests.love.picks):null;   /* [U15] 사랑할 때 나는 */
+        if(lt)t2+=` <span class="askturn">${LOVE_TIP[lt]}</span>`; }
       qs.push([st?`연애·결혼은? (${LOVE_KO[st]})`:'연애·결혼은?',t2]);}
     /* 자식 */
     if(sex){
@@ -3527,7 +3604,12 @@ function askHtml(n,isMe){
     if(yt&&yt.hits.some(h=>h.pos==='day'&&h.kind==='chung'))t+=' 올해는 몸의 리듬이 흔들리기 쉬운 해라, 검진은 미루지 마세요.';
     t+=' <span class="askdis">재미로 보는 풀이예요 — 몸이 불편하면 병원이 먼저예요.</span>';
     qs.push(['건강은?',t]); }
-  return `<div class="askbox">`+(sex?'':`<p class="nowhint">성별이 비어 있어요 — 넣으면 연애·자식 풀이와 10년 흐름(대운)까지 보여 드려요. ${sexBtn}</p>`)+qs.map(([q,a],i)=>`<div class="rdblk rdfold">${sjHelp('ask:'+i+':'+q,q,`<p>${a}</p>`,null,false)}</div>`).join('')+`</div>`;}
+  /* [U15] 요즘 고민 주제의 질문을 맨 위로 올리고 펼쳐 둔다 */
+  const T=n.tests||{}, topic=(T.concern&&T.concern.picks[0])||(n.self&&n.self.situation)||null, cq=topic?CONCERN_Q[topic]:null;
+  const fi=cq?qs.findIndex(x=>x[0].indexOf(cq)===0):-1;
+  if(fi>0)qs.unshift(qs.splice(fi,1)[0]);
+  return `<div class="askbox">`+(sex?'':`<p class="nowhint">성별이 비어 있어요 — 넣으면 연애·자식 풀이와 10년 흐름(대운)까지 보여 드려요. ${sexBtn}</p>`)
+    +qs.map(([q,a],i)=>`<div class="rdblk rdfold">${sjHelp('ask:'+i+':'+q,q,`<p>${a}</p>`,null,fi>=0&&i===0?true:false)}</div>`).join('')+`</div>`;}
 /** 근거 층에 둘 계산 사실 — 기둥과 십신 이름 */
 function nowFactsHtml(n){
   const L=luckNow(); if(!L||!n.birth)return '';
@@ -8073,7 +8155,7 @@ let _boltG=null;function BOLT_G(){if(_boltG)return _boltG;const c=document.creat
   [[48,70],[80,112],[44,172],[72,204],[40,250]].forEach(([a,b])=>x.lineTo(a,b));x.stroke();x.lineWidth=2.5;x.stroke();return _boltG=new THREE.CanvasTexture(c);}
 /** 모든 사람의 은하 구름을 다시 붙인다 — 나(meNode)가 바뀌거나 생일이 바뀌면 관계가 달라진다 */
 function refreshGalaxyClouds(){nodes.forEach(n=>{if(!n.isMe)applyGalaxyClouds(n.mesh,n);});groupInstances.forEach(i=>applyGalaxyClouds(i.mesh,i.ref));}
-function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt,self,love}){
+function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt,self,love,tests}){
   const el=STEM_EL[stemIdx],info=EL_INFO[el];
   /* [A] map/bumpMap/roughness/metalness를 stemSurface가 한 번에 준다 — 오행별 재질 분리
      (금 매끄럽고 반사 강하게 / 토 거칠고 무광)와 음양 요철이 전부 그 안에 들어 있다. */
@@ -8108,6 +8190,7 @@ function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updat
        예외로 self:p.self를 명시해 넘긴다. */
     self:self===undefined?null:self,
     love:LOVE_OK(love)?love:null,   /* [U12] 관계 상태 — self와 같은 이유로 여기서만 기본값 */
+    tests:testsClean(tests),        /* [U15] 테스트 답 — 모양이 틀리면 null */
     createdAt:createdAt===undefined?null:createdAt,
     updatedAt:updatedAt===undefined?null:updatedAt};
   mesh.userData.node=node;nodes.push(node);
@@ -8983,7 +9066,8 @@ function applySeed(seed){
          addNode 자체 기본값(null)은 새로 만드는 경로용이고, 여기는 이미 있던 값을 이어받는
          자리라 다르다. p.self가 아예 없는 시드(DEMO_SEED·my-data.js)는 null로 접는다. */
       self:p.self===undefined?null:p.self,
-      love:LOVE_OK(p.love)?p.love:null});   /* [U12] */
+      love:LOVE_OK(p.love)?p.love:null,   /* [U12] */
+      tests:testsClean(p.tests)});         /* [U15] */
     byKey.set(p.key,n);});
 
   (seed.links||[]).forEach(([a,b])=>{
@@ -9693,7 +9777,7 @@ const JUSTLOADED_KEY='groupsaju:justloaded';   /* 새로고침 너머로 넘기�
 const BACKUP_APP='group-saju';
 const BACKUP_MAX_CHARS=2*1024*1024; /* 실측 저장 한계 5,177,344바이트 대비 여유(30인=7,931바이트) */
 const BACKUP_MAX_PEOPLE=1000;       /* 폭주 방지. 30인 7.9KB이므로 1000인도 260KB 안팎이다 */
-const SAVE_VER=6;
+const SAVE_VER=7;
 /* ═════ 마이그레이션 [틀 정비 2026-08-28] ═════
    키 'N'이 **vN → v(N+1)** 변환이다. 구조를 바꾸는 사람이 함수를 더하고 SAVE_VER을 올린다.
    규칙 전문은 CLAUDE.md "저장 형식을 바꿀 때는 변환을 함께 넣는다".
@@ -9711,6 +9795,11 @@ const SAVE_VER=6;
    [입력을 고치지 않는다] 각 함수는 **새 객체를 돌려준다.** 체인 중간에서 실패했을 때
    원본이 성해야 loadSave가 'migfail'로 원본을 보존할 수 있다. */
 const MIGRATIONS={
+  /* [v6 → v7, 2026-09-19 U15] **테스트 답(tests)**을 사람 레벨에 신설한다 — {concern|stress|love: {picks:[…], at}} | null.
+     사용자: "심리·상황 테스트 같은 거 추가해서 할 때마다 개인화 강화". 「요즘」·「궁금한 것」이 답으로 맞춰진다.
+     null이 정상값이다(아직 안 한 사람). 기존 self(성향 10문항)는 그대로 둔다 — 같은 자리(사람 레벨). */
+  '6':d=>Object.assign({},d,{v:7,
+    people:(d.people||[]).map(p=>Object.assign({tests:null},p))}),
   /* [v5 → v6, 2026-09-19 U12] **관계 상태(love)**를 사람 레벨에 신설한다 — 'single'|'dating'|'married'|null(모름).
      사용자: "싱글·연애·결혼 세 가지 상태를 확인하지 못했기 때문에 상황별로 안내해야 하지 않을까". 「궁금한 것」의 연애·결혼 답이
      상태에 따라 갈린다. null이 정상값이다(아직 안 물은 사람) — 패널이 그 자리에서 세 버튼으로 묻는다. self와 같은 자리(사람 레벨)다. */
@@ -9863,7 +9952,7 @@ function clearDemo(){
    0,1,2…로 다시 매기므로 배치가 그대로 재현된다. */
 function serializeState(){
   return {v:SAVE_VER,savedAt:nowISO(),
-    people:nodes.map(x=>({key:x.id,name:x.name,isMe:!!x.isMe,birth:x.birth,self:x.self,love:x.love||null,
+    people:nodes.map(x=>({key:x.id,name:x.name,isMe:!!x.isMe,birth:x.birth,self:x.self,love:x.love||null,tests:x.tests||null,
       createdAt:x.createdAt||null,updatedAt:x.updatedAt||null})),
     /* [2026-08-28] 성계마다 선을 긋게 되면서 같은 쌍이 여러 번 나온다. 저장본에는 한 번만
        담는다 — 어차피 불러온 뒤 그룹에서 다시 만든다(rebuildEdges). */
@@ -10045,7 +10134,7 @@ function parseBackup(text){
         counts:Object.assign({},...GROUP5.map(g=>({[g]:p.self.counts[g]}))),
         situation:p.self.situation,at:p.self.at}
       :null;
-    people.push({key:p.key,name,isMe:!!p.isMe,self,love:LOVE_OK(p.love)?p.love:null,   /* [U12] 모양이 틀리면 파일을 거부하지 않고 null */
+    people.push({key:p.key,name,isMe:!!p.isMe,self,love:LOVE_OK(p.love)?p.love:null,tests:testsClean(p.tests),   /* [U12] 모양이 틀리면 파일을 거부하지 않고 null */
       createdAt:typeof p.createdAt==='string'?p.createdAt:null,
       updatedAt:typeof p.updatedAt==='string'?p.updatedAt:null,
       birth:{y:b.y,m:b.m,d:b.d,
@@ -12137,6 +12226,17 @@ async function sajuSelfTest(){
       rBad.ok&&rBad.data.people[0].self===null,
       rBad.ok?('self='+JSON.stringify(rBad.data.people[0].self)):('실패: '+rBad.why));
   }
+  /* [2026-09-19 U15] 테스트 개인화 — v6→v7 tests:null · 모르는 값은 버림 · 고민 주제가 「궁금한 것」 맨 위로 · 「요즘」에 고민 줄 */
+  { const m=MIGRATIONS['6']({v:6,people:[{key:'t1',name:'갑',isMe:true,self:null,love:null,birth:{y:2000,m:1,d:1,sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:'남',est:null,dayRule:null}}]});
+    const cl=testsClean({concern:{picks:['돈','start'],at:'x'},stress:{picks:['엉뚱']},zzz:{picks:[]}});
+    const x={id:'tt',name:'가상',isMe:false,birth:{y:1985,m:3,d:3,hour:null,sex:'여',est:null,dayRule:null},love:null,self:null,
+      tests:{concern:{picks:['건강','hold'],at:'x'}}};
+    const d=document.createElement('div');d.innerHTML=askHtml(x,false);
+    const first=((d.querySelector('.sjhelp-b')||{}).textContent||'').replace(/[▸▾]/g,'').trim();
+    const nowOk=/고민이 건강/.test(nowStoryHtml(x,false));
+    T('testsPersonal: v7 tests:null · 모르는 값 버림 · 고민 주제 질문이 맨 위 · 「요즘」 고민 줄',
+      m.v===7&&m.people[0].tests===null&&cl&&cl.concern&&!cl.stress&&!cl.zzz&&first==='건강은?'&&nowOk,
+      'v'+m.v+' · clean '+JSON.stringify(cl&&Object.keys(cl))+' · 첫 질문 '+first+' · 요즘 '+nowOk); }
   /* [2026-09-19 U14] 추정 시각을 계산에 쓴다 — 시각 모름 + 추정이면 추정 칸 가운데(진태양시)로, 정확한 시각이 있으면 그게 이긴다.
      자시 두 칸: 자정 넘어서 = 그날 일간 기준 子(辛일 → 戊子) · 밤 11시대 = 조자시(다음 날 천간 → 庚子), 일주는 그대로 */
   { const base={y:1990,m:6,d:15,hour:null,lon:126.978};
@@ -12593,7 +12693,7 @@ function showNode(n,groupContext,targetMesh){
   /* 「나」 패널은 나를 "이 사람"이라 부르지 않는다 — 읽는 사람이 곧 나다(U10 진단 ③) */
   const storyRd2=isMe?storyRd.map(x=>Object.assign({},x,{t:String(x.t).replace(/이 사람/g,'당신')})):storyRd;
   const rdHtml2=storyRd2.length?yo(plain(readingHtml(storyRd2,selfFold))):'';   /* [U11] 친구 말투 · [U12] 쉬운 말 */
-  const main2=(r?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')+rdHtml2+selfSectionHtml(n);
+  const main2=(r?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')+rdHtml2+testsSectionHtml(n)+selfSectionHtml(n);   /* [U15] */
   const nowSec=n.birth?`<div class="psec">요즘</div>${nowStoryHtml(n,isMe)}<div class="psec">궁금한 것</div>${askHtml(n,isMe)}`:'';   /* [U12] 궁금한 것 */
   const basisBody=(isMe?'':egoRelLine(n))
     +(pbOpt.eight?`<div class="basisrow"><div class="basish">여덟 글자로 보면</div><p>${pbOpt.eight}</p></div>`:'')
@@ -12657,6 +12757,7 @@ function showNode(n,groupContext,targetMesh){
     const B=nodes.find(x=>x.id===el.dataset.b);
     if(B){showNode(B);focusNode(B);}});
   pbody.querySelectorAll('[data-edit]').forEach(eb=>eb.onclick=()=>openAddSheet(n)); /* [U11] 「성별 넣기」도 같은 시트 */
+  pbody.querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>testStart(n,b.dataset.test));   /* [U15] */
   /* [U12] 관계 상태 — 누르면 저장하고 그 답을 펼친 채로 다시 그린다 */
   pbody.querySelectorAll('[data-love]').forEach(b=>b.onclick=()=>{
     const v=b.dataset.love; n.love=(n.love===v)?null:v; n.updatedAt=nowISO();
@@ -13799,6 +13900,37 @@ function selfBlocksHtml(counts,situation,cmp){
     const sl=situLine(situation,cmp.sTops);
     if(sl)parts.push(`<p>${sl}</p>`);}
   return parts.join('');}
+/** [U15] 「나를 더 알려 주기」 — 테스트 넷(성향 + 새 셋)의 진행도와 손잡이. 한 것은 결과 한 줄 */
+function testsSectionHtml(n){
+  const T=n.tests||{}, done=TEST_IDS.filter(id=>T[id]).length+(n.self?1:0);
+  const who=n.isMe?'나를':'이 사람을';
+  const line=id=>{const v=T[id]; if(!v)return '';
+    if(id==='concern'){const d=TEST_DEFS.concern;const ph=d.qs[1].opts.find(o=>o[0]===v.picks[1]);return `${v.picks[0]||'딱히 없음'}${ph?' · '+ph[1]:''}`;}
+    const t=testTop(v.picks);return t?(id==='stress'?STRESS_TIP[t]:LOVE_TIP[t]).split(' —')[0].split('. ')[0]:'잘 모르겠어요';};
+  return `<div class="psec">${who} 더 알려 주기 <span class="testcount">${done}/4</span></div>`
+    +`<p class="tnote">알려 줄수록 「요즘」과 「궁금한 것」이 ${n.isMe?'나':'이 사람'}한테 맞춰져요. 답은 사주 계산을 바꾸지 않아요.</p>`
+    +`<div class="testlist">`+TEST_IDS.map(id=>`<div class="testrow"><div class="testt">${T[id]?'✓ ':''}${TEST_DEFS[id].title}</div>`
+      +(T[id]?`<div class="testr">${bkEsc(line(id))}</div>`:'')
+      +`<button type="button" class="estnotebtn" data-test="${id}" data-n="${n.id}">${T[id]?'다시 하기':'하기 →'}</button></div>`).join('')+`</div>`;}
+let testFlow=null;
+function testStart(n,id){
+  testFlow={node:n,id,i:0,picks:[]};
+  const h=document.getElementById('selfsheet-h'); if(h)h.textContent=(n.isMe?'':n.name+' — ')+TEST_DEFS[id].title;
+  closeSheets();
+  document.getElementById('selfsheet').classList.add('open');dim.classList.add('on');
+  renderTestStep();}
+function renderTestStep(){
+  const f=testFlow, body=document.getElementById('self-body'); if(!f||!body)return;
+  const def=TEST_DEFS[f.id];
+  if(f.i>=def.qs.length){
+    const n=f.node; n.tests=Object.assign({},n.tests||{},{[f.id]:{picks:f.picks,at:nowISO()}}); n.updatedAt=nowISO();
+    saveState(); closeSheets(); showNode(n); return;}
+  const q=def.qs[f.i], head=f.node.isMe?'나라면 — ':'이 사람이라면 — ';
+  body.innerHTML=(f.i===0?`<p class="tnote">${def.intro}</p>`:'')
+    +`<div class="estprog">${f.i+1} / ${def.qs.length}</div><div class="field"><label>${bkEsc(head+q.q)}</label>`
+    +q.opts.map(o=>`<button type="button" class="estopt" data-tp="${o[0]}">${bkEsc(o[1])}</button>`).join('')
+    +`<button type="button" class="estopt unsure" data-tp="">잘 모르겠어요</button></div>`;
+  body.querySelectorAll('[data-tp]').forEach(b=>b.onclick=()=>{f.picks.push(b.dataset.tp||null);f.i++;renderTestStep();});}
 /** 인물 패널 「스스로 본 모습」 덩이 — personReading 뒤, 기본 펼침(설계 §1-ⓑ "표시"). */
 function selfSectionHtml(n){
   if(!n.self)
