@@ -10733,24 +10733,44 @@ async function sajuSelfTest(){
      [값을 박지 않는다] "220에서 0개"처럼 절대 수를 박으면 사람이 적거나 성계가 촘촘한
      데이터에서 헛되이 깨진다. **단조성**(가까울수록 더 많이 켜진다)만 본다 —
      이게 LOD가 지켜야 하는 성질이고 데이터와 무관하다. */
-  const lblSave={r:cam.r,rt:cam.rTarget,ag:activeGroup};
+  const lblSave={r:cam.r,rt:cam.rTarget,ag:activeGroup,tg:cam.target.clone(),tgG:cam.targetGoal.clone()};
   selectGroup(null);
   /* [U6] 성계→은하 각도 복귀는 부드럽게 돌아서 3프레임으로는 안 끝난다 — 이 검사는 거리(LOD)를 보는 것이지 각도가
      아니므로 복귀 목표로 바로 맞춘다 */
   if(cam.angGoal){cam.theta=cam.angGoal.theta;cam.phi=cam.angGoal.phi;cam.angGoal=null;}
+  /* [★ 2026-09-19 시간·화면 의존 제거] 구 검사는 **원점**을 보고 camR 75로 다가가 "나 말고 하나라도 켜졌나"를 봤다.
+     그런데 이름표는 행성의 화면 지름(26px)으로 켜지므로 결과가 두 가지 우연에 달렸다 —
+     (1) 그 순간 원점 근처를 지나는 행성이 있는가(궤도 위상 t), (2) 캔버스 높이.
+     실측: 1600×900에서는 25초 간격 16위상 모두 통과, 1100×600에서는 16위상 중 14번 실패(camR 75에서 1/10).
+     사용자가 실제로 하는 일은 "행성 쪽으로 다가간다"이므로 그걸 재현한다 — **가장 큰 행성을 겨누고**,
+     그 행성이 켜짐 임계의 1.25배가 되는 거리(R_MIN~75로 제한)로 다가간 뒤 켜졌는지 본다.
+     같은 겨냥으로 220에서 센 수와 비교해 단조성도 본다. 임계값 자체는 건드리지 않는다.
+     [알려 둔다] 지름 = 크기×높이/(tan25°×거리)라 R_MIN(40)까지 다가가도 완전히 켜지지(26px) 않는 화면이 있다 —
+     현 데이터(planetScaleOf 0.90/0.72)로 가장 큰 행성은 캔버스 높이 약 540px, 가장 작은 행성은 약 675px 미만.
+     그 아래로는 반투명(페이드 18.7~26px)으로 켜지고, 가장 큰 행성조차 약 390px 미만이면 아예 안 켜진다 —
+     그때 이 검사가 깨지는 건 우연이 아니라 실제 결함 신호다(실측: 높이 480에서 지름 23.2px로 통과). */
+  const lblFocus=nodes.filter(n=>!n.isMe&&n.label&&n.mesh&&(n.stageVis===undefined?1:n.stageVis)>.5)
+    .sort((a,b)=>planetScaleOf(b)-planetScaleOf(a))[0]||null;
+  const lblH=canvas.clientHeight||innerHeight;
+  const lblOnD=lblFocus?planetScaleOf(lblFocus)*lblH/(Math.tan(camera.fov*Math.PI/360)*V2_TUNABLES.NODE_LABEL_MIN_PLANET_PX):75;
+  const lblNearR=Math.max(cam.R_MIN,Math.min(75,lblOnD/1.25));
+  const aim=()=>{if(lblFocus){cam.target.copy(lblFocus.mesh.position);cam.targetGoal.copy(lblFocus.mesh.position);}};
   const zoomAt=r=>{cam.r=cam.rTarget=r;
-    for(let i=0;i<3;i++){t+=1/60;simulate();camTick();}
+    for(let i=0;i<3;i++){t+=1/60;simulate();aim();camTick();}
     cam.r=r;camera.updateMatrixWorld(true);simulate();
     return nodes.filter(n=>n.label&&n.label.visible);};
-  const zNear=zoomAt(Math.max(cam.R_MIN,75));
-  const nearOther=zNear.filter(n=>!n.isMe);
+  const zNear=zoomAt(lblNearR);
+  const focusPx=lblFocus?screenDiameterPx(lblFocus.mesh.position,planetScaleOf(lblFocus)):0;
   T('nodeLabelZoom: 줌인하면 인물 이름표가 켜진다',
-    nearOther.length>0,
-    'camR 75에서 '+zNear.length+'/'+nodes.length+' ('+zNear.map(n=>n.name).slice(0,4).join(',')+')');
+    !!lblFocus&&lblFocus.label.visible,
+    lblFocus?(lblFocus.name+' 겨냥 camR '+lblNearR.toFixed(1)+' · 지름 '+focusPx.toFixed(1)+'px(임계 '
+      +V2_TUNABLES.NODE_LABEL_MIN_PLANET_PX+') · 켜짐 '+zNear.length+'/'+nodes.length+' · 캔버스 높이 '+lblH)
+      :'나 말고 보이는 행성이 없음');
   const zFar=zoomAt(220);
   T('nodeLabelLod: 멀수록 적게 켜진다(단조)',
     zFar.length<=zNear.length,
-    'camR 220 '+zFar.length+'개 ≤ camR 75 '+zNear.length+'개');
+    'camR 220 '+zFar.length+'개 ≤ camR '+lblNearR.toFixed(0)+' '+zNear.length+'개');
+  cam.target.copy(lblSave.tg);cam.targetGoal.copy(lblSave.tgG);
   cam.r=cam.rTarget=lblSave.r; selectGroup(lblSave.ag);
   /* ═══ 범례 색 = 실제 선 색 [★ 2026-08-30] ═══
      CSS는 JS 상수를 못 읽어서 네 값을 손으로 옮겨 적는다. 주석으로만 묶으면 언젠가 갈라지므로
