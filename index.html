@@ -1432,7 +1432,7 @@
   .phero{display:flex;align-items:center;gap:16px;margin:4px 0 12px}
   .phero-img,.home-me-img{flex:0 0 auto;width:132px;height:132px;border-radius:50%;object-fit:cover;
     background:radial-gradient(circle at 50% 50%,var(--pc,#fff) -40%,transparent 68%);user-select:none}
-  .phero-t{min-width:0;display:flex;flex-direction:column;gap:6px}
+  .phero-t{min-width:0;display:flex;flex-direction:column;gap:6px;position:relative;z-index:1} /* [U7-2] 살아 있는 초상 캔버스(z 0)보다 위 */
   .phero-t h2{margin:0}
   .phero-t p{margin:0}
   .phero-tags{display:flex;flex-wrap:wrap;gap:6px}
@@ -4688,6 +4688,7 @@ const V2_TUNABLES={
      서로 파고들었다(실측: 우리 가족 반경 10/11, 600초 중 4.4%, 최대 0.80 관통). 사용자: "공전할 땐 겹치면 안 됨".
      같은 평면의 동심원이므로 반경 차 ≥ 반경 합이면 3D에서 절대 안 겹친다. */
   /* [U7 2026-09-19] 초상 v2 — U5 확정값 */
+  HERO_SPILL: 1.8,                // [U7-2] 살아 있는 초상 캔버스 = 정지 초상의 1.8배. 행성 크기는 같게, 고리(바깥 반경 1.9)가 안 잘리게
   SEASON_FILM_KK: 0.20,           // 계절막 진하기(가장 바깥 불투명도). 사용자 "약 20프로까지 올려줘"
   SU_ICE_KEEP: 0.5,               // 수 압도 극지방 얼음을 면적 기준 이만큼만 남긴다(1.7% -> 약 0.8%, 사용자 "작게" 확정)
   GEUM_METALNESS: 0.55,           // 금 영역만 금속 광택(은은하게). 1이면 크롬처럼 번쩍여 흰 금속으로 돌아간다
@@ -6941,7 +6942,7 @@ function portraitSnapshot(ps,cam,S){
    생년월일이 없으면 구 초상 그대로. */
 const PMAP_BASE='assets/planet-tex/map/';
 const _p2Cache=new Map(),_p2Pending=new Map();
-let _pFacingP=null,_pSkyEnv=null;
+let _pFacingP=null;const _pSkyEnv=new Map(),_pStudioEnv=new Map(); /* 렌더러(WebGL 문맥)마다 따로 굽는다 */
 const P2_BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 function pFacing(){if(!_pFacingP)_pFacingP=fetch(PMAP_BASE+'facing.json').then(r=>r.json()).catch(()=>({}));return _pFacingP;}
 function pLoadImg(u){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=u;});}
@@ -6964,25 +6965,24 @@ function planetMapInfo(n){
   for(let i=0;i<sd.length;i++){h^=sd.charCodeAt(i);h=Math.imul(h,16777619);}
   return {key,season,seed:h>>>0,id:key+'|'+(h>>>0)+'|'+season};}
 /* 바다 반사용 하늘(한 번만 굽는다) — U5 시안 portrait-fx.js skyEnv */
-function pSkyEnv(){
-  if(_pSkyEnv)return _pSkyEnv;
+function pSkyEnv(rdr){
+  rdr=rdr||renderer;if(_pSkyEnv.has(rdr))return _pSkyEnv.get(rdr);
   const c=document.createElement('canvas');c.width=1024;c.height=512;const x=c.getContext('2d');
   const g=x.createLinearGradient(0,0,0,512);g.addColorStop(0,'#dfefff');g.addColorStop(.45,'#9cc4ef');g.addColorStop(.52,'#3b5d86');g.addColorStop(1,'#101a2a');
   x.fillStyle=g;x.fillRect(0,0,1024,512);
   x.filter='blur(20px)';x.fillStyle='rgba(255,255,255,.9)';[[220,110,160,70],[640,80,120,60],[860,160,90,40]].forEach(([a,b,w,h])=>x.fillRect(a,b,w,h));x.filter='none';
   const t=new THREE.CanvasTexture(c);t.mapping=THREE.EquirectangularReflectionMapping;
-  const pm=new THREE.PMREMGenerator(renderer);_pSkyEnv=pm.fromEquirectangular(t).texture;pm.dispose();t.dispose();return _pSkyEnv;}
+  const pm=new THREE.PMREMGenerator(rdr);const e=pm.fromEquirectangular(t).texture;pm.dispose();t.dispose();_pSkyEnv.set(rdr,e);return e;}
 /* 금속이 비출 밝은 회색 스튜디오(한 번만 굽는다). scene.environment(우주)는 어두워 금 영역이 검게 보였다(실측) */
-let _pStudioEnv=null;
-function pStudioEnv(){
-  if(_pStudioEnv)return _pStudioEnv;
+function pStudioEnv(rdr){
+  rdr=rdr||renderer;if(_pStudioEnv.has(rdr))return _pStudioEnv.get(rdr);
   const c=document.createElement('canvas');c.width=1024;c.height=512;const x=c.getContext('2d');
   const g=x.createLinearGradient(0,0,0,512);g.addColorStop(0,'#f2f4f8');g.addColorStop(.35,'#c9ced6');g.addColorStop(.5,'#8a909c');g.addColorStop(.62,'#3a3e46');g.addColorStop(1,'#6c717b');
   x.fillStyle=g;x.fillRect(0,0,1024,512);
   x.filter='blur(6px)';x.fillStyle='#ffffff';[[140,70,220,70],[600,50,90,200],[820,120,160,50]].forEach(([a,b,w,h])=>x.fillRect(a,b,w,h));
   x.fillStyle='#50555f';[[380,40,40,400],[930,60,30,380]].forEach(([a,b,w,h])=>x.fillRect(a,b,w,h));x.filter='none';
   const t=new THREE.CanvasTexture(c);t.mapping=THREE.EquirectangularReflectionMapping;
-  const pm=new THREE.PMREMGenerator(renderer);_pStudioEnv=pm.fromEquirectangular(t).texture;pm.dispose();t.dispose();return _pStudioEnv;}
+  const pm=new THREE.PMREMGenerator(rdr);const e=pm.fromEquirectangular(t).texture;pm.dispose();t.dispose();_pStudioEnv.set(rdr,e);return e;}
 /* 계절막 — U5 확정 시안(portrait-fx.js bubbleMesh) 그대로: 가운데 투명, 가장자리만, 1시–7시 방향은 지우고 10시·5시만 */
 function pSeasonFilm(season){
   const tint=season==='winter'?[.72,.9,1.0]:[1.0,.38,.2];
@@ -7064,6 +7064,239 @@ function portraitImg(n,cls){
   const u=planetPortrait(n);
   return u?`<img class="${cls}" src="${u}" alt="" draggable="false">`
     :`<span class="${cls} noimg" style="background:${EL_INFO[n.el].css}"></span>`;}
+/* ═══ [U7-2 2026-09-19] 인물 패널 초상 = 살아 있는 장면 + 나와의 관계 장신구 ═══
+   [무엇] 인물 패널을 열면 정지 초상(renderPortrait2) 자리에 작은 3D 캔버스를 겹쳐 띄워 계속 움직이게 한다.
+   사용자: "실제 사용할 때 계속 돌아가야함" · 장신구 = 나와의 관계(U5·U6 확정).
+   [장신구 규칙 — U5 안 D, 사용자 확정] 나와 그 사람의 합충(hapChung = 태어난 날, hapChungPos = 해·달·시):
+     날 충 → 먹구름 / + 다른 자리 충 1곳 → 번개구름 / + 2곳 이상 → 태풍
+     날 천간합+육합 동시(천지합) → 오로라 / 날 천간합 → 무지개 고리 / 날 육합 → 토성 고리
+     날 합충 없음 + 다른 자리 합 2곳 이상 → 흰 구름
+     날 합(간합·육합) + 다른 자리 합 → 별똥별(다른 자리 합 수만큼)
+     모의 계산(20만 쌍): 장신구 붙는 행성 약 30%.
+   [모양] U5 확정 시안 코드(tools/planet-maps/live-*-template.html)를 그대로 옮겼다 — 구름 18겹 · 태풍(AI 그림 회전) ·
+     윤곽 오로라 · 🪐 고리 · 무지개 고리(양끝만, ② 단계) · 별똥별. 색 파이프라인도 시안과 같다(sRGB 출력).
+   [캔버스] 정지 초상보다 HERO_SPILL배 크게 잡고 가운데 맞춘다 — 행성은 정지 초상과 같은 크기로 보이고,
+     고리·별똥별은 동그란 테두리 밖으로 나온다. 렌더러는 이 초상 하나 전용(WebGL 문맥 1개 추가), 패널이 닫히면 멈춘다. */
+const LiveHero=(()=>{
+const LPOS=new THREE.Vector3(5,6,8),LDIR=LPOS.clone().normalize();
+function cloudHeight(im,th,cover,soft){const W=im.width,H=im.height;const src=document.createElement('canvas');src.width=W;src.height=H;const sx=src.getContext('2d');sx.drawImage(im,0,0);
+  const sd=sx.getImageData(0,0,W,H);const t0=th/255;const V=new Float32Array(W*H);for(let j=0;j<W*H;j++){let x=(sd.data[j*4]/255-t0)/(1-t0);V[j]=x<0?0:x>1?1:x;}
+  const hs=(x,y,z)=>{const t=Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453;return t-Math.floor(t);};
+  const vn=(x,y,z)=>{const ix=Math.floor(x),iy=Math.floor(y),iz=Math.floor(z),fx=x-ix,fy=y-iy,fz=z-iz;const u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy),w=fz*fz*(3-2*fz);const L=(a,b,t)=>a+(b-a)*t;const c=(a,b,d)=>hs(ix+a,iy+b,iz+d);
+    return L(L(L(c(0,0,0),c(1,0,0),u),L(c(0,1,0),c(1,1,0),u),v),L(L(c(0,0,1),c(1,0,1),u),L(c(0,1,1),c(1,1,1),u),v),w);};
+  const N=new Float32Array(W*H),Wt=new Float32Array(H);let cov0=0;
+  for(let y=0;y<H;y++){const la=(.5-(y+.5)/H)*Math.PI;Wt[y]=Math.cos(la);const cy=Math.sin(la),cr=Math.cos(la);
+    for(let x=0;x<W;x++){const lo=(x+.5)/W*Math.PI*2;const px=cr*Math.cos(lo),pz=cr*Math.sin(lo);const j=y*W+x;N[j]=.65*vn(px*2.2+11,cy*2.2+3,pz*2.2+7)+.35*vn(px*4.4+2,cy*4.4+9,pz*4.4+5);if(V[j]>.15)cov0+=Wt[y];}}
+  const covAt=th=>{let c=0;for(let y=0;y<H;y++)for(let x=0;x<W;x++){const j=y*W+x;let m=(N[j]-th)/.16+.5;m=m<0?0:m>1?1:m;if(V[j]*m>.15)c+=Wt[y];}return c;};
+  let lo=0,hi=1;for(let it=0;it<12;it++){const mid=(lo+hi)/2;if(covAt(mid)>cover*cov0)lo=mid;else hi=mid;}const th2=(lo+hi)/2;
+  for(let j=0;j<W*H;j++){let m=(N[j]-th2)/.16+.5;m=m<0?0:m>1?1:m;const v=Math.round(255*V[j]*m);sd.data[j*4]=sd.data[j*4+1]=sd.data[j*4+2]=v;}
+  sx.putImageData(sd,0,0);
+  const bl=px=>{const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.filter='blur('+px+'px)';x.drawImage(src,0,0);return x.getImageData(0,0,W,H).data;};
+  const bd=bl(soft?6:7),md=bl(soft?2.4:1.2);const out=document.createElement('canvas');out.width=W;out.height=H;const ox=out.getContext('2d');const od=ox.createImageData(W,H);
+  for(let i=0;i<od.data.length;i+=4){const hb=bd[i]/255,hsv=md[i]/255;let h=soft?Math.max(0,Math.min(1,(.65*hb+.35*hsv)*1.9-.42))*(hsv>.3?1:0):(.6*Math.min(1,hb*1.6)+.4*hsv)*(hsv>.04?1:0);
+    h=Math.pow(Math.min(1,h),.8);const v=Math.round(255*h);od.data[i]=od.data[i+1]=od.data[i+2]=v;od.data[i+3]=255;}
+  ox.putImageData(od,0,0);const t=new THREE.CanvasTexture(out);t.wrapS=THREE.RepeatWrapping;return t;}
+const TYPES={white:{top:0xffffff,bot:0x8e98ab,flash:0},dark:{top:0x6f7684,bot:0x15181e,flash:0},storm:{top:0x656c79,bot:0x121418,flash:1}};
+const FP1=new THREE.Vector3(.25,.35,.9).normalize(),FP2=new THREE.Vector3(.55,-.15,.82).normalize();
+// 구름 층 재질: uv를 시간에 따라 옆으로 밀어 흐르게. 번개는 행성 기준 두 점에서 불규칙하게 번쩍.
+function cloudShellMat(tex,t,fr,T,drift,shadow){
+  const shOff=shadow?'+.012,-.006':',0.';const shCut=shadow?'gl_FragColor=vec4(0.,0.,0.,a*'+(T.top<0x800000?'.72':'.5')+');return;':'';
+  return new THREE.ShaderMaterial({uniforms:{hm:{value:tex},t:{value:t},fr:{value:fr},L:{value:LDIR},TOP:{value:new THREE.Color(T.top)},BOT:{value:new THREE.Color(T.bot)},fl:{value:T.flash},
+    F1:{value:FP1},F2:{value:FP2},time:{value:0},drift:{value:drift},flash1:{value:0},flash2:{value:0}},
+  vertexShader:'varying vec2 vU;varying vec3 vN;varying vec3 vP;void main(){vU=uv;vP=normalize(position);vN=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+  fragmentShader:'uniform sampler2D hm;uniform float t,fr,fl,time,drift,flash1,flash2;uniform vec3 L,TOP,BOT,F1,F2;varying vec2 vU;varying vec3 vN;varying vec3 vP;\n'+
+    'void main(){vec2 uv=vU+vec2(time*drift'+shOff+');float h=texture2D(hm,uv).r;if(h<.03)discard;\n'+
+    'float a=smoothstep(t-(BOT.r<.2?.1:.05),t+.015,h);if(a<.01)discard;'+shCut+'\n'+
+    'float diff=max(dot(normalize(vN),L),0.);float occ=mix(.15,1.,pow(fr,.7));float rim=pow(1.-abs(dot(normalize(vN),normalize(vec3(0.,.3,1.)))),3.)*fr;\n'+
+    'vec3 col=mix(BOT,TOP,clamp(occ*(.35+.75*diff)+rim*.3,0.,1.));\n'+
+    'float g=flash1*exp(-(1.-dot(vP,F1))*55.)+flash2*exp(-(1.-dot(vP,F2))*70.);col+=fl*g*(1.-fr*.55)*vec3(.75,.85,1.)*1.8;\n'+
+    'gl_FragColor=vec4(col,a*mix(.85,.95,fr));}',transparent:true,depthWrite:false});}
+function typhoonShellMat(tex,t,fr,C,R,shadow){const up=new THREE.Vector3(0,1,0);const e1=new THREE.Vector3().crossVectors(up,C).normalize(),e2=new THREE.Vector3().crossVectors(C,e1);
+  const shCut=shadow?'gl_FragColor=vec4(0.,0.,0.,a*.45);return;':'';
+  return new THREE.ShaderMaterial({uniforms:{hm:{value:tex},t:{value:t},fr:{value:fr},L:{value:LDIR},C:{value:C},E1:{value:e1},E2:{value:e2},R:{value:R},time:{value:0}},
+    vertexShader:'varying vec3 vP;varying vec3 vN;void main(){vP=normalize(position);vN=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'uniform sampler2D hm;uniform float t,fr,R,time;uniform vec3 L,C,E1,E2;varying vec3 vP;varying vec3 vN;\n'+
+      'void main(){float dt=dot(vP,C);if(dt<cos(R))discard;float rr=acos(min(1.,dt))/R;float tt=atan(dot(vP,E2),dot(vP,E1))+time*.35;\n'+
+      'float lum=texture2D(hm,.5+.5*rr*vec2(cos(tt),sin(tt))).r;float h=pow(max(0.,(lum-.03)/.97),.85)*(1.-smoothstep(.86,1.,rr));\n'+
+      'float a=smoothstep(t-.05,t+.015,h);if(a<.01)discard;'+shCut+'\n'+
+      'float diff=max(dot(normalize(vN),L),0.);float occ=mix(.15,1.,pow(fr,.7));\n'+
+      'gl_FragColor=vec4(mix(vec3(.56,.6,.67),vec3(1.),clamp(occ*(.35+.75*diff),0.,1.)),a*mix(.85,.95,fr));}',transparent:true,depthWrite:false});}
+function boltTex(){const c=document.createElement('canvas');c.width=64;c.height=128;const x=c.getContext('2d');const pts=[[34,4],[26,40],[38,46],[22,86],[34,90],[28,124]];
+  for(const [w,a] of [[12,.2],[6,.5],[2.5,1]]){x.strokeStyle='rgba('+(a<1?'170,200,255':'255,255,255')+','+a+')';x.lineWidth=w;x.lineJoin='round';x.beginPath();pts.forEach(([px,py],i)=>i?x.lineTo(px,py):x.moveTo(px,py));x.stroke();}
+  return new THREE.CanvasTexture(c);}
+const BOLT=boltTex();
+TYPES.dark={top:0x525a6a,bot:0x07080b,flash:0};TYPES.storm={top:0x485063,bot:0x050608,flash:1};
+function limbAurora(tex){const SEG=240;const A0=12*Math.PI/180,A1=168*Math.PI/180;
+  const geo=new THREE.BufferGeometry();const pos=new Float32Array((SEG+1)*2*3),uv=new Float32Array((SEG+1)*2*2),idx=[];
+  for(let i=0;i<=SEG;i++){const u=i/SEG;uv.set([u,0,u,1],i*4);if(i<SEG){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));geo.setIndex(idx);
+  const mat=new THREE.ShaderMaterial({uniforms:{tex:{value:tex},time:{value:0}},
+    vertexShader:'varying vec2 vU;void main(){vU=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'uniform sampler2D tex;uniform float time;varying vec2 vU;'+
+      'void main(){float u=vU.x*1.6+time*.015+sin(vU.y*4.+time*.9+vU.x*14.)*.008;'+
+      'vec3 c=texture2D(tex,vec2(fract(u),vU.y)).rgb;float sh=.82+.18*sin(vU.x*70.+time*1.6);'+
+      'float ends=smoothstep(0.,.18,vU.x)*smoothstep(1.,.82,vU.x);'+                         // 양 끝은 서서히 사라짐
+      'float a=max(c.r,max(c.g,c.b))*sh*ends;gl_FragColor=vec4(c*1.5*sh*ends,a);}',
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
+  const m=new THREE.Mesh(geo,mat);
+  m.userData.update=(t)=>{for(let i=0;i<=SEG;i++){const u=i/SEG;const a=A0+(A1-A0)*u;
+      const hmul=.72+.28*Math.sin(u*Math.PI)+.06*Math.sin(u*9+t*.5);                            // 가운데가 높고 끝이 낮은 부채꼴 + 물결
+      const r0=.9,r1=1.0+.34*hmul;const ca=Math.cos(a),sa=Math.sin(a);
+      pos.set([ca*r0,sa*r0,0,ca*r1,sa*r1,0],i*6);}geo.attributes.position.needsUpdate=true;geo.computeBoundingSphere();mat.uniforms.time.value=t;};
+  m.userData.update(0);return m;}
+// 윗쪽 윤곽을 따라 행성 표면에 비치는 옅은 초록 기운
+function limbGlow(){return new THREE.Mesh(new THREE.SphereGeometry(1.004,96,64),new THREE.ShaderMaterial({
+  vertexShader:'varying vec3 vN;varying vec3 vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',
+  fragmentShader:'varying vec3 vN;varying vec3 vV;void main(){float f=pow(1.-abs(dot(vN,vV)),3.);float up=smoothstep(-.1,.7,vN.y);float g=f*up*.55;gl_FragColor=vec4(vec3(.3,1.,.55)*g,g);}',
+  transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));}
+// ── 무지개 고리: 토성 고리 모양에 일곱 색 띠 (안쪽 보라 → 바깥 빨강) ──
+function rainbowRing(o){const g=new THREE.RingGeometry(o.ri,o.ro,256,1);
+  const m=new THREE.Mesh(g,new THREE.ShaderMaterial({uniforms:{L:{value:LDIR},ri:{value:o.ri},ro:{value:o.ro},time:{value:0},op:{value:o.op},D:{value:new THREE.Vector2(Math.cos(o.roll),Math.sin(o.roll))},k0:{value:o.k0||0.},k1:{value:o.k1||0.}},
+    vertexShader:'varying vec3 vW;varying vec3 vL;varying vec2 vS;void main(){vL=position;vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;vec4 c=viewMatrix*modelMatrix*vec4(0.,0.,0.,1.);vS=(viewMatrix*w).xy-c.xy;gl_Position=projectionMatrix*viewMatrix*w;}',
+    fragmentShader:'uniform vec3 L;uniform float ri,ro,time,op,k0,k1;uniform vec2 D;varying vec3 vW;varying vec3 vL;varying vec2 vS;'+
+      'vec3 band(int i){if(i==6)return vec3(.93,.16,.18);if(i==5)return vec3(1.,.52,.1);if(i==4)return vec3(1.,.86,.15);if(i==3)return vec3(.25,.8,.3);if(i==2)return vec3(.2,.55,1.);if(i==1)return vec3(.3,.3,.85);return vec3(.58,.3,.85);}'+
+      'void main(){float t=clamp((length(vL.xy)-ri)/(ro-ri),0.,.9999);float v=t*7.;int i=int(floor(v));float f=fract(v);vec3 c=band(i);'+
+      'c=mix(c*.8,c,smoothstep(0.,.12,f)*smoothstep(1.,.88,f));float edge=smoothstep(0.,.04,t)*smoothstep(1.,.96,t);'+
+      'vec3 p=vW;float b=dot(p,L);float d2=dot(p,p)-b*b;float shade=(b<0.&&d2<1.)?.25:1.;'+
+      'float ang=atan(vL.y,vL.x);float fl=.9+.1*sin(ang*6.-time*1.2);float sp=pow(max(0.,sin(ang*40.+time*.9+t*30.)),80.);'+
+      'float ends=k1>0.?smoothstep(k0,k1,abs(dot(normalize(vS),D))):1.;gl_FragColor=vec4((c*fl+vec3(sp)*.7)*shade,op*edge*ends);}',transparent:true,side:THREE.DoubleSide,depthWrite:false}));
+  m.rotation.order='ZYX';m.rotation.set(-Math.PI/2+o.tilt,0,o.roll);m.userData.upd=t=>{m.material.uniforms.time.value=t;};return m;}
+// ── 토성 고리: 비스듬히, 앞은 행성을 가로지르고 뒤는 숨음. 띠 3줄 + 틈, 반투명, 행성 그림자 ──
+function saturnRing(){const ri=1.3,ro=1.9;const g=new THREE.RingGeometry(ri,ro,256,1);
+  const m=new THREE.Mesh(g,new THREE.ShaderMaterial({uniforms:{L:{value:LDIR},ri:{value:ri},ro:{value:ro},time:{value:0}},
+    vertexShader:'varying vec3 vW;varying vec3 vL;void main(){vL=position;vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
+    fragmentShader:'uniform vec3 L;uniform float ri,ro,time;varying vec3 vW;varying vec3 vL;float h(float x){return fract(sin(x*91.7)*43758.5);}'+
+      'void main(){float t=(length(vL.xy)-ri)/(ro-ri);'+
+      // 띠 3줄: 안쪽 옅은 띠 / 가운데 밝은 띠 / 틈 / 바깥 띠
+      'float a=.35*smoothstep(0.,.05,t)*smoothstep(.34,.3,t)+.95*smoothstep(.32,.36,t)*smoothstep(.66,.62,t)+.7*smoothstep(.7,.74,t)*smoothstep(1.,.95,t);'+
+      'vec3 col=mix(vec3(.93,.84,.66),vec3(1.,.95,.84),smoothstep(.3,.6,t));col*=.9+.1*h(floor(t*80.));'+
+      'vec3 p=vW;float b=dot(p,L);float d2=dot(p,p)-b*b;float shade=(b<0.&&d2<1.)?.2:1.;'+
+      'float ang=atan(vL.y,vL.x);float sp=pow(max(0.,sin(ang*55.+time*.8+t*40.)),60.);'+
+      'gl_FragColor=vec4(col*shade+vec3(sp)*.8*shade,a*.9);}',transparent:true,side:THREE.DoubleSide,depthWrite:false}));
+  m.rotation.order='ZYX';m.rotation.set(-Math.PI/2+.12,0,.36);m.userData.upd=t=>{m.material.uniforms.time.value=t;};return m;}
+// 고리가 행성에 드리우는 그림자 띠 (행성 표면에서 고리 평면을 빛 방향으로 거슬러 올라가 고리와 만나면 어둡게)
+function ringShadowOn(planetMat,ringMesh){ringMesh.updateMatrixWorld();const n=new THREE.Vector3(0,0,1).applyQuaternion(ringMesh.quaternion).normalize();
+  planetMat.onBeforeCompile=sh=>{sh.uniforms.rn={value:n};sh.uniforms.Ld={value:LDIR};
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform vec3 rn;uniform vec3 Ld;varying vec3 vWp;')
+      .replace('#include <dithering_fragment>','#include <dithering_fragment>\n{float dn=dot(Ld,rn);if(abs(dn)>1e-3){float s=-dot(vWp,rn)/dn;if(s>0.){vec3 q=vWp+Ld*s;float rr=length(q);float tt=(rr-1.3)/(1.9-1.3);float occ=.35*smoothstep(0.,.05,tt)*smoothstep(.34,.3,tt)+.95*smoothstep(.32,.36,tt)*smoothstep(.66,.62,tt)+.7*smoothstep(.7,.74,tt)*smoothstep(1.,.95,tt);gl_FragColor.rgb*=1.-.55*occ;}}}');};
+  planetMat.needsUpdate=true;}
+// ── 별똥별: 반짝이는 네 갈래 별 머리 + 뒤따르는 빛 꼬리, 행성 둘레를 비스듬히 돈다 ──
+function starTex(){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');x.translate(64,64);
+  const g=x.createRadialGradient(0,0,0,0,0,40);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,240,200,.8)');g.addColorStop(1,'rgba(255,220,160,0)');x.fillStyle=g;x.fillRect(-64,-64,128,128);
+  x.fillStyle='rgba(255,255,255,.95)';for(let i=0;i<4;i++){x.rotate(Math.PI/2);x.beginPath();x.moveTo(0,-60);x.quadraticCurveTo(4,-6,0,0);x.quadraticCurveTo(-4,-6,0,-60);x.fill();}
+  return new THREE.CanvasTexture(c);}
+const STAR=starTex();
+function shootingStar(incl,phase,speed,radius,col){const g=new THREE.Group();const N=90;const pos=new Float32Array(N*2*3),uv=new Float32Array(N*2*2),idx=[];
+  for(let i=0;i<N;i++){uv.set([i/(N-1),0,i/(N-1),1],i*4);if(i<N-1){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}}
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));geo.setIndex(idx);
+  const trail=new THREE.Mesh(geo,new THREE.ShaderMaterial({uniforms:{c:{value:new THREE.Color(col)}},vertexShader:'varying vec2 vU;void main(){vU=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'uniform vec3 c;varying vec2 vU;void main(){float head=pow(vU.x,2.2);float side=exp(-pow((vU.y-.5)*3.2,2.));float a=head*side;gl_FragColor=vec4(mix(c,vec3(1.),head*.6)*a*1.6,a);}',
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+  const head=new THREE.Sprite(new THREE.SpriteMaterial({map:STAR,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,color:col}));head.scale.set(.3,.3,1);
+  g.add(trail);g.add(head);const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(incl[0],0,incl[1]));
+  const at=a=>new THREE.Vector3(Math.cos(a)*radius,0,Math.sin(a)*radius).applyQuaternion(q);
+  g.userData.upd=(t,cam)=>{const a0=phase+t*speed;const L=1.7;const camDir=new THREE.Vector3().subVectors(cam.position,new THREE.Vector3()).normalize();
+    for(let i=0;i<N;i++){const u=i/(N-1);const a=a0-L*(1-u);const p=at(a);const d=at(a+.01).sub(p).normalize();const side=new THREE.Vector3().crossVectors(d,camDir).normalize();const w=.006+.045*Math.pow(u,1.8);
+      pos.set([p.x-side.x*w,p.y-side.y*w,p.z-side.z*w,p.x+side.x*w,p.y+side.y*w,p.z+side.z*w],i*6);}
+    geo.attributes.position.needsUpdate=true;geo.computeBoundingSphere();head.position.copy(at(a0));head.material.rotation=t*.8;};
+  return g;}
+function flicker(t,off){const p=(t+off)%2.2;if(p>.55)return 0;return Math.max(0,Math.sin(p*40.))*((p<.12||(p>.22&&p<.3)||(p>.42&&p<.5))?1:0);}
+const STARCFG=[[[.55,.35],0,.5,1.34,0xffe7a8],[[1.2,-.5],2.6,.42,1.42,0xa8d8ff],[[-.4,-.6],4.4,.56,1.28,0xffc2e2],[[1.0,.8],1.3,.47,1.5,0xc8ffd8],[[.2,-1.1],3.5,.6,1.36,0xfff2c0]];
+const RB={ri:1.42,ro:1.62,tilt:.42,roll:-.55,op:.9,k0:.88,k1:.999};
+const FX='assets/planet-tex/fx/';
+let R=null,cur=null,cloudIm=null,hurrT=null,aurT=null;const H={};
+function load(u){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=u;});}
+async function cloudTex(kind){ /* 구름 높이 지도는 비싸서(1024×512 이분 탐색) 종류별로 한 번만 */
+  if(H[kind])return H[kind];
+  if(!cloudIm)cloudIm=await load(FX+'cloudmap_a.png');
+  H[kind]=kind==='white'?cloudHeight(cloudIm,125,.48,false):cloudHeight(cloudIm,125,.6,true);return H[kind];}
+/** 나와 그 사람의 합충으로 장신구 목록. 나 자신이거나 생년월일이 없으면 [] */
+function accessoriesFor(n){
+  const me=nodes.find(x=>x.isMe);if(!me||n===me||n.isMe)return [];
+  const day=hapChung(me,n),pos=hapChungPos(me,n);
+  const dk=day?day.kind:null;
+  const och=pos.filter(p=>p.kind==='chung').length,ohap=pos.filter(p=>p.kind==='ganhap'||p.kind==='yukhap').length;
+  const out=[];
+  if(dk==='chung')out.push(och>=2?'typhoon':och===1?'storm':'dark');
+  const a=hcPillars(me),b=hcPillars(n);
+  const tian=!!(a&&b&&a.day&&b.day&&hcPairIn(GANHAP,a.day[0],b.day[0])&&hcPairIn(YUKHAP,a.day[1],b.day[1]));
+  if(tian)out.push('aurora');
+  else if(dk==='ganhap')out.push('rainbow');
+  else if(dk==='yukhap')out.push('ring');
+  else if(!dk&&ohap>=2)out.push('white');
+  if((dk==='ganhap'||dk==='yukhap'||tian)&&ohap>=1)out.push('star'+Math.min(5,ohap));
+  return out;}
+async function build(n,force){
+  const info=planetMapInfo(n);if(!info)return null;
+  const F=(await pFacing())[info.key];if(!F)return null;
+  const im=await load(PMAP_BASE+info.key+'.jpg');
+  const fx=force||accessoriesFor(n); /* force = 검사용(장신구 목록을 직접 준다) */
+  const P=pPrepMap(im,info.key);
+  const S=new THREE.Scene();
+  S.add(new THREE.AmbientLight(0x9098b8,.5));const k=new THREE.DirectionalLight(0xfff4e6,1.35);k.position.copy(LPOS);S.add(k);
+  const rl=new THREE.DirectionalLight(0x9fc0ff,.45);rl.position.set(-6,3,-9);S.add(rl);
+  const map=new THREE.CanvasTexture(P.map);map.encoding=THREE.sRGBEncoding;map.anisotropy=4;
+  const u1=((info.seed>>>8)&255)/255-.5,u2=((info.seed>>>16)&255)/255-.5;
+  const tint=new THREE.Color(1+u1*.06,1,1-u1*.06).multiplyScalar(1+u2*.08);
+  const mp={map:map,bumpMap:map,bumpScale:.015,roughness:.85,metalness:0,color:tint};
+  if(P.metal)Object.assign(mp,{metalnessMap:new THREE.CanvasTexture(P.metal),metalness:V2_TUNABLES.GEUM_METALNESS,roughness:.55,envMap:pStudioEnv(R)});
+  const mat=new THREE.MeshStandardMaterial(mp);
+  const planet=new THREE.Mesh(new THREE.SphereGeometry(1,128,96),mat);
+  const pass=F.pass&&F.pass.length?F.pass:[[F.pitch,Math.round(F.yaw*180/Math.PI)]];
+  const pick=pass[info.seed%pass.length];planet.rotation.set(pick[0],pick[1]*Math.PI/180,.08);S.add(planet);
+  if(P.water){const w=new THREE.Mesh(planet.geometry,new THREE.MeshStandardMaterial({map:map,metalness:0,roughness:.16,envMap:pSkyEnv(R),
+      alphaMap:new THREE.CanvasTexture(P.water),transparent:true,alphaTest:.5,color:tint}));w.scale.setScalar(1.001);w.rotation.copy(planet.rotation);S.add(w);}
+  if(info.season)S.add(pSeasonFilm(info.season));
+  const mats=[],bolts=[],upd=[];const N=18,G=new THREE.SphereGeometry(1,96,72);const g=new THREE.Group();S.add(g);
+  for(const f of fx){
+    if(f==='white'||f==='dark'||f==='storm'){const T=TYPES[f];const tex=await cloudTex(f==='white'?'white':'dark');
+      const sh=new THREE.Mesh(new THREE.SphereGeometry(1.004,96,72),cloudShellMat(tex,.1,0,T,.006,true));g.add(sh);mats.push(sh.material);
+      for(let i=0;i<N;i++){const fr=i/(N-1);const m=new THREE.Mesh(G,cloudShellMat(tex,.03+fr*.92,fr,T,.006,false));m.scale.setScalar(1.03+fr*.11);m.renderOrder=10+i;g.add(m);mats.push(m.material);}
+      if(T.flash)for(const [d,sc] of [[FP1,1],[FP2,.8]]){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:BOLT,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));sp.position.copy(d.clone().multiplyScalar(1.08));sp.scale.set(.28*sc,.56*sc,1);sp.renderOrder=40;g.add(sp);bolts.push(sp);}}
+    if(f==='typhoon'){if(!hurrT){hurrT=new THREE.Texture(await load(FX+'hurr_a.png'));hurrT.needsUpdate=true;}
+      const C=new THREE.Vector3(.35,.32,.88).normalize();
+      const sh=new THREE.Mesh(new THREE.SphereGeometry(1.004,96,72),typhoonShellMat(hurrT,.1,0,C,.35,true));g.add(sh);mats.push(sh.material);
+      for(let i=0;i<N;i++){const fr=i/(N-1);const m=new THREE.Mesh(G,typhoonShellMat(hurrT,.03+fr*.92,fr,C,.35,false));m.scale.setScalar(1.025+fr*.065);m.renderOrder=10+i;g.add(m);mats.push(m.material);}}
+    if(f==='aurora'){if(!aurT){aurT=new THREE.Texture(await load(FX+'aurora_a_band.png'));aurT.needsUpdate=true;aurT.encoding=THREE.sRGBEncoding;aurT.wrapS=THREE.RepeatWrapping;}
+      const b=limbAurora(aurT);b.renderOrder=20;S.add(b);S.add(limbGlow());upd.push((t,c)=>{b.userData.update(t);b.quaternion.copy(c.quaternion);});}
+    if(f==='ring'){const r=saturnRing();S.add(r);ringShadowOn(mat,r);upd.push(t=>r.userData.upd(t));}
+    if(f==='rainbow'){const r=rainbowRing(RB);S.add(r);upd.push(t=>r.userData.upd(t));}
+    if(f.startsWith('star')){const c=+f.slice(4);for(let i=0;i<c;i++){const s=shootingStar(...STARCFG[i]);S.add(s);upd.push((t,cm)=>s.userData.upd(t,cm));}}}
+  const reach=(info.season?1.3:1.12)*V2_TUNABLES.HERO_SPILL;
+  const cam=new THREE.PerspectiveCamera(30,1,.1,100);cam.position.set(0,.3,1).normalize().multiplyScalar(reach/Math.tan(15*Math.PI/180));cam.lookAt(0,0,0);
+  return {S,cam,mats,bolts,upd,fx};}
+function stop(){if(cur){cancelAnimationFrame(cur.raf);if(cur.cv&&cur.cv.parentNode)cur.cv.parentNode.removeChild(cur.cv);
+  if(cur.img){cur.img.style.visibility='';if(cur.shift)cur.img.style.marginLeft='';}cur.scene&&cur.scene.S.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});cur=null;}}
+async function start(n,img,force){
+  stop();if(!img||!planetMapInfo(n))return;
+  const token={};cur=token;
+  const box=img.getBoundingClientRect();const size=Math.round((box.width||132)*V2_TUNABLES.HERO_SPILL);
+  const cv=document.createElement('canvas');const dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.width=cv.height=Math.round(size*dpr);cv.className='phero-live';
+  const par=img.parentNode;par.style.position='relative';
+  if(!R){R=new THREE.WebGLRenderer({alpha:true,antialias:true,premultipliedAlpha:true});R.outputEncoding=THREE.sRGBEncoding;R.setClearColor(0x000000,0);}
+  let sc;try{sc=await build(n,force);}catch(e){console.warn('[살아 있는 초상] 만들지 못했다',e);return;}
+  if(cur!==token||!sc||!img.isConnected)return;
+  /* 고리·무지개·별똥별·오로라는 초상 밖으로 나온다 — 패널 왼쪽 끝에 잘리지 않게 그만큼만 초상을 오른쪽으로 민다(실측: 고리 왼쪽 33px 잘림) */
+  const wide=sc.fx.some(f=>f==='ring'||f==='rainbow'||f==='aurora'||f.startsWith('star'));
+  const spill=(size-(box.width||132))/2;
+  const clip=img.closest('#panel')||document.body; /* 잘리는 기준 = 패널(모바일은 화면) 왼쪽 끝 */
+  const room=img.getBoundingClientRect().left-clip.getBoundingClientRect().left;
+  if(wide&&room<spill){img.style.marginLeft=Math.ceil(spill-room)+'px';token.shift=true;}
+  cv.style.cssText='position:absolute;pointer-events:none;z-index:0;width:'+size+'px;height:'+size+'px;left:'+(img.offsetLeft-spill)+'px;top:'+(img.offsetTop-(size-(box.height||132))/2)+'px';
+  token.cv=cv;token.img=img;token.scene=sc;par.appendChild(cv);
+  const ctx=cv.getContext('2d');const t0=performance.now();let first=true;
+  const loop=now=>{if(cur!==token)return;if(!cv.isConnected){stop();return;}
+    token.raf=requestAnimationFrame(loop);if(document.hidden)return;
+    const t=(now-t0)/1000,f1=flicker(t,0),f2=flicker(t,1.1);
+    for(const m of sc.mats){m.uniforms.time.value=t;if(m.uniforms.flash1){m.uniforms.flash1.value=f1;m.uniforms.flash2.value=f2;}}
+    if(sc.bolts.length){sc.bolts[0].material.opacity=f1;sc.bolts[1].material.opacity=f2;}
+    sc.upd.forEach(fn=>fn(t,sc.cam));
+    R.setSize(cv.width,cv.height,false);R.render(sc.S,sc.cam);ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(R.domElement,0,0);
+    if(first){first=false;img.style.visibility='hidden';}};
+  token.raf=requestAnimationFrame(loop);}
+return {start,stop,accessoriesFor};})();
 function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt,self}){
   const el=STEM_EL[stemIdx],info=EL_INFO[el];
   /* [A] map/bumpMap/roughness/metalness를 stemSurface가 한 번에 준다 — 오행별 재질 분리
@@ -11421,6 +11654,7 @@ function showNode(n,groupContext,targetMesh){
     ${birthLine}</div></div>${relSec}${selfSec}
     <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">${bkEsc(n.name)}와 다른 사람의 관계 보기</button></div>
     <div class="panelbtns"><button class="pbtn" id="vstoggle">${virtualMembers.some(c=>c.ref===n)?'가상 성계에서 빼기':'가상 성계에 담기'}</button></div>`;
+  LiveHero.start(n,pbody.querySelector('.phero-img')); /* [U7-2] 살아 있는 초상 + 나와의 관계 장신구 */
   /* 뒤로 가기 — 그룹이면 그 그룹으로, 아니면 은하 전체로. selectGroup이 카메라·패널·트리
      강조를 한꺼번에 맞춰 주므로 showGroup을 직접 부르지 않는다(트리 강조가 어긋난다). */
   navWireBack(()=>{selectGroup(backTo);});
