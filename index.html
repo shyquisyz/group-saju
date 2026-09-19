@@ -13859,12 +13859,14 @@ function openCardSheet(a,b){
 /* ═══ [2026-09-19 U26] 공유 카드 둘 — 우리 그룹 한 장 · 일주 캐릭터 카드 ═══ 사용자: 권장대로(R5 ③ "퍼지는 장치").
    관계 카드(openCardSheet)와 같은 시트·같은 공유/저장 버튼을 쓴다. 그림은 캔버스 2D로 직접 그린다(우주 배경 + 행성 초상 + 글).
    초상은 인물 패널과 같은 것(_p2Cache의 4분할 지도 초상, 없으면 일간 초상). 이름·생일은 그림에만 들어가고 어디로도 안 간다(관계 카드와 같은 원칙). */
+/* [2026-09-20] 카드용 초상은 **계절막 없이** 따로 굽는다 — 겨울·여름생의 푸른/붉은 반투명 막이 바탕을 빼고 나면 줄무늬 테처럼 남았다(사용자: "후광이 어색") */
+const _shareP=new Map();
 async function portraitFor(n){
   const info=planetMapInfo(n);
   if(info){
-    if(_p2Cache.has(info.id))return _p2Cache.get(info.id);
-    queuePortrait2(info);const pend=_p2Pending.get(info.id);if(pend){try{await pend;}catch(e){}}
-    if(_p2Cache.has(info.id))return _p2Cache.get(info.id);}
+    if(_shareP.has(info.id))return _shareP.get(info.id);
+    let u='';try{u=await renderPortrait2(Object.assign({},info,{season:''}));}catch(e){console.warn('[공유 카드 초상]',e);}
+    if(u){_shareP.set(info.id,u);return u;}}
   return planetPortrait(n)||'';}
 function shareLoadImg(src){return new Promise(res=>{if(!src)return res(null);const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src;});}
 function shareSpace(W,H){
@@ -13874,10 +13876,18 @@ function shareSpace(W,H){
   for(let i=0;i<260;i++){x.globalAlpha=.2+rnd()*.7;x.fillStyle='#fff';x.beginPath();x.arc(rnd()*W,rnd()*H,rnd()*1.7+.3,0,Math.PI*2);x.fill();}
   x.globalAlpha=1;return {cv,x};}
 function shareWrap(x,text,maxW){const out=[];let line='';for(const w of String(text).split(' ')){const t=line?line+' '+w:w;if(x.measureText(t).width>maxW&&line){out.push(line);line=w;}else line=t;}if(line)out.push(line);return out;}
+/** [2026-09-20] 초상의 어두운 바탕을 투명하게(모서리 색과 가까운 만큼) — 원 안에 회색 원판이 남던 것. 바탕만 빼면 행성 윤곽(변위)이 그대로 산다 */
+function shareKeyed(im){
+  const S=im.naturalWidth||im.width, c=document.createElement('canvas');c.width=c.height=S;const x=c.getContext('2d');x.drawImage(im,0,0,S,S);
+  const d=x.getImageData(0,0,S,S), a=d.data, r0=a[0],g0=a[1],b0=a[2];
+  for(let k=0;k<a.length;k+=4){const dd=Math.max(Math.abs(a[k]-r0),Math.abs(a[k+1]-g0),Math.abs(a[k+2]-b0));a[k+3]=Math.min(255,dd*10);}
+  x.putImageData(d,0,0);return c;}
 function shareCircle(x,im,cx,cy,r,ring){
-  if(ring){x.save();x.shadowColor=ring;x.shadowBlur=r*.5;x.fillStyle=ring;x.globalAlpha=.55;x.beginPath();x.arc(cx,cy,r*1.02,0,Math.PI*2);x.fill();x.restore();}
-  if(!im){x.fillStyle=ring||'#556';x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.fill();return;}
-  x.save();x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.clip();x.drawImage(im,cx-r,cy-r,r*2,r*2);x.restore();}
+  if(ring){x.save();const g=x.createRadialGradient(cx,cy,r*.7,cx,cy,r*1.35);g.addColorStop(0,ring);g.addColorStop(1,'rgba(0,0,0,0)');
+    x.globalAlpha=.22;x.fillStyle=g;x.beginPath();x.arc(cx,cy,r*1.35,0,Math.PI*2);x.fill();x.restore();}
+  if(!im){x.fillStyle=ring||'#556';x.beginPath();x.arc(cx,cy,r*.8,0,Math.PI*2);x.fill();return;}
+  const k=shareKeyed(im), R=r*1.18;   /* 초상 안의 행성이 정사각형을 다 안 채우므로 조금 키운다 */
+  x.drawImage(k,cx-R,cy-R,R*2,R*2);}
 /* CARD_FONT는 관계 카드 쪽 상수를 그대로 쓴다 */
 /** 우리 그룹 한 장 — 구성원 행성 + 이름 + 올해 과제 한 단어 + 그룹 한 줄 */
 async function renderGroupCard(g){
