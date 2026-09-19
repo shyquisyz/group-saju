@@ -4687,6 +4687,10 @@ const V2_TUNABLES={
      [왜] 칸 간격이 (18-9)/9 = 1.0인데 행성 지름이 1.8이라, 이웃 칸 두 행성이 같은 각도를 지나면
      서로 파고들었다(실측: 우리 가족 반경 10/11, 600초 중 4.4%, 최대 0.80 관통). 사용자: "공전할 땐 겹치면 안 됨".
      같은 평면의 동심원이므로 반경 차 ≥ 반경 합이면 3D에서 절대 안 겹친다. */
+  /* [U7 2026-09-19] 초상 v2 — U5 확정값 */
+  SEASON_FILM_KK: 0.20,           // 계절막 진하기(가장 바깥 불투명도). 사용자 "약 20프로까지 올려줘"
+  SU_ICE_KEEP: 0.5,               // 수 압도 극지방 얼음을 면적 기준 이만큼만 남긴다(1.7% -> 약 0.8%, 사용자 "작게" 확정)
+  GEUM_METALNESS: 0.55,           // 금 영역만 금속 광택(은은하게). 1이면 크롬처럼 번쩍여 흰 금속으로 돌아간다
   MEMBER_MIN_GAP: 0.8,          // 0.4는 화면 최소 간격 3px(거의 닿아 보임, 실측) → 0.8
   /* [U6 2026-09-19] 성계 장면 카메라 = 궤도면 법선에서 이만큼(rad) 기운 방향. 0.25 ≈ 14° — 완전히 위에서 보면
      납작한 원판이 되어 깊이감이 사라진다. null이면 끈다(구 동작: 카메라 각도를 안 건드림). */
@@ -4695,6 +4699,7 @@ const V2_TUNABLES={
      인성(엄마·스승)·관성(상사·어른) = 위 / 비겁(길동무·형제) = 나란히 / 식상·재성 = 아래.
      큰 쪽은 PLANET_SCALE 그대로 두고 작은 쪽만 줄인다 — 키우면 fitGroup·은하 조망 픽셀이 같이 변한다. */
   PLANET_RANK_MUL: {up:1.0, even:0.9, down:0.8},
+  PLANET_RANK_GALAXY_KEEP: 0.5,   // [U7] 은하 조망에서 위계 차이를 이만큼만 남긴다(0.8 -> 0.9)
   /* [U6 2026-09-19] 자전 = 모두 같은 속도, 시간 기준. 구 `spin:.003+random*.004`는 **프레임당** 값이라
      120Hz 폰에서 두 배로 돌고, 사람마다 무작위라 새로고침마다 달랐다. 뜻을 싣지 않는다 —
      기질은 이미 공전 속도가 맡는다. 0.12 rad/s ≈ 52초에 한 바퀴(행성 시안에서 확정한 값). */
@@ -6892,6 +6897,10 @@ function renderPortrait(stemIdx,isMe){
   const reach=glow?Math.max(1.12,glow.scale.x*.4):1.12;   /* 화면에 담을 반경(월드) */
   cam.position.set(0,.35,1).normalize().multiplyScalar(reach/Math.tan(15*Math.PI/180));
   cam.lookAt(0,0,0);
+  try{return portraitSnapshot(ps,cam,S);}finally{mat.dispose();}}
+/* [U7] 초상 장면 → PNG. renderPortrait(구 일간 초상)와 renderPortrait2(55장 지도 초상)가 같이 쓴다. */
+function portraitSnapshot(ps,cam,S){
+  const W=S*2;
   const rt=new THREE.WebGLRenderTarget(W,W);
   const prevRT=renderer.getRenderTarget(),prevC=renderer.getClearColor(new THREE.Color()),prevA=renderer.getClearAlpha();
   const px=new Uint8Array(W*W*4);
@@ -6901,7 +6910,7 @@ function renderPortrait(stemIdx,isMe){
     renderer.readRenderTargetPixels(rt,0,0,W,W,px);
   }finally{
     renderer.setRenderTarget(prevRT);renderer.setClearColor(prevC,prevA);
-    rt.dispose();mat.dispose();}
+    rt.dispose();}
   const big=document.createElement('canvas');big.width=big.height=W;
   const bx=big.getContext('2d'),img=bx.createImageData(W,W);
   for(let y=0;y<W;y++)img.data.set(px.subarray((W-1-y)*W*4,(W-y)*W*4),y*W*4);   /* GL은 아래가 0행 */
@@ -6918,7 +6927,140 @@ function renderPortrait(stemIdx,isMe){
   const c=document.createElement('canvas');c.width=c.height=S;
   const cx=c.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(big,0,0,S,S);
   return c.toDataURL('image/png');}
+/* ═══ [U7 2026-09-19] 행성 초상 v2 — 오행 조합 지도 55장 ═══
+   [무엇] 초상을 일간 모양(최대 20장)에서 **그 사람의 여덟 글자 오행 분포**로 고른 지도(assets/planet-tex/map/)로 바꾼다.
+   사용자 확정(U4·U5): 지도 55장 · 사람마다 다른 방향 · 금 영역 약한 금속 광택 · 바다 반사 · 수 압도 얼음 축소 ·
+   동점은 일간 우선 · 계절막(양력 12·1·2월 겨울 / 7·8월 여름, 진하기 20%, 10시·5시 가장자리만) · 적용은 초상부터.
+   [고르는 규칙] 겉 8글자(sajuElements) 개수로 —
+     주 오행 = 가장 많은 것. 동점이면 일간 오행 → 월지 오행 → 목화토금수 순.
+     주가 5글자 이상이거나 다른 오행이 없으면 압도 지도(`geum.jpg`처럼 한 단어).
+     아니면 주 + 보조 둘(많은 순, 동점은 목화토금수 순), 파일명은 보조를 목화토금수 순으로(`to-mok-hwa.jpg`).
+   [방향] facing.json의 pass = 주 오행이 가장 넓고 보조가 모두 3% 이상 보이는 방향 목록(tools/planet-maps/passlist.html 실측).
+     생년월일·시각의 해시로 그중 하나를 고른다 — 같은 조합이어도 사람마다 다른 면.
+   [비동기] 지도를 내려받아 그려야 하므로 처음엔 구 초상(일간)을 보여 주고, 다 그려지면 같은 자리의 src를 바꾼다.
+   생년월일이 없으면 구 초상 그대로. */
+const PMAP_BASE='assets/planet-tex/map/';
+const _p2Cache=new Map(),_p2Pending=new Map();
+let _pFacingP=null,_pSkyEnv=null;
+const P2_BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+function pFacing(){if(!_pFacingP)_pFacingP=fetch(PMAP_BASE+'facing.json').then(r=>r.json()).catch(()=>({}));return _pFacingP;}
+function pLoadImg(u){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=u;});}
+function planetMapInfo(n){
+  const b=n&&n.birth;if(!b||!b.y||!b.m||!b.d)return null;
+  let r=null;
+  try{r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});}catch(e){return null;}
+  if(!r||!r.day)return null;
+  const EL=['mok','hwa','to','geum','su'],c=sajuElements(r);
+  const max=Math.max(...EL.map(e=>c[e]||0)),tops=EL.filter(e=>(c[e]||0)===max);
+  const de=STEM_EL[r.day[0]],mb=r.month?BRANCH_EL[r.month[1]]:null;
+  const main=tops.length===1?tops[0]:tops.includes(de)?de:(mb&&tops.includes(mb))?mb:tops[0];
+  const rest=EL.filter(e=>e!==main&&(c[e]||0)>0);
+  let key=main;
+  if(c[main]<5&&rest.length){
+    const sec=rest.slice().sort((a,z)=>(c[z]-c[a])||EL.indexOf(a)-EL.indexOf(z)).slice(0,2).sort((a,z)=>EL.indexOf(a)-EL.indexOf(z));
+    key=[main].concat(sec).join('-');}
+  const season=(b.m===12||b.m<=2)?'winter':(b.m===7||b.m===8)?'summer':'';
+  let h=2166136261;const sd=[b.y,b.m,b.d,b.hour,b.min].join('|');
+  for(let i=0;i<sd.length;i++){h^=sd.charCodeAt(i);h=Math.imul(h,16777619);}
+  return {key,season,seed:h>>>0,id:key+'|'+(h>>>0)+'|'+season};}
+/* 바다 반사용 하늘(한 번만 굽는다) — U5 시안 portrait-fx.js skyEnv */
+function pSkyEnv(){
+  if(_pSkyEnv)return _pSkyEnv;
+  const c=document.createElement('canvas');c.width=1024;c.height=512;const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,0,512);g.addColorStop(0,'#dfefff');g.addColorStop(.45,'#9cc4ef');g.addColorStop(.52,'#3b5d86');g.addColorStop(1,'#101a2a');
+  x.fillStyle=g;x.fillRect(0,0,1024,512);
+  x.filter='blur(20px)';x.fillStyle='rgba(255,255,255,.9)';[[220,110,160,70],[640,80,120,60],[860,160,90,40]].forEach(([a,b,w,h])=>x.fillRect(a,b,w,h));x.filter='none';
+  const t=new THREE.CanvasTexture(c);t.mapping=THREE.EquirectangularReflectionMapping;
+  const pm=new THREE.PMREMGenerator(renderer);_pSkyEnv=pm.fromEquirectangular(t).texture;pm.dispose();t.dispose();return _pSkyEnv;}
+/* 금속이 비출 밝은 회색 스튜디오(한 번만 굽는다). scene.environment(우주)는 어두워 금 영역이 검게 보였다(실측) */
+let _pStudioEnv=null;
+function pStudioEnv(){
+  if(_pStudioEnv)return _pStudioEnv;
+  const c=document.createElement('canvas');c.width=1024;c.height=512;const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,0,512);g.addColorStop(0,'#f2f4f8');g.addColorStop(.35,'#c9ced6');g.addColorStop(.5,'#8a909c');g.addColorStop(.62,'#3a3e46');g.addColorStop(1,'#6c717b');
+  x.fillStyle=g;x.fillRect(0,0,1024,512);
+  x.filter='blur(6px)';x.fillStyle='#ffffff';[[140,70,220,70],[600,50,90,200],[820,120,160,50]].forEach(([a,b,w,h])=>x.fillRect(a,b,w,h));
+  x.fillStyle='#50555f';[[380,40,40,400],[930,60,30,380]].forEach(([a,b,w,h])=>x.fillRect(a,b,w,h));x.filter='none';
+  const t=new THREE.CanvasTexture(c);t.mapping=THREE.EquirectangularReflectionMapping;
+  const pm=new THREE.PMREMGenerator(renderer);_pStudioEnv=pm.fromEquirectangular(t).texture;pm.dispose();t.dispose();return _pStudioEnv;}
+/* 계절막 — U5 확정 시안(portrait-fx.js bubbleMesh) 그대로: 가운데 투명, 가장자리만, 1시–7시 방향은 지우고 10시·5시만 */
+function pSeasonFilm(season){
+  const tint=season==='winter'?[.72,.9,1.0]:[1.0,.38,.2];
+  return new THREE.Mesh(new THREE.SphereGeometry(1.22,96,72),new THREE.ShaderMaterial({
+    uniforms:{tint:{value:new THREE.Vector3(tint[0],tint[1],tint[2])},kk:{value:V2_TUNABLES.SEASON_FILM_KK}},
+    vertexShader:'varying vec3 vN;varying vec3 vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',
+    fragmentShader:'uniform vec3 tint;uniform float kk;varying vec3 vN;varying vec3 vV;void main(){float c=abs(dot(vN,vV));float fr=pow(1.-c,.85)*kk;'
+      +'vec3 r=reflect(-vV,vN);float s1=pow(max(dot(r,normalize(vec3(-.45,.6,.65))),0.),80.)*.35;'
+      +'vec2 sd2=normalize(vN.xy+1e-5);float keep=smoothstep(.15,.85,abs(dot(sd2,vec2(-.866,.5))));fr*=keep;s1*=keep;float A=fr+s1;'
+      +'gl_FragColor=vec4(mix(tint,vec3(1.),s1/max(A,.001)),A);}',
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));}
+/* 지도 가공: 수 압도 극지방 얼음 줄이기 · 금 영역 마스크 · 바다 마스크 */
+function pPrepMap(im,key){
+  const W=im.width,H=im.height;
+  const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(im,0,0);
+  const img=x.getImageData(0,0,W,H),d=img.data;
+  if(key==='su'){ /* [U5 확정 "작게"] 흰 얼음을 극에서부터 면적(구 표면 기준) SU_ICE_KEEP만 남기고 나머지는 같은 줄의 바다색으로 덮는다 */
+    const white=i=>Math.min(d[i],d[i+1],d[i+2])>185;
+    const rowW=y=>Math.cos((.5-(y+.5)/H)*Math.PI);
+    let tot=0;const rowCnt=new Float64Array(H);
+    for(let y=0;y<H;y++){let n=0;for(let xx=0;xx<W;xx++)if(white((y*W+xx)*4))n++;rowCnt[y]=n*rowW(y);tot+=rowCnt[y];}
+    let keep=0;const order=Array.from({length:H},(_,i)=>i).sort((a,z)=>Math.abs(z-H/2)-Math.abs(a-H/2)); /* 극에 가까운 줄부터 */
+    const keepRow=new Uint8Array(H);for(const y of order){if(keep>=tot*V2_TUNABLES.SU_ICE_KEEP)break;keep+=rowCnt[y];keepRow[y]=1;}
+    for(let y=0;y<H;y++){if(keepRow[y])continue;let sr=0,sg=0,sb=0,n=0;
+      for(let xx=0;xx<W;xx++){const i=(y*W+xx)*4;if(!white(i)){sr+=d[i];sg+=d[i+1];sb+=d[i+2];n++;}}
+      if(!n)continue;sr/=n;sg/=n;sb/=n;
+      for(let xx=0;xx<W;xx++){const i=(y*W+xx)*4;if(white(i)){d[i]=sr;d[i+1]=sg;d[i+2]=sb;}}}
+    x.putImageData(img,0,0);}
+  const mk=(f)=>{const m=document.createElement('canvas');m.width=W;m.height=H;const mx=m.getContext('2d'),md=mx.createImageData(W,H);
+    let any=0;for(let i=0;i<d.length;i+=4){const v=f(d[i],d[i+1],d[i+2]);md.data[i]=md.data[i+1]=md.data[i+2]=v;md.data[i+3]=255;if(v>128)any++;}
+    mx.putImageData(md,0,0);const b=document.createElement('canvas');b.width=W;b.height=H;const bx=b.getContext('2d');bx.filter='blur(1.5px)';bx.drawImage(m,0,0);
+    return any/(W*H)>.002?b:null;};
+  /* 금: U5 facing.py classify(geum=True)와 같은 문턱 — 채도 <.3 · 밝기 >=55 · (R-B) <50, 바다(파랑)는 뺀다 */
+  const metal=key.split('-').indexOf('geum')>=0?mk((r,g,b)=>{const mx=Math.max(r,g,b),mn=Math.min(r,g,b);return((mx-mn)/(mx+1)<.3&&mx>=55&&(r-b)<50&&!(b>r+30))?255:0;}):null;
+  const water=mk((r,g,b)=>(b>r+30&&b>=g-10)?255:0);
+  return {map:c,metal:metal,water:water};}
+async function renderPortrait2(info){
+  const F=(await pFacing())[info.key];if(!F)return '';
+  const im=await pLoadImg(PMAP_BASE+info.key+'.jpg');
+  const P=pPrepMap(im,info.key),T=[];
+  const tex=cv=>{const t=new THREE.CanvasTexture(cv);T.push(t);return t;};
+  /* 앱 렌더러는 출력 색 변환을 안 쓴다(renderPortrait 주석) — 지도를 sRGB로 표시하면 어둡고 붉게 가라앉는다(실측으로 잡음). 그대로 둔다 */
+  const map=tex(P.map);map.anisotropy=4;
+  const ps=new THREE.Scene();ps.environment=scene.environment;
+  ps.add(new THREE.AmbientLight(0x8890b0,V2_TUNABLES.LIGHT_AMBIENT));
+  const key=new THREE.DirectionalLight(0xffffff,V2_TUNABLES.LIGHT_KEY);key.position.set(6,10,8);ps.add(key);
+  const rim=new THREE.DirectionalLight(0x9fc0ff,V2_TUNABLES.LIGHT_RIM);rim.position.set(-6,3,-9);ps.add(rim);
+  /* 사람마다 아주 약한 색감(±3% 따뜻함·차가움, ±4% 밝기) — U5 권장 예시 ① */
+  const u1=((info.seed>>>8)&255)/255-.5,u2=((info.seed>>>16)&255)/255-.5;
+  const tint=new THREE.Color(1+u1*.06,1,1-u1*.06).multiplyScalar(1+u2*.08);
+  const mp={map:map,bumpMap:map,bumpScale:.015,roughness:.85,metalness:0,color:tint};
+  if(P.metal){const mt=tex(P.metal);Object.assign(mp,{metalnessMap:mt,metalness:V2_TUNABLES.GEUM_METALNESS,roughness:.55,envMap:pStudioEnv(),envMapIntensity:1.0});}
+  const G=new THREE.SphereGeometry(1,128,96),mats=[new THREE.MeshStandardMaterial(mp)];
+  const mesh=new THREE.Mesh(G,mats[0]);
+  const pass=F.pass&&F.pass.length?F.pass:[[F.pitch,Math.round(F.yaw*180/Math.PI)]];
+  const pick=pass[info.seed%pass.length];
+  mesh.rotation.set(pick[0],pick[1]*Math.PI/180,.08);ps.add(mesh);
+  if(P.water){const wm=new THREE.MeshStandardMaterial({map:map,metalness:0,roughness:.16,envMap:pSkyEnv(),envMapIntensity:1.0,
+      alphaMap:tex(P.water),transparent:true,alphaTest:.5,color:tint});mats.push(wm);
+    const w=new THREE.Mesh(G,wm);w.scale.setScalar(1.001);w.rotation.copy(mesh.rotation);ps.add(w);}
+  if(info.season){const f=pSeasonFilm(info.season);mats.push(f.material);ps.add(f);}
+  const cam=new THREE.PerspectiveCamera(30,1,.1,100);
+  cam.position.set(0,.3,1).normalize().multiplyScalar((info.season?1.3:1.12)/Math.tan(15*Math.PI/180));cam.lookAt(0,0,0);
+  try{return portraitSnapshot(ps,cam,256);}
+  finally{mats.forEach(m=>m.dispose());T.forEach(t=>t.dispose());G.dispose();}}
+function queuePortrait2(info){
+  if(_p2Pending.has(info.id))return;
+  _p2Pending.set(info.id,renderPortrait2(info).then(u=>{
+    if(!u)return;_p2Cache.set(info.id,u);
+    document.querySelectorAll('img[data-p2="'+info.id+'"]').forEach(im=>{im.src=u;im.removeAttribute('data-p2');});})
+    .catch(e=>console.warn('[행성 초상 v2] 그리지 못했다',info.key,e)));}
 function portraitImg(n,cls){
+  const info=planetMapInfo(n);
+  if(info){
+    const done=_p2Cache.get(info.id);
+    if(done)return `<img class="${cls}" src="${done}" alt="" draggable="false">`;
+    queuePortrait2(info);
+    return `<img class="${cls}" data-p2="${info.id}" src="${planetPortrait(n)||P2_BLANK}" alt="" draggable="false">`;}
   const u=planetPortrait(n);
   return u?`<img class="${cls}" src="${u}" alt="" draggable="false">`
     :`<span class="${cls} noimg" style="background:${EL_INFO[n.el].css}"></span>`;}
@@ -7334,7 +7476,11 @@ function planetRank(n){
   return g<=1?'even':g<=5?'down':'up';}
 function planetScaleOf(n){
   if(n.isMe)return V2_TUNABLES.STAR_SCALE;
-  return V2_TUNABLES.PLANET_SCALE*V2_TUNABLES.PLANET_RANK_MUL[planetRank(n)];}
+  let mul=V2_TUNABLES.PLANET_RANK_MUL[planetRank(n)];
+  /* [U7] 은하 조망에서는 위계 차이를 절반만 — 행성이 4~9px라 0.8배면 4px대로 떨어져 점처럼 된다(U6 실측).
+     성계·포커스 장면에서는 위계 그대로. */
+  if(!activeGroup)mul=1-(1-mul)*V2_TUNABLES.PLANET_RANK_GALAXY_KEEP;
+  return V2_TUNABLES.PLANET_SCALE*mul;}
 /* 자전 시작각 — 사람 id로 고정(새로고침해도 같은 얼굴에서 시작) */
 function spinPhase(n){
   if(n.spin0===undefined){let h=0;const s=String(n.id);for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;n.spin0=(h>>>0)/4294967296*Math.PI*2;}

@@ -1,0 +1,25 @@
+<!doctype html><meta charset="utf-8"><title>pass list</title>
+<body style="background:#000;color:#fff">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// check.html의 pickYaw와 같은 측정 조건으로, 기준(주 오행이 가장 넓음 + 보조 모두 3% 이상)을 통과하는 방향을 전부 모은다.
+const BUST=Date.now();const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(96,96);
+const loadImg=u=>new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=u;});
+async function passes(key){
+  const im=await loadImg('cls/'+key+'.png?b='+BUST);const t=new THREE.Texture(im);t.needsUpdate=true;t.magFilter=t.minFilter=THREE.NearestFilter;t.generateMipmaps=false;
+  const ps=new THREE.Scene();const m=new THREE.Mesh(new THREE.SphereGeometry(1,96,64),new THREE.MeshBasicMaterial({map:t}));ps.add(m);
+  const cam=new THREE.PerspectiveCamera(30,1,.1,100);cam.position.set(0,.3,1).normalize().multiplyScalar(1.4/Math.tan(15*Math.PI/180));cam.lookAt(0,0,0);
+  const N=96,rt=new THREE.WebGLRenderTarget(N,N),px=new Uint8Array(N*N*4);const want=key.split('-');const out=[];
+  for(const pt of [-.45,-.25,0,.2,.45])for(let d=0;d<360;d+=10){const y=d*Math.PI/180;m.rotation.set(pt,y,.08);
+    renderer.setRenderTarget(rt);renderer.setClearColor(0x808080,1);renderer.clear();renderer.render(ps,cam);renderer.readRenderTargetPixels(rt,0,0,N,N,px);
+    const cnt={mok:0,hwa:0,to:0,geum:0,su:0};let n=0;
+    for(let i=0;i<px.length;i+=4){const r=px[i],g=px[i+1],b=px[i+2];if(r===128&&g===128&&b===128)continue;n++;
+      const R=r>128,G=g>128,B=b>128;const e=R&&G&&B?'geum':R&&G?'to':R?'hwa':G?'mok':B?'su':null;if(e)cnt[e]++;}
+    const fr=e=>cnt[e]/n;const main=fr(want[0]);const oth=want.slice(1).map(fr);
+    const mainTop=['mok','hwa','to','geum','su'].every(e=>e===want[0]||fr(e)<=main);
+    if(mainTop&&oth.every(o=>o>=.03))out.push([+pt.toFixed(2),d]);}
+  renderer.setRenderTarget(null);rt.dispose();t.dispose();m.geometry.dispose();return out;}
+(async()=>{const keys=await (await fetch('keys.json')).json();const R={};
+  for(const k of keys){R[k]=await passes(k);document.title=k;}
+  await fetch('/passlist.json',{method:'POST',body:'data:,'+btoa(JSON.stringify(R))});document.title='done';})();
+</script>
