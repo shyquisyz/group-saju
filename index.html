@@ -2607,7 +2607,10 @@ function cardPillar(p){
       hour:Number.isInteger(p.birth.hour)?p.birth.hour:null,min:p.birth.min,lon:p.birth.lon,
       dayRule:p.birth.dayRule,est:p.birth.est}):null;
     if(r){stem=r.day[0];branch=r.day[1];}}catch(e){}
-  return stemThing(stem)+(branch===null?'':' '+BRANCHES[branch]);}
+  /* [2026-09-19 U16 — B0 결정 ⑤, 사용자: 권장대로] ~~뒷 글자 한자 그대로(申)~~ → **동물 이름.** "무쇠·바위 申"처럼 쉬운 말과 한자가 한 줄에 섞였다.
+     일지(태어난 날 아랫글자)의 동물이라 "띠"(태어난 해)와는 다르다 — 명패는 일주를 말하는 자리라 일지 그대로 둔다 */
+  return stemThing(stem)+(branch===null?'':' '+BRANCH_ANIMAL[branch]);}
+const BRANCH_ANIMAL=['쥐','소','호랑이','토끼','용','뱀','말','양','원숭이','닭','개','돼지'];
 /** 명패 맨 윗줄 — "누가 누구를 보는가". ~~"테오에게 아내는"~~ →
     **[2026-09-09 ⑫] 본인(isMe)이 낀 쪽은 '나'로 부르고, 안 낀 쪽은 두 이름을 그대로 쓴다**(사용자 규칙).
     본인 판별은 새로 만들지 않고 노드에 이미 있는 `isMe`를 쓴다(§2.1 — 은하에 정확히 하나).
