@@ -217,6 +217,8 @@
   /* [2026-09-19 U11] 「요즘」 — 이야기 층 첫 구역. 근거 층 「사주로 보면」은 회색·작은 글씨로 이야기와 모양부터 다르게 */
   .nowbox p{font-size:var(--fs-base);line-height:1.7;color:var(--ink);word-break:keep-all;margin:0 0 9px}
   .nowbox p.nowhint{font-size:var(--fs-sm);color:var(--mut)}
+  .askbox .sjhelp-body p{font-size:var(--fs-base);line-height:1.7;color:var(--ink);word-break:keep-all;margin:4px 0 6px}
+  .askdis{display:block;margin-top:6px;font-size:var(--fs-sm);color:var(--mut)}
   .basis{margin:22px 0 6px;border-top:1px solid var(--line);padding-top:8px}
   .basis .sjhelp-body{color:var(--mut)}
   .basisrow{margin:10px 0 12px}
@@ -3323,7 +3325,7 @@ const DAEUN_WORD={비겁:'내 사람·내 몫을 넓히는',식상:'재주를 �
    합쇼체(~습니다) → 해요체(~요)로 바꾼다. 되돌리려면 yo()가 입력을 그대로 돌려주게 하면 된다.
    규칙 넷(~입니다 · ~합니다 · ~됩니다 · ~ㅆ습니다) + 불규칙 사전(원고 전체에서 뽑은 '~니다' 290종 중 규칙 밖의 것).
    사전에 없는 말은 **바꾸지 않는다**(틀린 활용을 만드느니 옛 말투가 남는 편이 낫다) — 자가진단 yoCoverage가 남은 개수를 센다. */
-const YO_DICT={'겁니다':'걸어요','있습니다':'있어요','없습니다':'없어요','않습니다':'않아요','쉽습니다':'쉬워요','아닙니다':'아니에요','갑니다':'가요','줍니다':'줘요','사라집니다':'사라져요','나옵니다':'나와요','많습니다':'많아요','남습니다':'남아요','맞습니다':'맞아요','낫습니다':'나아요','쓰입니다':'쓰여요','어울립니다':'어울려요','챙깁니다':'챙겨요','모입니다':'모여요','지킵니다':'지켜요','지칩니다':'지쳐요','갈립니다':'갈려요','봅니다':'봐요','드뭅니다':'드물어요','적습니다':'적어요','어렵습니다':'어려워요','큽니다':'커요','만듭니다':'만들어요','빕니다':'비어요','늘어납니다':'늘어나요','드립니다':'드려요','얇습니다':'얇아요','들어갑니다':'들어가요','같습니다':'같아요','섭니다':'서요','납니다':'나요','놓습니다':'놓아요','밀립니다':'밀려요','늦습니다':'늦어요','붙습니다':'붙어요','옵니다':'와요','자랍니다':'자라요','씁니다':'써요','보냅니다':'보내요','달라집니다':'달라져요','세웁니다':'세워요','가깝습니다':'가까워요','가리킵니다':'가리켜요','만들어집니다':'만들어져요','빠릅니다':'빨라요','굴립니다':'굴려요','커집니다':'커져요','나갑니다':'나가요','버팁니다':'버텨요','탑니다':'타요','헐겁습니다':'헐거워요','풀립니다':'풀려요','냅니다':'내요','다듬습니다':'다듬어요','셉니다':'세요','굳습니다':'굳어요','바뀝니다':'바뀌어요','쌓입니다':'쌓여요','모릅니다':'몰라요','겹칩니다':'겹쳐요','건너뜁니다':'건너뛰어요','되돌립니다':'되돌려요','열립니다':'열려요','뜹니다':'떠요','부칩니다':'부쳐요','듭니다':'들어요','거둡니다':'거둬요','버겁습니다':'버거워요','달립니다':'달려요','어지럽습니다':'어지러워요','맞아떨어집니다':'맞아떨어져요','갇힙니다':'갇혀요','짚습니다':'짚어요','이깁니다':'이겨요','잃습니다':'잃어요','다독입니다':'다독여요','밀어붙입니다':'밀어붙여요','끝납니다':'끝나요','흔들립니다':'흔들려요','떨어집니다':'떨어져요','물러섭니다':'물러서요','돌아옵니다':'돌아와요','뚫습니다':'뚫어요','넓힙니다':'넓혀요','생깁니다':'생겨요','찾아냅니다':'찾아내요','두껍습니다':'두꺼워요','걸립니다':'걸려요','서운해집니다':'서운해져요','놓칩니다':'놓쳐요','웃습니다':'웃어요','거침없어집니다':'거침없어져요','편해집니다':'편해져요','너그럽습니다':'너그러워요','따릅니다':'따라요','삼습니다':'삼아요','끕니다':'끌어요','꺾입니다':'꺾여요','트입니다':'트여요','띄웁니다':'띄워요','익힙니다':'익혀요','찾습니다':'찾아요','꺼냅니다':'꺼내요','듣습니다':'들어요','기웁니다':'기울어요','따집니다':'따져요','고릅니다':'골라요','불어납니다':'불어나요','얻습니다':'얻어요','그렇습니다':'그래요','내립니다':'내려요','샙니다':'새요','기다립니다':'기다려요','깎습니다':'깎아요','그립니다':'그려요','좋습니다':'좋아요','섞입니다':'섞여요','곧아집니다':'곧아져요','잡힙니다':'잡혀요','들어옵니다':'들어와요','버립니다':'버려요','없어집니다':'없어져요','흩어집니다':'흩어져요','움직입니다':'움직여요','서툽니다':'서툴러요','식습니다':'식어요','조용해집니다':'조용해져요','미뤄집니다':'미뤄져요','걷습니다':'걸어요','자유롭습니다':'자유로워요','쥡니다':'쥐어요','몰립니다':'몰려요','갖춥니다':'갖춰요','무뎌집니다':'무뎌져요','흘러나옵니다':'흘러나와요','느낍니다':'느껴요','마릅니다':'말라요','파고듭니다':'파고들어요','식힙니다':'식혀요','달굽니다':'달궈요','쳐냅니다':'쳐내요','흐릅니다':'흘러요','답답해집니다':'답답해져요','이룹니다':'이뤄요','남깁니다':'남겨요','지웁니다':'지워요','보입니다':'보여요','넉넉해집니다':'넉넉해져요','누릅니다':'눌러요','살립니다':'살려요','옮겨갑니다':'옮겨가요','막힙니다':'막혀요','줄입니다':'줄여요','나타냅니다':'나타내요','읽습니다':'읽어요','가릅니다':'갈라요','다릅니다':'달라요','엽니다':'열어요','나뉩니다':'나뉘어요','고칩니다':'고쳐요','올라갑니다':'올라가요','것입니다':'거예요','잔잔합니다':'잔잔해요','되었습니다':'됐어요'};
+const YO_DICT={'겁니다':'걸어요','다그칩니다':'다그쳐요','북돋습니다':'북돋아요','있습니다':'있어요','없습니다':'없어요','않습니다':'않아요','쉽습니다':'쉬워요','아닙니다':'아니에요','갑니다':'가요','줍니다':'줘요','사라집니다':'사라져요','나옵니다':'나와요','많습니다':'많아요','남습니다':'남아요','맞습니다':'맞아요','낫습니다':'나아요','쓰입니다':'쓰여요','어울립니다':'어울려요','챙깁니다':'챙겨요','모입니다':'모여요','지킵니다':'지켜요','지칩니다':'지쳐요','갈립니다':'갈려요','봅니다':'봐요','드뭅니다':'드물어요','적습니다':'적어요','어렵습니다':'어려워요','큽니다':'커요','만듭니다':'만들어요','빕니다':'비어요','늘어납니다':'늘어나요','드립니다':'드려요','얇습니다':'얇아요','들어갑니다':'들어가요','같습니다':'같아요','섭니다':'서요','납니다':'나요','놓습니다':'놓아요','밀립니다':'밀려요','늦습니다':'늦어요','붙습니다':'붙어요','옵니다':'와요','자랍니다':'자라요','씁니다':'써요','보냅니다':'보내요','달라집니다':'달라져요','세웁니다':'세워요','가깝습니다':'가까워요','가리킵니다':'가리켜요','만들어집니다':'만들어져요','빠릅니다':'빨라요','굴립니다':'굴려요','커집니다':'커져요','나갑니다':'나가요','버팁니다':'버텨요','탑니다':'타요','헐겁습니다':'헐거워요','풀립니다':'풀려요','냅니다':'내요','다듬습니다':'다듬어요','셉니다':'세요','굳습니다':'굳어요','바뀝니다':'바뀌어요','쌓입니다':'쌓여요','모릅니다':'몰라요','겹칩니다':'겹쳐요','건너뜁니다':'건너뛰어요','되돌립니다':'되돌려요','열립니다':'열려요','뜹니다':'떠요','부칩니다':'부쳐요','듭니다':'들어요','거둡니다':'거둬요','버겁습니다':'버거워요','달립니다':'달려요','어지럽습니다':'어지러워요','맞아떨어집니다':'맞아떨어져요','갇힙니다':'갇혀요','짚습니다':'짚어요','이깁니다':'이겨요','잃습니다':'잃어요','다독입니다':'다독여요','밀어붙입니다':'밀어붙여요','끝납니다':'끝나요','흔들립니다':'흔들려요','떨어집니다':'떨어져요','물러섭니다':'물러서요','돌아옵니다':'돌아와요','뚫습니다':'뚫어요','넓힙니다':'넓혀요','생깁니다':'생겨요','찾아냅니다':'찾아내요','두껍습니다':'두꺼워요','걸립니다':'걸려요','서운해집니다':'서운해져요','놓칩니다':'놓쳐요','웃습니다':'웃어요','거침없어집니다':'거침없어져요','편해집니다':'편해져요','너그럽습니다':'너그러워요','따릅니다':'따라요','삼습니다':'삼아요','끕니다':'끌어요','꺾입니다':'꺾여요','트입니다':'트여요','띄웁니다':'띄워요','익힙니다':'익혀요','찾습니다':'찾아요','꺼냅니다':'꺼내요','듣습니다':'들어요','기웁니다':'기울어요','따집니다':'따져요','고릅니다':'골라요','불어납니다':'불어나요','얻습니다':'얻어요','그렇습니다':'그래요','내립니다':'내려요','샙니다':'새요','기다립니다':'기다려요','깎습니다':'깎아요','그립니다':'그려요','좋습니다':'좋아요','섞입니다':'섞여요','곧아집니다':'곧아져요','잡힙니다':'잡혀요','들어옵니다':'들어와요','버립니다':'버려요','없어집니다':'없어져요','흩어집니다':'흩어져요','움직입니다':'움직여요','서툽니다':'서툴러요','식습니다':'식어요','조용해집니다':'조용해져요','미뤄집니다':'미뤄져요','걷습니다':'걸어요','자유롭습니다':'자유로워요','쥡니다':'쥐어요','몰립니다':'몰려요','갖춥니다':'갖춰요','무뎌집니다':'무뎌져요','흘러나옵니다':'흘러나와요','느낍니다':'느껴요','마릅니다':'말라요','파고듭니다':'파고들어요','식힙니다':'식혀요','달굽니다':'달궈요','쳐냅니다':'쳐내요','흐릅니다':'흘러요','답답해집니다':'답답해져요','이룹니다':'이뤄요','남깁니다':'남겨요','지웁니다':'지워요','보입니다':'보여요','넉넉해집니다':'넉넉해져요','누릅니다':'눌러요','살립니다':'살려요','옮겨갑니다':'옮겨가요','막힙니다':'막혀요','줄입니다':'줄여요','나타냅니다':'나타내요','읽습니다':'읽어요','가릅니다':'갈라요','다릅니다':'달라요','엽니다':'열어요','나뉩니다':'나뉘어요','고칩니다':'고쳐요','올라갑니다':'올라가요','것입니다':'거예요','잔잔합니다':'잔잔해요','되었습니다':'됐어요'};
 function yoWord(w){
   if(YO_DICT[w])return YO_DICT[w];
   if(w.endsWith('입니다')){const st=w.slice(0,-3);return st?st+ieyo(st):w;}
@@ -3336,6 +3338,16 @@ function yoWord(w){
 function yo(t){
   /* 강조 태그가 낱말을 끊는 자리 — "<b>…뜻</b>입니다" 꼴(원고에 10곳). 태그 앞 글자로 이에요/예요를 고른다 */
   return String(t).replace(/([가-힣])((?:<\/[a-z]+>)+)입니다/g,(m0,c,tg)=>c+tg+ieyo(c)).replace(/[가-힣]+니다/g,yoWord);}
+/* ═══ 쉬운 말 [2026-09-19 U12] ═══ 사용자: "살리는 쪽 누르는 쪽 이런 것처럼 무슨 말인지 모르겠는 건 쉽게 풀어야 할 듯".
+   생(生)·극(剋)을 옮긴 "살린다·누른다"가 사람 사이 말로는 안 읽혔다 → **북돋는다 · 다그친다.** 괄호 속 갈래 용어 "(재성)"과
+   오행 화살표 "(수→화)"는 이야기 층에서 빼고 근거 층에만 둔다. yo()보다 **먼저** 부른다(다그칩니다 → 다그쳐요 순서). */
+const PLAIN_SWAP=[['누르는 쪽','다그치는 쪽'],['살리는 쪽','북돋는 쪽'],['눌리면서','다그침을 받으며'],['이 눌림이','이 다그침이'],
+  ['눌리는','다그침을 받는'],['누릅니다','다그칩니다'],['살립니다','북돋습니다'],['누르는','다그치는'],['살리는','북돋는']];
+function plain(t){
+  let x=String(t).replace(/\((?:비겁|식상|재성|관성|인성)\)/g,'')
+    .replace(/\s?\((?:[목화토금수]\s?→\s?[목화토금수]|[목화토금수]·[목화토금수])\)/g,'');
+  PLAIN_SWAP.forEach(([a,b])=>{x=x.split(a).join(b);});
+  return x;}
 /** 받침에 따라 이에요/예요 */
 function ieyo(w){const c=w.charCodeAt(w.length-1);return(c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28)?'이에요':'예요';}
 /** 「요즘」 이야기 층. isMe면 "당신" */
@@ -3362,7 +3374,7 @@ function nowStoryHtml(n,isMe){
   ps.push(`<p>${tm}</p>`);
   /* 대운 */
   const du=daeunOf(n);
-  if(!du)ps.push(`<p class="nowhint">성별을 넣으면 10년 단위 흐름(대운)도 보여 드려요. <button type="button" class="estnotebtn" data-edit="${n.id}">성별 넣기 →</button></p>`);
+  if(!du){}   /* [U12] ~~여기 「성별 넣기」~~ — 바로 아래 「궁금한 것」이 한 번만 안내한다(한 패널에 같은 버튼 세 번이던 것) */
   else if(!du.cur)ps.push(`<p>${X}의 첫 10년 흐름은 ${Math.round(du.startYears)}살 무렵부터 시작돼요.</p>`);
   else{
     const c=du.cur, ct=luckTouch(n,c.pillar), within=du.ageNow-c.from;
@@ -3376,6 +3388,104 @@ function nowStoryHtml(n,isMe){
       td+=` ${left<1?'올해 안에':`${Math.max(1,Math.round(left))}년쯤 뒤`}(${Math.round(nx.from)}살 무렵)부터는 '${DAEUN_WORD[nt.groups[0]]}' 10년이 시작돼요.`;}
     ps.push(`<p>${td}</p>`);}
   return `<div class="nowbox">${ps.join('')}</div>`;}
+/* ═══ 「궁금한 것」 [2026-09-19 U12] ═══ 사용자: "결국 사람들이 궁금해할 건 돈은 언제 버나, 건강은? 연애운은? 자식은 어떻게 되나 —
+   이런 질문에 답이 있어야 할 듯. 아직 읽다 만 느낌". 질문 넷(18살 미만은 공부·재능 + 건강)을 접힌 제목으로 두고 누르면 답이 펼쳐진다.
+   [읽는 규칙 — 명리의 널리 쓰는 대응, 유파 이견이 적은 것만]
+     돈 = 재성 · 짝 = 남자 재성 / 여자 관성 · 자식 = 남자 관성 / 여자 식상 · 공부 = 인성 · 재능 = 식상
+     건강 = 오행 → 몸(목 간·눈·근육 / 화 심장·혈압·잠 / 토 위장·소화 / 금 폐·호흡기·피부 / 수 신장·허리·붓기) — 비었거나 넘치는 쪽
+   [언제] 앞으로 10년 세운 중 그 갈래가 천간·지지에 드는 해 + 대운 중 그 갈래가 드는 10년(앞 5년 천간 · 뒤 5년 지지).
+   [하지 않는 말] 자식이 있다·없다, 병 이름, 결혼 여부 단정 — 관계 방식과 "때"만 말한다. 건강은 매번 "병원이 먼저" 한 줄. */
+const ASK_ORG={mok:'간·눈·근육',hwa:'심장·혈압·잠',to:'위장·소화',geum:'폐·호흡기·피부',su:'신장·허리·붓기'};
+/** 앞으로 n년 중 그 갈래가 드는 해. match(t) 로 더 좁힐 수 있다 */
+function askYears(x,test,n){
+  const L=luckNow(); if(!L||!x.birth)return [];
+  const out=[];
+  for(let Y=L.luckYear;Y<L.luckYear+(n||10);Y++){
+    const pil=[((Y-4)%10+10)%10,((Y-4)%12+12)%12], t=luckTouch(x,pil);
+    if(t&&test(t))out.push({Y,age:Y-x.birth.y,t});}
+  return out;}
+function askYearStr(ys,k){return ys.slice(0,k||3).map(o=>`${o.Y}년(${o.age}살)`).join('·');}
+/** 지금부터의 대운 중 그 갈래가 드는 첫 10년(또는 반쪽) */
+function askDaeun(x,grp){
+  const du=daeunOf(x); if(!du)return null;
+  const from=du.cur?du.cur.k-1:0;
+  for(let i=from;i<du.list.length;i++){
+    const d=du.list[i], t=luckTouch(x,d.pillar); if(!t)continue;
+    const s=t.groups[0]===grp, b=t.groups[1]===grp;
+    if(!s&&!b)continue;
+    const a0=s?d.from:d.from+5, a1=b?d.to:d.from+5;
+    if(a1<=du.ageNow)continue;
+    return {a0:Math.round(Math.max(a0,du.ageNow)),a1:Math.round(a1),now:du.ageNow>=a0};}
+  return null;}
+function askHtml(n,isMe){
+  const b=n.birth; if(!b)return '';
+  const r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule}); if(!r)return '';
+  const X=isMe?'당신':bkEsc(n.name), Xh=`${X}한테는`;
+  const cnt=personGroupCounts(n).cnt, v=(gangyak(r)||{}).verdict||'';
+  const age=(Date.now()-r.utcMs)/(365.2425*86400000);
+  const sex=b.sex==='남'||b.sex==='여'?b.sex:null;
+  const sexBtn=`<button type="button" class="estnotebtn" data-edit="${n.id}">성별 넣기 →</button>`;
+  const qs=[];
+  const dStr=(d,what)=>d?(d.now?` 큰 흐름으로는 <b>지금(${d.a1}살까지)</b>이 ${what} 10년이에요.`:` 큰 흐름으로는 <b>${d.a0}~${d.a1}살</b>이 ${what} 시기예요.`):'';
+  if(age<18){
+    /* 공부·재능 — 인성(받아들이기)·식상(꺼내기) */
+    const inS=cnt['인성'], sik=cnt['식상'];
+    let t=inS>=2?'배운 걸 스펀지처럼 받아들이는 아이예요. 좋은 선생님 한 명이 크게 바꿔 놓아요.'
+      :inS===1?'관심 가는 한 과목을 깊게 파는 쪽이에요. 억지로 넓히기보다 좋아하는 걸 밀어 주세요.'
+      :'앉아서 외우는 공부보다 해 보고 만들어 보며 배우는 쪽이에요.';
+    t+=sik>=2?' 손재주·말재주가 여러 갈래라, 보여 줄 무대를 만들어 주면 신나서 커요.':sik===1?' 재주가 한 줄기 또렷해요 — 그걸 찾는 게 먼저예요.':'';
+    const ys=askYears(n,t2=>t2.groups.includes('인성'),10).filter(o=>o.age<=20);
+    if(ys.length)t+=` 공부 운이 붙는 해: ${askYearStr(ys)}.`;
+    qs.push(['공부·재능은?',t]);
+  }else{
+    /* 돈 */
+    const c=cnt['재성'];
+    let t=c===0?`${X}의 사주에는 '돈을 쥐는 기운'이 겉에 드러나 있지 않아요. 돈 자체보다 다른 걸 좇는 사람이라, 돈은 일과 사람을 따라 들어와요.`
+      :c===1?'돈 감각이 딱 한 줄 있어요 — 필요한 만큼은 알아서 챙기는 쪽이에요.'
+      :'돈과 실속을 보는 눈이 여러 겹이에요. 기회가 보이면 몸이 먼저 움직여요.';
+    if(v==='신강'&&c>=1)t+=' 들어온 돈을 쥘 힘도 있어요.';
+    if(v==='신약'&&c>=2)t+=' 다만 벌 기회에 비해 쥐는 힘이 달려서, 혼자보다 같이 굴릴 때 남아요.';
+    const ys=askYears(n,t2=>t2.groups.includes('재성'));
+    t+=ys.length?` 가까운 해로는 <b>${askYearStr(ys)}</b>에 돈 들어올 거리가 생겨요.`+(v==='신약'?' 그해엔 쓸 일도 같이 커지니, 들어오면 바로 묶어 두세요.':'')
+      :' 앞으로 10년 안엔 따로 튀는 "돈의 해"가 없어요 — 꾸준히 모으는 쪽이 맞아요.';
+    if(sex)t+=dStr(askDaeun(n,'재성'),"돈이 크게 도는");   /* 성별이 없으면 아래 「연애·결혼·자식」 한 곳에서만 안내(반복 금지) */
+    qs.push(['돈은 언제 들어와요?',t]);
+    /* 연애·결혼 */
+    if(!sex)qs.push(['연애·결혼·자식은?',`짝과 자식을 보는 자리는 남녀에 따라 달라서, 성별을 넣으면 알려 드려요 — 10년 단위 큰 흐름(대운)과 돈이 크게 도는 시기도 같이 보여 드려요. ${sexBtn}`]);
+    else{
+      const sg=sex==='남'?'재성':'관성', c2=cnt[sg];
+      let t2=c2===0?'사주에 짝을 뜻하는 기운이 겉에 드러나 있지 않아요 — 인연을 기다리기보다 내가 움직일 때 닿아요.'
+        :c2===1?'짝 자리가 또렷하게 하나 있어요 — 한 사람에게 오래 가는 편이에요.'
+        :'짝을 뜻하는 기운이 여러 겹이라 인연이 많은 편이에요 — 고르는 눈이 중요해요.';
+      const good=askYears(n,t3=>t3.groups.includes(sg)||t3.hits.some(h=>h.pos==='day'&&h.kind!=='chung'));
+      const shake=askYears(n,t3=>t3.hits.some(h=>h.pos==='day'&&h.kind==='chung'));
+      t2+=good.length?` 인연이 닿기 쉬운 해: <b>${askYearStr(good)}</b> — 짝이 있다면 사이가 깊어지는 해예요.`:' 앞으로 10년 안엔 인연이 몰리는 해가 따로 없어요 — 지금 곁의 사람에게 쓰세요.';
+      if(shake.length)t2+=` ${askYearStr(shake,2)}은 가까운 사이가 흔들리기 쉬우니 말 한마디를 아끼세요.`;
+      t2+=dStr(askDaeun(n,sg),'인연이 무르익는');
+      qs.push(['연애·결혼은?',t2]);}
+    /* 자식 */
+    if(sex){
+      const cg=sex==='남'?'관성':'식상', c3=cnt[cg];
+      let t3=c3===0?'아이 일에 매이기보다, 자기 일을 하면서 곁을 지키는 부모 쪽이에요.'
+        :c3===1?'아이 한 명 한 명에게 마음을 깊게 쏟는 편이에요.'
+        :'아이 일에 마음이 많이 가요 — 챙길 게 많은 만큼 기쁨도 커요.';
+      const ys=askYears(n,t4=>t4.groups.includes(cg));
+      if(ys.length)t3+=` 아이 일로 바빠지거나 좋은 소식이 오기 쉬운 해: <b>${askYearStr(ys)}</b>.`;
+      qs.push(['자식은?',t3]);}
+  }
+  /* 건강 */
+  { const sur=sajuElements(r), letters=r.hasTime?8:6, hi=letters===8?4:3;
+    const miss=EL_ORDER.filter(k=>!sur[k]), over=EL_ORDER.filter(k=>sur[k]>=hi);
+    let t=miss.length?`명리에서는 비어 있는 기운 쪽을 몸의 약한 고리로 봐요. ${Xh} ${miss.map(k=>EL_KO[k]).join('·')} 기운이 없어서 <b>${miss.map(k=>ASK_ORG[k]).join(', ')}</b> 쪽을 한 번 더 챙기면 좋아요.`
+      :'다섯 기운이 고루 있어서 크게 기우는 곳은 없어요.';
+    if(over.length)t+=` ${over.map(k=>EL_KO[k]).join('·')} 기운은 넘치는 편이라 <b>${over.map(k=>ASK_ORG[k]).join(', ')}</b> 쪽이 과열되기 쉬워요.`;
+    t+=(v==='극약'||v==='신약')?' 체력은 아껴 쓰는 편이 좋아요 — 몰아서 하고 앓아눕는 패턴을 조심하세요.'
+      :(v==='신강'||v==='극왕')?' 체력은 좋은 편인데, 그걸 믿고 무리하기 쉬워요.':'';
+    const L=luckNow(), yt=L?luckTouch(n,L.year):null;
+    if(yt&&yt.hits.some(h=>h.pos==='day'&&h.kind==='chung'))t+=' 올해는 몸의 리듬이 흔들리기 쉬운 해라, 검진은 미루지 마세요.';
+    t+=' <span class="askdis">재미로 보는 풀이예요 — 몸이 불편하면 병원이 먼저예요.</span>';
+    qs.push(['건강은?',t]); }
+  return `<div class="askbox">`+qs.map(([q,a],i)=>`<div class="rdblk rdfold">${sjHelp('ask:'+i+':'+q,q,`<p>${a}</p>`,null,false)}</div>`).join('')+`</div>`;}
 /** 근거 층에 둘 계산 사실 — 기둥과 십신 이름 */
 function nowFactsHtml(n){
   const L=luckNow(); if(!L||!n.birth)return '';
@@ -3389,6 +3499,7 @@ function nowFactsHtml(n){
     +du.list.slice(0,9).map(d=>{const on=du.cur&&d.k===du.cur.k;return `${on?'<b>':''}${Math.floor(d.from)} ${pillarStr(d.pillar)}${on?'</b>':''}`;}).join(' · '));
   else rows.push('대운 — 성별이 없어 방향을 정할 수 없습니다(양남음녀 순행).');
   rows.push('판단은 기운의 세기(억부)만 봅니다 — 계절 보정(조후)은 아직 넣지 않았습니다. 극왕·극약이면 도움·부담을 말하지 않습니다.');
+  rows.push('「궁금한 것」 읽는 규칙 — 돈 = 재성 · 짝 = 남자 재성 / 여자 관성 · 자식 = 남자 관성 / 여자 식상 · 공부 = 인성 · 재능 = 식상 · 건강 = 비었거나 넘치는 오행(목 간 · 화 심장 · 토 위장 · 금 폐 · 수 신장).');
   return `<div class="basisrow"><div class="basish">운의 흐름</div>${rows.map(r=>`<p>${r}</p>`).join('')}</div>`;}
 /** 그룹 「올해 우리는」 */
 function gSecYear(ms){
@@ -10482,31 +10593,32 @@ function wireGSections(root){
 /* ═════════════════════════════════════════════════════════════════════ */
 function analysisInsightBody(A,mode,gtype){   /* [2026-09-17 A6-4] gtype(선택) — showGroup만 넘긴다 */
   const grp=mode!=='relview'&&mode!=='virtual';
-  const W=grp?{here:'이 그룹',unit:'성계',in:'이 성계'}:{here:'이 조합',unit:'조합',in:'이 안'};
+  const W=grp?{here:'이 그룹',unit:'그룹',in:'이 그룹'}:{here:'이 조합',unit:'조합',in:'이 안'};   /* [U12] ~~성계~~ — 화면 말은 그룹 */
   const total=A.total;
   const body=[];
   /* [4번 1단계] "기운을 가장 많이 발산하는 사람"은 중심축의 정의를 되풀이한 동어반복이었다 —
      실제 발신 횟수(saengGive/geukGive)로 근거를 바꾼다. 뒤에 붙던 "항성은 언제나 나이고…"
      설명은 매 그룹마다 토씨 하나 안 틀리고 반복되던 문장이라 여기서 뺀다(3단계에서 도움말로). */
   const sg=A.saengGive[A.sun.id]||0, gg=A.geukGive[A.sun.id]||0;
-  body.push(`${W.here}의 중심축은 <b>${bkEsc(A.sun.name)}</b> — ${
-    sg||gg?`살리는 쪽 ${sg}회, 누르는 쪽 ${gg}회로 ${W.in}에서 가장 많이 발신합니다.`
-          :`발신이 없어 기본값으로 잡힌 자리입니다.`}`);
+  /* [2026-09-19 U12] ~~"살리는 쪽 n회, 누르는 쪽 n회로 가장 많이 발신합니다"~~ — 사용자가 못 알아들은 바로 그 문장. 횟수는 근거 층으로 */
+  body.push(sg||gg
+    ?`${W.here}의 중심은 <b>${bkEsc(A.sun.name)}</b>입니다 — 다른 사람을 북돋거나 다그치는 일이 이 안에서 제일 많은 사람입니다.`
+    :`${W.here}의 중심은 <b>${bkEsc(A.sun.name)}</b>로 두었습니다 — 서로 주고받는 기운이 아직 없어서 정한 자리입니다.`);
   /* [2026-09-17 A6-4] ~~쏠림(domRatio>=.5) 한 줄~~ → 가장 많은 오행이 하나로 정해지면 오행×역학 15문장(GPAN_LINE)으로
      판의 성격을 말한다. 동률이면 종전 "고르게 섞인" 문장. 옛 문장은 개수만 말했고 개수는 legend 줄에 이미 있다. */
   const topEl=groupTopEl(A);
   body.push(topEl
     ?`${total}인 중 ${A.cnt[topEl]}명이 ${EL_KO[topEl]} 기운입니다. ${GPAN_LINE[topEl][A.dyn]||GPAN_LINE[topEl]['혼합형']}`
     :`오행이 비교적 고르게 섞인 ${W.unit} — 서로 다른 체질이 균형을 만듭니다.`);
-  body.push(`내부 관계: 생 ${A.saeng} · 극 ${A.geuk} · 비화 ${A.bi} — <b>${A.dyn}</b>.`);
+  /* [U12] ~~내부 관계: 생 n · 극 n · 비화 n~~ → 근거 층(groupBasisHtml)으로 */
   /* [4번 1단계] rel2를 실제로 쓰는 자리. 2인 이하는 그 1쌍이 곧 그룹이라 관계 패널과 완전히
      중복되므로 생략하고, 대신 showGroup이 관계 패널로 가는 직행 링크를 단다. */
   if(total>=3){
     const gc=pairClauses(A,'geuk'),sc=pairClauses(A,'saeng');
-    const gk=clauseHTML(gc,'누릅니다');
-    if(gk)body.push(`${W.here}의 <b>긴장선</b> — ${gk}`);
-    const sa=clauseHTML(sc,'살립니다');
-    if(sa)body.push(`<b>기운이 도는 길</b> — ${sa}`);
+    const gk=clauseHTML(gc,'다그칩니다');
+    if(gk)body.push(`<b>서로 다그치는 줄</b> — ${gk} 나쁜 사이라는 뜻이 아니라, 서로를 조이고 단련시키는 사이라는 뜻입니다.`);
+    const sa=clauseHTML(sc,'북돋습니다');
+    if(sa)body.push(`<b>서로 북돋는 줄</b> — ${sa}`);   /* [U12] ~~긴장선 · 기운이 도는 길~~ */
     /* §7.2 에고센트릭 — 내가 낀 쌍이 상한에 밀려 사라지면 "내 은하인데 내 얘기가 없는" 화면이 된다 */
     const me=A.ms.find(n=>n.isMe);
     /* 판정 기준은 "내 이름이 축약본에 등장하는가"다. 상대 이름으로 판정하면 내가 낀 쌍이 통째로
@@ -10534,7 +10646,7 @@ function analysisInsightBody(A,mode,gtype){   /* [2026-09-17 A6-4] gtype(선택)
       body.push(`서로 밀거나 당기는 축이 없습니다 — 전원이 같은 결이라 편하지만, 판을 흔들 힘도 그만큼 적습니다.`);}
   /* 조언 절("조기경보입니다")은 group에서만. relview/virtual은 같은 사실을 관찰로만 적는다 */
   if(A.geuk>0)body.push(grp
-    ?`긴장을 가장 많이 받는 자리는 <b>${bkEsc(A.pressed.name)}</b>(받는 쪽 ${A.geukRecv[A.pressed.id]||0}회) — 이 사람의 컨디션이 성계의 조기경보입니다.`
+    ?`이 안에서 다그침을 제일 많이 받는 사람은 <b>${bkEsc(A.pressed.name)}</b>입니다 — ${josa(A.pressed.name,'이가')} 지쳐 보이면 그룹 전체에 탈이 났다는 신호입니다.`   /* [U12] ~~조기경보~~ */
     :`긴장을 가장 많이 받는 자리는 <b>${bkEsc(A.pressed.name)}</b> — 받는 쪽 ${A.geukRecv[A.pressed.id]||0}회로 ${W.in}에서 가장 많습니다.`);
   /* [2026-08-31] 그룹 패널에서는 뺀다 — 새 "기운 분포" 항목이 같은 사실을
      성질 풀이와 해석까지 붙여 말한다. relview/virtual에는 그 항목이 없으므로 그대로 둔다. */
@@ -10601,15 +10713,17 @@ function showGroup(g){
     <h2>${bkEsc(g.name)} — ${total}인 성계</h2>
     <div class="gbar">${barHtml}</div><div class="glegend">${legend}</div>
     ${(ys=>ys?`<div class="gsecs gyear"><div class="gsec"><div class="gsech">${ys.h}</div>${ys.html}</div></div>`:'')(gSecYear(A.ms))}
-    ${yo(body.map(p=>`<p>${p}</p>`).join(''))}
-    ${yo(gSections(A,g.type))}
-    <div class="tip"><b>${g.type} · ${A.dyn} INSIGHT</b>${yo(g3+gtypeCloser(g.type,A.dyn))}</div>
-    <div class="legendrow">
-      <span><i class="lg-ring" style="border-color:var(--gold)"></i>금색 고리 = 생 발신</span>
-      <span><i class="lg-ring" style="border-color:#ff7a5a"></i>붉은 고리 = 극 발신</span>
-      <span>궤도: 항성과 생=안쪽 · 극=바깥</span>
-    </div>
-    ${lineLegend}
+    ${yo(plain(body.map(p=>`<p>${p}</p>`).join('')))}
+    ${yo(plain(gSections(A,g.type)))}
+    <div class="tip"><b>${g.type} · ${A.dyn} INSIGHT</b>${yo(plain(g3+gtypeCloser(g.type,A.dyn)))}</div>
+    <div class="basis">${sjHelp('gbasis','사주로 보면',
+      `<div class="basisrow"><div class="basish">안에서 오가는 기운</div><p>북돋음(생) ${A.saeng} · 다그침(극) ${A.geuk} · 같은 기운(비화) ${A.bi} — ${A.dyn}.`
+      +` 중심 ${bkEsc(A.sun.name)}: 북돋음 ${A.saengGive[A.sun.id]||0}회 · 다그침 ${A.geukGive[A.sun.id]||0}회.</p></div>`
+      +`<div class="legendrow">
+      <span><i class="lg-ring" style="border-color:var(--gold)"></i>금색 고리 = 다른 사람을 북돋는 사람</span>
+      <span><i class="lg-ring" style="border-color:#ff7a5a"></i>붉은 고리 = 다른 사람을 다그치는 사람</span>
+      <span>궤도: 나를 북돋는 사람은 안쪽 · 다그치는 사람은 바깥</span>
+    </div>${lineLegend}`,null,false)}</div>
     <div class="members">${mchips}</div>
     ${total===2?`<div class="panelbtns"><button class="pbtn" id="gpair">두 사람의 관계 자세히 보기</button></div>`:''}
     <div class="panelbtns"><button class="pbtn" id="gedit">그룹 수정 · 삭제</button></div>`;
@@ -11238,7 +11352,7 @@ async function sajuSelfTest(){
   const nk=pbody.querySelector('.nickname');
   const secs=[...pbody.querySelectorAll('.psec')].map(x=>x.textContent);
   T('nodePair: 인물 패널에 나와의 관계 전문이 있다',
-    !!nk && !!pbody.querySelector('#cardbtn') && secs.indexOf('나와의 관계')>=0 && secs.indexOf('나와의 관계')<=1, /* [U11] ~~secs[0]~~ — 맨 위는 「요즘」 */
+    !!nk && !!pbody.querySelector('#cardbtn') && secs.indexOf('나와의 관계')>=0 && secs.indexOf('나와의 관계')<=2, /* [U11] ~~secs[0]~~ — 맨 위는 「요즘」 · [U12] 그다음 「궁금한 것」 */
     (secs.join(' / ')||'구역 없음')+' · 별명 '+(nk?nk.textContent.trim().slice(0,14):'없음'));
   /* [2026-09-19 U11] 두 층 — 사주 표·판정 근거는 이야기 층에 없고 「사주로 보면」(.basis) 안에만 있다. 이야기 층 맨 위는 「요즘」 */
   { const tbl=pbody.querySelectorAll('.sjcol'), inB=[...tbl].every(el=>!!el.closest('.basis'));
@@ -11252,6 +11366,14 @@ async function sajuSelfTest(){
     T('yoCoverage: 이야기 층에 "~니다" 0개 · 불규칙 활용',
       left.length===0&&unit==='<b>뜻</b>이에요. 쉬워요. 몰라요. 했어요. 사이예요.',
       '남은 '+left.length+(left.length?' ('+[...new Set(left)].slice(0,6).join(' ')+')':'')+' · '+unit); }
+  /* [2026-09-19 U12] 쉬운 말 — 그룹·인물 이야기 층에 "살리는/누르는 · 발신 · 조기경보 · 긴장선 · (재성) · (수→화)"가 없다. 질문 넷(또는 셋)이 있다 */
+  { const hard=/살리는|누르는|발신|조기경보|긴장선|\((?:비겁|식상|재성|관성|인성)\)|[목화토금수] ?→ ?[목화토금수]/;
+    const storyTxt=()=>[...pbody.children].filter(el=>!el.classList.contains('basis')).map(el=>el.innerText).join(' ');
+    const pTxt=storyTxt(), askN=pbody.querySelectorAll('.askbox .sjhelp').length;
+    const g0=groups.find(g=>(g.analysis||analyzeGroup(g)).ms.length>=3); let gTxt='';
+    if(g0){showGroup(g0);gTxt=storyTxt();showNode(other);}
+    const hit=(pTxt+' '+gTxt).match(hard);
+    T('plainWords: 이야기 층에 어려운 말 0 · 「궁금한 것」 질문 3~4개', !hit&&askN>=3&&askN<=4, (hit?'남음: '+hit[0]:'0건')+' · 질문 '+askN+'개'); }
   /* 접힌 제목은 보이는 높이가 39px이라 누르는 판을 ::before 로 44px 채운다.
      [★ 겉높이를 재면 안 된다] offsetHeight 는 39다 — 그걸로 검사하면 "39 맞음"으로
      통과시키거나 "44 아님"으로 떨어뜨리거나 둘 다 틀린다. **판을 재야 한다.** */
@@ -12254,9 +12376,9 @@ function showNode(n,groupContext,targetMesh){
     return Object.assign({},x,{t:mm[2].replace(/<span class="nicktake-h">[\s\S]*?<\/span>/,'')});});
   /* 「나」 패널은 나를 "이 사람"이라 부르지 않는다 — 읽는 사람이 곧 나다(U10 진단 ③) */
   const storyRd2=isMe?storyRd.map(x=>Object.assign({},x,{t:String(x.t).replace(/이 사람/g,'당신')})):storyRd;
-  const rdHtml2=storyRd2.length?yo(readingHtml(storyRd2,selfFold)):'';   /* [U11] 친구 말투 */
+  const rdHtml2=storyRd2.length?yo(plain(readingHtml(storyRd2,selfFold))):'';   /* [U11] 친구 말투 · [U12] 쉬운 말 */
   const main2=(r?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')+rdHtml2+selfSectionHtml(n);
-  const nowSec=n.birth?`<div class="psec">요즘</div>${nowStoryHtml(n,isMe)}`:'';
+  const nowSec=n.birth?`<div class="psec">요즘</div>${nowStoryHtml(n,isMe)}<div class="psec">궁금한 것</div>${askHtml(n,isMe)}`:'';   /* [U12] 궁금한 것 */
   const basisBody=(isMe?'':egoRelLine(n))
     +(pbOpt.eight?`<div class="basisrow"><div class="basish">여덟 글자로 보면</div><p>${pbOpt.eight}</p></div>`:'')
     +nowFactsHtml(n)
@@ -12269,7 +12391,7 @@ function showNode(n,groupContext,targetMesh){
       /* [2026-09-19] ~~"이 은하의 항성입니다 — 아래 관계는 모두 당신을 기준으로 계산됩니다."~~ 바로 아래 relHead
          "아래는 모두 나 기준입니다 — 누르면 …"와 같은 말이 두 줄 연달아 나왔다(사용자: 같은 게 반복되는 건 피해야 함) */
       +relHead+`<div class="rel-list">${rels}</div>`
-    : `<div class="psec">나와의 관계</div>${yo(PB.reading)}${PB.card}`;
+    : `<div class="psec">나와의 관계</div>${yo(plain(PB.reading))}${PB.card}`;
   /* 이 사람 자체 — 나 패널은 관계 목록을 위로 올렸으므로 여기서 뺀다. [U11] ~~sajuTableHtml(n)+main~~ → 이야기(main2)만, 표는 근거 층 */
   void main;
   const selfSec=`<div class="psec">${isMe?'나는 이런 사람':josa(n.name,'은는')+' 이런 사람'}</div>`
@@ -12390,7 +12512,7 @@ function showEdge(e){
   const rel=PB.rel;
   /* [2026-08-30] 십신 세 문단을 얹는다. 오행 문구(pairPhrase)는 ②에 그대로 남는다 —
      기존 카피 15개는 "성질까지 간다"는 원칙으로 쓴 자산이라 버리지 않는다. */
-  const relHtml=yo(PB.reading);   /* [2026-09-19 U11] 친구 말투 */
+  const relHtml=yo(plain(PB.reading));   /* [2026-09-19 U11] 친구 말투 · [U12] 쉬운 말 */
   /* [★ 2026-08-31] rich 제목이 있어도 **"A ↔ B"를 h2로 먼저** 놓는다.
      구 코드는 rich가 있으면 h2를 r.title("서로를 비추는 두 사람" 같은 별칭)으로 덮어써서
      **누구와 누구의 관계인지가 화면 어디에도 크게 안 나왔다.** 관계를 잘못 열었을 때
