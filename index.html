@@ -3618,6 +3618,49 @@ function gRoleHtml(ms,nm){
   const best=pairs[0], fire=pairs.find(p=>p.hc==='chung')||pairs[pairs.length-1];
   return `<div class="gsub">우리 역할</div><div class="groles">`+rows.map(r=>`<span>${GROLE_KO[r.top][0]} <b>${nm(r.x)}</b> ${GROLE_KO[r.top][1]}</span>`).join('')+`</div>`
     +(pairs.length>=2?`<p class="gsecp">💞 제일 잘 맞는 짝 <b>${nm(best.a)}·${nm(best.b)}</b> (${best.sc}점) · 🔥 제일 불꽃 튀는 짝 <b>${nm(fire.a)}·${nm(fire.b)}</b>${fire.hc==='chung'?' (태어난 날 글자가 부딪힘)':` (${fire.sc}점)`}</p>`:'');}
+/* ═══ [2026-09-19 U19] 「만약 우리가 ○○한다면?」 ═══ 사용자: "그룹이 사업한다면? 여행한다면? 이런 것도 있으면 좋을 것 같음".
+   상황 넷 × 그 사람 사주 1순위 갈래 → 맡을 일. + 이 그룹에 없는 갈래 = 빈 역할 · 태어난 날 충인 짝 = 떨어뜨릴 짝 · 그룹 12달의 좋은 달 ·
+   추천(사업 = 그룹에 가장 많은 오행의 업종 / 여행 = 그룹에 없는 오행을 채우는 곳). 상황별 문장은 갈래 다섯 칸씩. */
+const GSCENE={
+  사업:{icon:'💼',role:{비겁:'대표·최종 결정',식상:'홍보·영업·아이디어',재성:'재무·돈 관리',관성:'운영·관리·계약',인성:'전략·연구·교육'},
+    miss:{비겁:'밀어붙일 대표가 없어요 — 결정이 늦어지니 최종 결정권자를 정하세요.',식상:'알릴 사람이 없어요 — 홍보는 밖에 맡기세요.',
+      재성:'돈을 챙길 사람이 없어요 — 세무사·회계 도움부터 구하세요.',관성:'관리할 사람이 없어요 — 계약서와 규칙을 먼저 만드세요.',인성:'판을 멀리 보는 사람이 없어요 — 멘토·자문을 한 명 두세요.'},
+    rec:{mok:'교육·출판·콘텐츠',hwa:'미디어·마케팅·외식',to:'부동산·유통·요식업',geum:'금융·IT·제조·정비',su:'무역·물류·온라인 커머스'},recH:'어울리는 업종',
+    fire:'는 공동대표를 하지 마세요 — 결정권을 영역별로 나누면 오히려 강해요.',good:'시작하기 좋은 달'},
+  여행:{icon:'🧳',role:{비겁:'길 찾기·돌발 해결',식상:'분위기·사진·맛집',재성:'예산·가성비',관성:'일정·예약',인성:'숙소·안전·챙김'},
+    miss:{비겁:'돌발 상황에 앞장설 사람이 없어요 — 비상 연락처와 대안 동선을 미리.',식상:'분위기 띄울 사람이 없어요 — 조용한 힐링 여행이 맞아요.',
+      재성:'돈 챙길 사람이 없어요 — 공금 통장 하나 만들고 가세요.',관성:'일정 짜는 사람이 없어요 — 대충 가다 헤매니 출발 전 한 명 정해요.',인성:'챙겨 줄 사람이 없어요 — 상비약과 숙소는 꼭 미리.'},
+    rec:{mok:'숲·수목원·트레킹',hwa:'햇살 좋은 남쪽·축제',to:'시골 마을·맛집 동네',geum:'도시·전시·쇼핑',su:'바다·호수·온천'},recH:'가면 좋은 곳',
+    fire:'는 한 방을 쓰지 마세요 — 따로 쉬는 시간이 있어야 끝까지 즐거워요.',good:'떠나기 좋은 달'},
+  '같이 살기':{icon:'🏠',role:{비겁:'큰일 해결·수리',식상:'요리·분위기',재성:'살림·가계부',관성:'규칙·청소 당번',인성:'돌봄·경조사'},
+    miss:{비겁:'집안 큰일을 밀고 갈 사람이 없어요 — 결정은 순번제로.',식상:'집이 조용하다 못해 식어요 — 같이 먹는 저녁을 정해 두세요.',
+      재성:'살림을 챙길 사람이 없어요 — 생활비 자동이체부터.',관성:'규칙이 없어요 — 청소·쓰레기 당번표를 붙이세요.',인성:'서로 챙기는 사람이 없어요 — 생일·기념일 달력을 공유하세요.'},
+    rec:null,fire:'는 방을 떨어뜨리세요 — 붙어 있을수록 부딪혀요.',good:'이사·집안 행사 좋은 달'},
+  '위기 때':{icon:'🆘',role:{비겁:'앞장서 부딪히기',식상:'분위기 살리기',재성:'현실 계산·돈 마련',관성:'정리·절차 밟기',인성:'마음 다독이기'},
+    miss:{비겁:'앞장설 사람이 없어요 — 위기 땐 한 명에게 지휘를 맡기세요.',식상:'분위기를 살릴 사람이 없어요 — 가라앉지 않게 밥부터 같이 먹어요.',
+      재성:'현실 계산할 사람이 없어요 — 돈 문제는 전문가에게.',관성:'정리할 사람이 없어요 — 할 일 목록부터 쓰세요.',인성:'다독일 사람이 없어요 — 서로 탓하지 않기로 먼저 약속해요.'},
+    rec:null,fire:'는 위기 때 서로 부딪히기 쉬워요 — 역할을 나눠 따로 움직이게 하세요.',good:'버티고 나면 풀리는 달'}};
+const gLensPick={};   /* 그룹 id → 상황(화면 상태, 저장 안 함) */
+function gSceneHtml(A,g,nm){
+  const cur=gLensPick[g.id]||null;
+  const chips=Object.keys(GSCENE).map(k=>`<button type="button" class="estnotebtn${k===cur?' on':''}" data-glens="${k}">${GSCENE[k].icon} ${k}</button>`).join(' ');
+  let body='';
+  if(cur){
+    const S=GSCENE[cur];
+    const rows=A.ms.filter(x=>x.birth).map(x=>{const pg=personGroupCounts(x);return pg?{x,top:GROUP5.slice().sort((a,b)=>pg.cnt[b]-pg.cnt[a])[0]}:null;}).filter(Boolean);
+    const have=new Set(rows.map(r=>r.top)), miss=GROUP5.filter(k=>!have.has(k));
+    const fires=[];for(let i=0;i<rows.length;i++)for(let j=i+1;j<rows.length;j++)if((hapChung(rows[i].x,rows[j].x)||{}).kind==='chung')fires.push(nm(rows[i].x)+'·'+nm(rows[j].x));
+    const ms=rows.map(r=>yearMonths(r.x)), M=[];for(let i=0;i<12&&ms[0]&&ms[0][i];i++)M.push({i,cal:ms[0][i].cal,sc:ms.reduce((t,m)=>t+(m[i]&&m[i].good?1:0)-(m[i]&&m[i].warn?1:0),0)});
+    const bestM=M.slice().sort((a,b)=>b.sc-a.sc).filter(m=>m.sc>0).slice(0,2).sort((a,b)=>a.i-b.i).map(m=>m.cal+'월');   /* 고른 뒤 달 순서로 */
+    const EL=A.cnt, elMiss=EL_ORDER.filter(e=>!EL[e]), elTop=EL_ORDER.slice().sort((a,b)=>EL[b]-EL[a])[0];
+    const recEl=cur==='여행'?(elMiss[0]||elTop):elTop;
+    body=`<div class="lensbox">`
+      +`<p><b>누가 뭘 맡나</b></p><div class="groles">${rows.map(r=>`<span><b>${nm(r.x)}</b> ${S.role[r.top]}</span>`).join('')}</div>`
+      +(miss.length?`<p><b>빈 자리</b> ${miss.slice(0,2).map(k=>S.miss[k]).join(' ')}</p>`:`<p><b>빈 자리</b> 다섯 역할이 다 있어요 — 누가 뭘 할지만 정하면 돼요.</p>`)
+      +(fires.length?`<p><b>떨어뜨릴 짝</b> ${fires.slice(0,2).join(', ')}${S.fire}</p>`:'')
+      +(bestM.length?`<p><b>${S.good}</b> ${bestM.join('·')}</p>`:'')
+      +(S.rec?`<p><b>${S.recH}</b> ${S.rec[recEl]}${cur==='여행'&&elMiss.length?` — 우리에게 없는 ${EL_KO[recEl]} 기운을 채워 줘요`:''}</p>`:'')+`</div>`;}
+  return `<div class="gsub">만약 우리가 ○○한다면?</div><div class="lenschips">${chips}</div>${body}`;}
 /** 받침에 따라 이에요/예요 */
 function ieyo(w){const c=w.charCodeAt(w.length-1);return(c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28)?'이에요':'예요';}
 /** 「요즘」 이야기 층. isMe면 "당신" */
@@ -3875,6 +3918,7 @@ function gReportHtml(A,g){
     +(pairs.length?`<div class="gsub">누가 누구를 챙기면 좋을까</div>${pairs.map(t=>`<p class="gsecp">${t}</p>`).join('')}`:'')
     +`<div class="gsub">우리의 12달</div><p class="gsecp">${mSum}.</p><div class="mgrid">${mg}</div>`
     +gRoleHtml(A.ms,x=>x===me?'나':bkEsc(x.name))   /* [U18] 우리 역할 · 짝 */
+    +gSceneHtml(A,g,x=>x===me?'나':bkEsc(x.name))   /* [U19] 만약 우리가 ○○한다면 */
     +`<div class="gsub">사람별 올해</div><div class="gcards">${cards}</div></div>`;}
 /** 그룹 「올해 우리는」 */
 function gSecYear(ms){
@@ -11278,6 +11322,8 @@ function showGroup(g){
   navPrependBack('은하 전체',()=>selectGroup(null));
   wireHelp(pbody);        /* [2026-08-31] 흐름의 "흐름 읽는 법" */
   wireGSections(pbody);   /* [2026-08-31] 케미 쌍 → 관계 패널 */
+  pbody.querySelectorAll('[data-glens]').forEach(b=>b.onclick=()=>{   /* [U19] 그룹 상황 — 다시 누르면 닫힘 */
+    gLensPick[g.id]=gLensPick[g.id]===b.dataset.glens?null:b.dataset.glens; const top=pbody.scrollTop; showGroup(g); pbody.scrollTop=top;});
   panel.classList.add('open');
   bindInsight(pbody);
   /* [4번 1단계] 2인 그룹은 쌍 서술을 생략하는 대신(관계 패널과 완전 중복) 직행 링크를 단다.
@@ -12498,6 +12544,11 @@ async function sajuSelfTest(){
       rBad.ok&&rBad.data.people[0].self===null,
       rBad.ok?('self='+JSON.stringify(rBad.data.people[0].self)):('실패: '+rBad.why));
   }
+  /* [2026-09-19 U19] 만약 우리가 ○○한다면 — 네 상황 모두 역할·빈 자리가 나온다 */
+  { const g0=groups.find(g=>(g.analysis||analyzeGroup(g)).ms.filter(x=>x.birth).length>=2); let ok=!!g0, det='';
+    if(g0){const A=g0.analysis||analyzeGroup(g0);Object.keys(GSCENE).forEach(k=>{gLensPick[g0.id]=k;const d=document.createElement('div');d.innerHTML=gSceneHtml(A,g0,x=>x.name);
+      const n=d.querySelectorAll('.groles span').length;det+=k+' '+n+' · ';if(!n||!/빈 자리/.test(d.textContent))ok=false;});gLensPick[g0.id]=null;}
+    T('groupScene: 사업·여행·같이 살기·위기 때 — 역할·빈 자리', ok, det); }
   /* [2026-09-19 U18] 일주 캐릭터 · 평생 흐름(성별 있으면 9칸, 없으면 null) · 렌즈 깊게(싸움·추천·둘의 달) · 그룹 역할 */
   { const x={id:'lf',name:'가상',birth:{y:1981,m:5,d:16,hour:null,sex:'여',est:null,dayRule:null}};
     const c=ilju(x), F=lifeFlow(x), F0=lifeFlow({birth:Object.assign({},x.birth,{sex:null})});
