@@ -11957,7 +11957,8 @@ function showNode(n,groupContext,targetMesh){
   /* 관계 구역 — 근거·고리 → 서로에게 무엇인가(펼침) → 카드로 저장 → 접힌 둘 */
   const relSec=isMe
     ? `<div class="psec">나와 사람들</div>`
-      +`<div class="egorel"><span class="k">이 은하의 항성입니다 — 아래 관계는 모두 당신을 기준으로 계산됩니다.</span></div>`
+      /* [2026-09-19] ~~"이 은하의 항성입니다 — 아래 관계는 모두 당신을 기준으로 계산됩니다."~~ 바로 아래 relHead
+         "아래는 모두 나 기준입니다 — 누르면 …"와 같은 말이 두 줄 연달아 나왔다(사용자: 같은 게 반복되는 건 피해야 함) */
       +relHead+`<div class="rel-list">${rels}</div>`
     : `<div class="psec">나와의 관계</div>${egoRelLine(n)}${PB.reading}${PB.card}`;
   /* 이 사람 자체 — 나 패널은 관계 목록을 위로 올렸으므로 여기서 뺀다 */
@@ -11988,7 +11989,7 @@ function showNode(n,groupContext,targetMesh){
     <div class="phero-t"><div class="phero-tags">${roleTag}<span class="tag">${EL_INFO[n.el].name}</span></div>
     <h2>${r?r.title:`${bkEsc(n.name)} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
     ${birthLine}</div></div>${portraitNoteHtml(n,isMe)}${relSec}${selfSec}
-    <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">${bkEsc(n.name)}와 다른 사람의 관계 보기</button></div>
+    <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">${josa(n.name,'과와')} 다른 사람의 관계 보기</button></div>
     <div class="panelbtns"><button class="pbtn" id="vstoggle">${virtualMembers.some(c=>c.ref===n)?'가상 성계에서 빼기':'가상 성계에 담기'}</button></div>`;
   LiveHero.start(n,pbody.querySelector('.phero-img')); /* [U7-2] 살아 있는 초상 + 나와의 관계 장신구 */
   /* 뒤로 가기 — 그룹이면 그 그룹으로, 아니면 은하 전체로. selectGroup이 카메라·패널·트리
