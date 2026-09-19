@@ -234,6 +234,14 @@
   .lensbox{margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04)}
   .lensbox p{margin:6px 0 0;line-height:1.65;color:var(--ink);word-break:keep-all}
   .lensscore b{font-size:28px;color:var(--gold)}.lensscore span{font-size:var(--fs-sm);color:var(--mut);margin-left:6px}
+  .iljucard{margin:8px 0 12px;padding:12px 14px;border-radius:12px;border:1px solid var(--pc);background:linear-gradient(135deg,rgba(255,255,255,.05),transparent)}
+  .iljut{font-size:var(--fs-sm);color:var(--mut)}.ijname{font-size:22px;font-weight:700;color:var(--ink);margin:2px 0}
+  .ijgz{font-size:var(--fs-sm);color:var(--pc)}.ijkeys{margin:6px 0}.ijkeys span{display:inline-block;margin:0 6px 4px 0;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.07);font-size:var(--fs-sm);color:var(--ink)}
+  .iljucard p{margin:4px 0 0;line-height:1.6;color:var(--ink);word-break:keep-all}
+  .lifebox{margin:6px 0 12px}.lifesvg{width:100%;max-width:420px;height:auto;display:block;color:var(--mut)}
+  .lifelg{display:flex;gap:12px;font-size:var(--fs-sm);margin:4px 0 6px}.lifelg span:last-child{color:var(--mut)}
+  .lifebox p{margin:4px 0;line-height:1.65;color:var(--ink);word-break:keep-all}
+  .groles{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}.groles span{padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-size:var(--fs-sm);color:var(--ink)}
   .nowbox p.nowtoday{background:rgba(232,198,106,.07);border-radius:8px;padding:8px 10px}
   .daylucky{display:block;margin-top:3px;font-size:var(--fs-sm);color:var(--gold)}
   .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:8px 0}
@@ -3542,8 +3550,74 @@ function lensHtml(me,o){
     const both=ya&&yb?(ya.groups[0]===yb.groups[0]?`올해 둘은 같은 과제('${NOW_WORD[ya.groups[0]]}')를 받아 한 방향으로 가기 좋아요.`
       :`올해 나는 '${NOW_WORD[ya.groups[0]]}', ${bkEsc(o.name)}${particle(o.name,'은는')} '${NOW_WORD[yb.groups[0]]}'의 해라 서로 바빠요 — 약속은 미리 잡으세요.`):'';
     body=`<div class="lensbox"><div class="lensscore"><b>${sc}</b>점 <span>${cur} 궁합 · 재미로 보는 점수</span></div>`
-      +`<p>${LENS_LINE[cur][g].replace(/이 사람/g,bkEsc(o.name))}</p>${hc?`<p>${HC_LENS[hc]}</p>`:''}${both?`<p>${both}</p>`:''}</div>`;}
+      +`<p>${LENS_LINE[cur][g].replace(/이 사람/g,bkEsc(o.name))}</p>${hc?`<p>${HC_LENS[hc]}</p>`:''}${both?`<p>${both}</p>`:''}${lensDeepHtml(me,o,cur)}</div>`;}   /* [U18] 더 깊게 */
   return `<div class="lens"><div class="lensq">만약 ${bkEsc(o.name)}${particle(o.name,'이가')} 나의 …라면?</div><div class="lenschips">${chips}</div>${body}</div>`;}
+/* ═══ [2026-09-19 U18] 내 패널 — 평생 흐름 그래프 · 일주 캐릭터 ═══ 사용자: 권장대로(내 패널 → 타인 → 그룹).
+   평생 흐름: 대운 10개마다 돈(재성)·일(관성·식상)·사랑(남 재성/여 관성)이 천간·지지에 몇 번 드는지 + 신약·신강이면 도움 반 점 → 0~3.
+   일주 캐릭터: 일간 형용사 + 일지 동물("단단한 원숭이") · 키워드 셋(일간 물상 · 가까운 사람 앞 · 기세) — 60일주를 조각으로 조립한다(손으로 60장을 쓰지 않았다). */
+const STEM_ADJ=['곧게 뻗은','휘감는','빛나는','따뜻한','묵직한','포근한','단단한','반짝이는','깊은','맑은'];
+const DAY_KEY=['나란히 서는','몫을 챙기는','느긋한','거침없는','통 큰','살뜰한','엄한','반듯한','속 깊은','기대고 챙기는'];
+const UNSEONG_KEY=['막 돋는 기세','새싹 기세','차려입은 기세','제 힘으로 서는 기세','한창때 기세','노련한 기세','머리 쓰는 기세','정리의 기세','모으는 기세','다시 서는 기세','품은 가능성','자라는 기세'];
+function ilju(n){
+  const b=n.birth; if(!b)return null;
+  const r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est}); if(!r)return null;
+  const [ds,db]=r.day, det=sajuDetail(r)[2];
+  return {name:STEM_ADJ[ds]+' '+BRANCH_ANIMAL[db],gz:STEMS[ds]+BRANCHES[db]+'일주',keys:[STEM_IMG[ds],DAY_KEY[det.branchGod],UNSEONG_KEY[det.unseong]],
+    line:STEM_BLURB[ds][0].split('. ')[0].replace(/\.$/,'')+'. '+POS_DAY[det.branchGod],el:STEM_EL[ds]};}
+function iljuHtml(n,isMe){
+  const c=ilju(n); if(!c)return '';
+  return `<div class="iljucard" style="--pc:${EL_INFO[c.el].css}"><div class="iljut">${isMe?'나는':bkEsc(n.name)+particle(n.name,'은는')}</div>`
+    +`<div class="ijname">${c.name}</div><div class="ijgz">${c.gz}</div>`
+    +`<div class="ijkeys">${c.keys.map(k=>`<span>#${k}</span>`).join('')}</div><p>${c.line}</p></div>`;}
+/** 평생 흐름 — 대운별 {from,to,money,work,love,cur} (성별 없으면 null) */
+function lifeFlow(n){
+  const du=daeunOf(n); if(!du)return null;
+  const sg=n.birth.sex==='남'?'재성':'관성';
+  return du.list.slice(0,9).map(d=>{const t=luckTouch(n,d.pillar);const c=k=>t.groups.filter(g=>k.indexOf(g)>=0).length;
+    const h=t.helps?t.helps.filter(Boolean).length*.5:0;
+    return {from:Math.round(d.from),to:Math.round(d.to),money:c(['재성'])+h,work:c(['관성','식상'])+h,love:c([sg])+h,cur:!!du.cur&&du.cur.k===d.k};});}
+function lifeFlowHtml(n,isMe){
+  const F=lifeFlow(n); if(!F)return '';
+  const W=320,H=130,px=i=>18+i*(W-30)/(F.length-1),py=v=>H-18-v*(H-36)/3;
+  const line=(k,col)=>`<polyline fill="none" stroke="${col}" stroke-width="2.2" points="${F.map((f,i)=>px(i)+','+py(f[k])).join(' ')}"/>`
+    +F.map((f,i)=>`<circle cx="${px(i)}" cy="${py(f[k])}" r="2.6" fill="${col}"/>`).join('');
+  const ci=F.findIndex(f=>f.cur);
+  const svg=`<svg viewBox="0 0 ${W} ${H}" class="lifesvg" role="img" aria-label="평생 흐름">`
+    +(ci>=0?`<rect x="${px(ci)-12}" y="4" width="24" height="${H-18}" rx="4" fill="rgba(255,255,255,.07)"/>`:'')
+    +line('money','#e8c66a')+line('work','#7fb6ff')+line('love','#ff8fb0')
+    +F.map((f,i)=>`<text x="${px(i)}" y="${H-3}" text-anchor="middle" font-size="9" fill="currentColor" opacity=".7">${f.from}</text>`).join('')+`</svg>`;
+  const best=k=>{const m=Math.max(...F.map(f=>f[k]));return m>0?F.filter(f=>f[k]===m).slice(0,2).map(f=>`${f.from}~${f.to}살`).join('·'):null;};
+  const bm=best('money'),bw=best('work'),bl=best('love');
+  const who=isMe?'내':bkEsc(n.name)+'의';
+  return `<div class="lifebox">${svg}<div class="lifelg"><span style="color:#e8c66a">● 돈</span><span style="color:#7fb6ff">● 일</span><span style="color:#ff8fb0">● 사랑</span>${ci>=0?'<span>▯ 지금</span>':''}</div>`
+    +`<p>${who} 평생에서 ${bm?`돈이 크게 도는 때는 <b>${bm}</b>`:''}${bw?`, 일이 가장 바쁜 때는 <b>${bw}</b>`:''}${bl?`, 인연이 무르익는 때는 <b>${bl}</b>`:''}이에요.</p>`
+    +`<p class="nowhint">10년 단위 큰 흐름(대운)으로 본 그림이에요 — 해마다의 오르내림은 「궁금한 것」에.</p></div>`;}
+/* ═══ [U18] 만약 ○○라면 — 더 깊게: 둘의 12달 · 싸움 포인트와 화해법 · 상대 오행에 맞춘 추천 ═══ */
+const FIGHT={비겁:['누가 더 옳은지','이긴 사람이 먼저 밥 사기'],식상:['내가 한 만큼 몰라줄 때','"고마워" 한마디를 먼저 달라고 하기'],
+  재성:['돈 쓰는 방식','각자 쓰는 돈을 따로 정해 두기'],관성:['잔소리와 통제','규칙은 하나만, 나머지는 자유'],인성:['한쪽이 기대기만 할 때','이번엔 내가 들어 주기']};
+const LENS_TIP={
+  애인:{h:'데이트 추천',mok:'숲길 산책·식물 가게·새로 연 가게 탐방',hwa:'공연·축제·야경 좋은 루프탑',to:'맛집 투어·동네 시장·집에서 같이 요리',geum:'전시·정갈한 레스토랑·호텔 라운지',su:'바다·카페에서 긴 대화·온천'},
+  배우자:{h:'이 사람이 좋아할 선물',mok:'책·화분',hwa:'향수·공연 티켓',to:'맛있는 음식·집에서 쓸 좋은 물건',geum:'시계·액세서리·좋은 필기구',su:'여행·보습 크림·차 세트'},
+  친구:{h:'같이 하면 좋은 것',mok:'새로운 걸 같이 배우기',hwa:'여행·공연 보러 가기',to:'밥 먹고 수다',geum:'운동·목표 챌린지',su:'밤 드라이브·긴 대화'},
+  상사:{h:'이 사람한테 보고하는 법',mok:'성장 가능성을 보여 주며',hwa:'짧고 자신 있게, 먼저 말하기',to:'차분하게 전체 그림부터',geum:'결론과 숫자 먼저, 군더더기 없이',su:'근거와 맥락을 충분히'},
+  동업자:{h:'이 사람한테 맡길 일',mok:'새 판 기획·확장',hwa:'홍보·영업·대외 일',to:'운영·관리·고객 돌봄',geum:'재무·계약·품질',su:'전략·리서치·인맥'}};
+function lensDeepHtml(me,o,lens){
+  const g=TEN_GOD_GROUP[relGod(me,o)], f=FIGHT[g], tip=LENS_TIP[lens];
+  const A=yearMonths(me), B=yearMonths(o), both=[], sharp=[];
+  for(let i=0;i<Math.min(A.length,B.length);i++){if(A[i].good&&B[i].good)both.push(A[i].cal+'월');if(A[i].warn||B[i].warn)sharp.push(A[i].cal+'월');}
+  return `<p><b>싸움 포인트</b> ${f[0]} → <b>화해법</b> ${f[1]}</p>`
+    +`<p><b>${tip.h}</b> ${tip[o.el]}</p>`
+    +(both.length||sharp.length?`<p><b>올해 둘의 달</b> ${both.length?`같이 좋은 달 ${both.join('·')}`:''}${both.length&&sharp.length?' · ':''}${sharp.length?`예민한 달 ${sharp.slice(0,3).join('·')}`:''}</p>`:'');}
+/* ═══ [U18] 그룹 — 우리 역할 · 제일 잘 맞는 짝 / 제일 불꽃 튀는 짝 ═══ 역할 = 그 사람 사주에서 가장 많은 갈래(동률이면 앞) */
+const GROLE_KO={식상:['🎤','분위기 메이커'],재성:['💳','지갑'],관성:['🛑','브레이크'],인성:['📚','멘토'],비겁:['💪','해결사']};
+function gRoleHtml(ms,nm){
+  const rows=ms.filter(x=>x.birth).map(x=>{const pg=personGroupCounts(x);if(!pg)return null;const top=GROUP5.slice().sort((a,b)=>pg.cnt[b]-pg.cnt[a])[0];return {x,top};}).filter(Boolean);
+  if(rows.length<2)return '';
+  const pairs=[];for(let i=0;i<rows.length;i++)for(let j=i+1;j<rows.length;j++){const a=rows[i].x,b=rows[j].x;pairs.push({a,b,sc:lensScore(a,b,'친구'),hc:(hapChung(a,b)||{}).kind});}
+  pairs.sort((p,q)=>q.sc-p.sc);
+  const best=pairs[0], fire=pairs.find(p=>p.hc==='chung')||pairs[pairs.length-1];
+  return `<div class="gsub">우리 역할</div><div class="groles">`+rows.map(r=>`<span>${GROLE_KO[r.top][0]} <b>${nm(r.x)}</b> ${GROLE_KO[r.top][1]}</span>`).join('')+`</div>`
+    +(pairs.length>=2?`<p class="gsecp">💞 제일 잘 맞는 짝 <b>${nm(best.a)}·${nm(best.b)}</b> (${best.sc}점) · 🔥 제일 불꽃 튀는 짝 <b>${nm(fire.a)}·${nm(fire.b)}</b>${fire.hc==='chung'?' (태어난 날 글자가 부딪힘)':` (${fire.sc}점)`}</p>`:'');}
 /** 받침에 따라 이에요/예요 */
 function ieyo(w){const c=w.charCodeAt(w.length-1);return(c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28)?'이에요':'예요';}
 /** 「요즘」 이야기 층. isMe면 "당신" */
@@ -3800,6 +3874,7 @@ function gReportHtml(A,g){
     +`<div class="gsub">이번 달 우리</div><p class="gsecp">${monthL}</p>`
     +(pairs.length?`<div class="gsub">누가 누구를 챙기면 좋을까</div>${pairs.map(t=>`<p class="gsecp">${t}</p>`).join('')}`:'')
     +`<div class="gsub">우리의 12달</div><p class="gsecp">${mSum}.</p><div class="mgrid">${mg}</div>`
+    +gRoleHtml(A.ms,x=>x===me?'나':bkEsc(x.name))   /* [U18] 우리 역할 · 짝 */
     +`<div class="gsub">사람별 올해</div><div class="gcards">${cards}</div></div>`;}
 /** 그룹 「올해 우리는」 */
 function gSecYear(ms){
@@ -12423,6 +12498,14 @@ async function sajuSelfTest(){
       rBad.ok&&rBad.data.people[0].self===null,
       rBad.ok?('self='+JSON.stringify(rBad.data.people[0].self)):('실패: '+rBad.why));
   }
+  /* [2026-09-19 U18] 일주 캐릭터 · 평생 흐름(성별 있으면 9칸, 없으면 null) · 렌즈 깊게(싸움·추천·둘의 달) · 그룹 역할 */
+  { const x={id:'lf',name:'가상',birth:{y:1981,m:5,d:16,hour:null,sex:'여',est:null,dayRule:null}};
+    const c=ilju(x), F=lifeFlow(x), F0=lifeFlow({birth:Object.assign({},x.birth,{sex:null})});
+    const meN=nodes.find(z=>z.isMe), o=nodes.find(z=>!z.isMe&&z.birth);
+    const deep=o?lensDeepHtml(meN,o,'애인'):'';
+    T('iljuLifeDeep: 일주 캐릭터 · 평생 9칸 · 성별 없으면 null · 싸움 포인트·데이트 추천',
+      !!c&&/일주$/.test(c.gz)&&c.keys.length===3&&F&&F.length===9&&F0===null&&/싸움 포인트/.test(deep)&&/데이트 추천/.test(deep),
+      (c?c.name+' '+c.gz:'없음')+' · 평생 '+(F?F.length:0)+'칸'); }
   /* [2026-09-19 U17] 그룹 보고서 · 만약 ○○라면 — 보고서에 순위·12달·사람별 카드, 렌즈 다섯 점수 45~97 · 문단 25칸 */
   { const g0=groups.find(g=>(g.analysis||analyzeGroup(g)).ms.filter(x=>x.birth).length>=2);
     const d=document.createElement('div');d.innerHTML=g0?gReportHtml(g0.analysis||analyzeGroup(g0),g0):'';
@@ -12916,7 +12999,8 @@ function showNode(n,groupContext,targetMesh){
   const storyRd2=isMe?storyRd1.map(x=>Object.assign({},x,{t:String(x.t).replace(/이 사람/g,'당신')})):storyRd1;
   const rdHtml2=storyRd2.length?yo(plain(readingHtml(storyRd2,selfFold))):'';   /* [U11] 친구 말투 · [U12] 쉬운 말 */
   const main2=(r?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')+rdHtml2+testsSectionHtml(n)+selfSectionHtml(n);   /* [U15] */
-  const nowSec=n.birth?`<div class="psec">요즘</div>${nowStoryHtml(n,isMe)}<div class="psec">궁금한 것</div>${askHtml(n,isMe)}`:'';   /* [U12] 궁금한 것 */
+  const nowSec=n.birth?`<div class="psec">요즘</div>${nowStoryHtml(n,isMe)}<div class="psec">궁금한 것</div>${askHtml(n,isMe)}`
+    +((lf=>lf?`<div class="psec">평생 흐름</div>${lf}`:'')(lifeFlowHtml(n,isMe))):'';   /* [U12] 궁금한 것 · [U18] 평생 흐름 */
   const basisBody=(isMe?'':egoRelLine(n))
     +(pbOpt.eight?`<div class="basisrow"><div class="basish">여덟 글자로 보면</div><p>${pbOpt.eight}</p></div>`:'')
     +nowFactsHtml(n)
@@ -12933,7 +13017,7 @@ function showNode(n,groupContext,targetMesh){
   /* 이 사람 자체 — 나 패널은 관계 목록을 위로 올렸으므로 여기서 뺀다. [U11] ~~sajuTableHtml(n)+main~~ → 이야기(main2)만, 표는 근거 층 */
   void main;
   const selfSec=`<div class="psec">${isMe?'나는 이런 사람':josa(n.name,'은는')+' 이런 사람'}</div>`
-    +main2
+    +iljuHtml(n,isMe)+main2   /* [U18] 일주 캐릭터 */
     +(isMe?'':relHead+`<div class="rel-list">${rels}</div>`);
   /* ═══ 뒤로 가기 [★ 2026-08-28] ═══
      그룹을 보다 그 안의 사람을 누르면 인물 카드로 넘어가는데, 그룹 정보로 돌아가려면
