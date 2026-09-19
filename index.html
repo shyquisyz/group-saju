@@ -2538,7 +2538,7 @@ function cardPillar(p){
   let stem=((p.stemIdx%10)+10)%10, branch=null;
   try{const r=p.birth?sajuOf({y:p.birth.y,m:p.birth.m,d:p.birth.d,
       hour:Number.isInteger(p.birth.hour)?p.birth.hour:null,min:p.birth.min,lon:p.birth.lon,
-      dayRule:p.birth.dayRule}):null;
+      dayRule:p.birth.dayRule,est:p.birth.est}):null;
     if(r){stem=r.day[0];branch=r.day[1];}}catch(e){}
   return stemThing(stem)+(branch===null?'':' '+BRANCHES[branch]);}
 /** 명패 맨 윗줄 — "누가 누구를 보는가". ~~"테오에게 아내는"~~ →
@@ -3036,7 +3036,7 @@ function hcPairIn(table,x,y){return table.some(a=>(a[0]===x&&a[1]===y)||(a[0]===
 function hcPillars(x){
   const b=x&&x.birth; if(!b)return null;
   try{return sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});}catch(e){return null;}}
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});}catch(e){return null;}}
 /** 문장 한 줄. 조사는 **한자가 아니라 한글 음**에서 고른다 — particle이 마지막 글자를 보므로
     "午(오)"를 그대로 넘기면 ')'를 보고 고른다. */
 function hcWhy(kind,tbl,ko,x,y){
@@ -3171,15 +3171,22 @@ function sajuJieList(y){
     이야기라 그대로 둔다. */
 function sajuOf(b){
   if(!b||!Number.isInteger(b.y)||!Number.isInteger(b.m)||!Number.isInteger(b.d))return null;
-  const hasTime=Number.isInteger(b.hour);
-  const timeMode=hasTime?'exact':'none';
+  /* ═══ [2026-09-19 U14] 추정 시각을 풀이에 쓴다 ═══ 사용자: "행성은 두 종류 — 내가 임의로 등록한 자, 로그인해서 연동한 자.
+     연동되면 추정이 아니라 연동된 원본의 시각으로 판단하게 될 것". → **임의 등록자**는 추정(birth.est)을 쓰고 「추정」으로 표시한다.
+     ~~A5 원칙: 추정은 표에 반영하지 않는다("정확한 척하지 않는다")~~ — 해도 달라지는 게 없어 "미흡"했다(U13). 정직함은 표시로 지킨다(timeMode 'est').
+     [연동자] 원본 시각(hour)이 있으면 이 분기를 안 탄다 — 정확한 시각이 언제나 이긴다. 나중에 연동 필드가 생기면 b.noEst로 막을 수 있다.
+     [추정 시각의 자리] 두 시간 칸의 **가운데**(est.hour: 丑 2시 · 寅 4시 …, 자시 23시대 23:30 · 0시대 0:30)를 **진태양시 그대로** 쓴다 —
+     벽시계로 넣으면 서울 −32분 보정에 23시가 亥시로 넘어간다. 그래서 apparentMs를 직접 만든다. */
+  const estOn=!Number.isInteger(b.hour)&&!!b.est&&Number.isInteger(b.est.hour)&&b.noEst!==true;
+  const hasTime=Number.isInteger(b.hour)||estOn;
+  const timeMode=estOn?'est':(hasTime?'exact':'none');
   const lon=(typeof b.lon==='number'&&isFinite(b.lon))?b.lon:SAJU_LON_DEFAULT;
   /* 시각을 모르면 연·월주 판정에 쓸 순간이 필요하다 — 그 날의 정오로 잡는다.
      이건 "정오에 태어났다"는 가정이 아니라 **그 날 안에서 어디를 찍어도 대개 같은 절기 구간**
      이라는 뜻이다. 그날 절입이 걸리면 갈릴 수 있고, 그건 화면이 경계 안내로 알린다. */
-  const wall=Date.UTC(b.y,b.m-1,b.d,hasTime?b.hour:12,hasTime?(b.min||0):0);
+  const wall=Date.UTC(b.y,b.m-1,b.d,estOn?b.est.hour:(hasTime?b.hour:12),estOn?0:(hasTime?(b.min||0):0));
   const utcMs=sajuUtcFromWall(wall);
-  const apparentMs=utcMs+(lon*4+sajuEot(utcMs))*60000;
+  const apparentMs=estOn?Date.UTC(b.y,b.m-1,b.d,b.est.hour,b.est.sub?30:0):utcMs+(lon*4+sajuEot(utcMs))*60000;
 
   const jl=sajuJieList(b.y);
   let k=-1;
@@ -3220,7 +3227,7 @@ function sajuOf(b){
 
 
   const nextMs=jl[k+1]?jl[k+1].ms:null;
-  return {year:[yStem,yBranch],month:[mStem,cur.branch],day:[dStem,dBranch],hour:hPil,
+  return {est:estOn,year:[yStem,yBranch],month:[mStem,cur.branch],day:[dStem,dBranch],hour:hPil,
     hasTime:hasTime,timeMode:timeMode,lon:lon,utcMs:utcMs,apparentMs:apparentMs,apparentHour:aHour,
     jieMs:cur.ms,jieTerm:cur.term,jieTermYear:cur.termYear,nextJieMs:nextMs,
     minSinceJie:(utcMs-cur.ms)/60000,
@@ -3265,7 +3272,7 @@ function luckNow(atMs){
 function daeunOf(x,atMs){
   const b=x&&x.birth; if(!b||(b.sex!=='남'&&b.sex!=='여'))return null;
   let r=null;
-  try{r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});}catch(e){return null;}
+  try{r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});}catch(e){return null;}
   if(!r||r.minToNextJie==null)return null;
   const yang=r.year[0]%2===0;
   const forward=(yang&&b.sex==='남')||(!yang&&b.sex==='여');
@@ -3284,7 +3291,7 @@ function daeunOf(x,atMs){
 function luckTouch(x,pil){
   const b=x&&x.birth; if(!b||!pil)return null;
   let r=null;
-  try{r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});}catch(e){return null;}
+  try{r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});}catch(e){return null;}
   if(!r)return null;
   const ds=r.day[0];
   const stemGod=tenGod(ds,pil[0]), branchGod=tenGod(ds,mainStem(pil[1]));
@@ -3429,7 +3436,7 @@ function askDaeun(x,grp){
   return null;}
 function askHtml(n,isMe){
   const b=n.birth; if(!b)return '';
-  const r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule}); if(!r)return '';
+  const r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est}); if(!r)return '';
   const X=isMe?'당신':bkEsc(n.name), Xh=`${X}한테는`;
   const cnt=personGroupCounts(n).cnt, v=(gangyak(r)||{}).verdict||'';
   const age=(Date.now()-r.utcMs)/(365.2425*86400000);
@@ -3561,7 +3568,7 @@ function gSecYear(ms){
 function stemOfBirth(b){
   if(!b)return 0;
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});
   return r?r.day[0]:dayStem(b.y,b.m,b.d);}
 
 /* ═════════════════════════════════════════════════════════════════════════
@@ -4058,7 +4065,7 @@ function personGangyak(x){
   const b=x&&x.birth; if(!b)return '';
   let r=null;
   try{r=sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});}catch(e){return '';}
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});}catch(e){return '';}
   if(!r)return '';
   const g=gangyak(r); return g?g.verdict:'';}
 
@@ -4125,7 +4132,7 @@ function relGod(a,b){return tenGod(a.stemIdx,b.stemIdx);}
 function relSpread(a,b){
   const bb=b.birth; if(!bb)return null;
   const r=sajuOf({y:bb.y,m:bb.m,d:bb.d,
-    hour:Number.isInteger(bb.hour)?bb.hour:null,min:bb.min,lon:bb.lon,dayRule:bb.dayRule});
+    hour:Number.isInteger(bb.hour)?bb.hour:null,min:bb.min,lon:bb.lon,dayRule:bb.dayRule,est:bb.est});
   if(!r)return null;
   const det=sajuDetail(r);
   const cnt={비겁:0,식상:0,재성:0,관성:0,인성:0};
@@ -4144,7 +4151,7 @@ function relSpread(a,b){
 function personGroupCounts(n){
   const b=n.birth; if(!b)return null;
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});
   if(!r)return null;
   const det=sajuDetail(r), d=r.day[0];
   const cnt10=[0,0,0,0,0,0,0,0,0,0];
@@ -4547,7 +4554,7 @@ function KO_CNT(k){return ['','한','두','세','네','다섯','여섯','일곱'
 function personReading(n){
   const b=n.birth; if(!b)return null;
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});
   if(!r)return null;
   const det=sajuDetail(r), gy=gangyak(r), d=r.day[0];
   const letters=r.hasTime?8:6;
@@ -7536,7 +7543,7 @@ function pLoadImg(u){return new Promise((res,rej)=>{const i=new Image();i.onload
 function planetMapInfo(n){
   const b=n&&n.birth;if(!b||!b.y||!b.m||!b.d)return null;
   let r=null;
-  try{r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});}catch(e){return null;}
+  try{r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});}catch(e){return null;}
   if(!r||!r.day)return null;
   const EL=['mok','hwa','to','geum','su'],c=sajuElements(r),byEL=(a,z)=>EL.indexOf(a)-EL.indexOf(z);
   const de=STEM_EL[r.day[0]];
@@ -8498,7 +8505,7 @@ function planetBodyOf(n){
   if(n._bodyKey===key&&n._body)return n._body;
   const T=V2_TUNABLES;let rate=T.PLANET_SPIN_RATE,tilt=0,lean=0;
   if(b&&b.y&&b.m&&b.d){
-    try{const r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});
+    try{const r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});
       /* 앞뒤 기울기 = 태어난 해의 띠(년지 12칸, 입춘 기준은 sajuOf가 이미 처리). 같은 날 다른 해에 난 사람을 가른다 */
       if(r&&r.year)lean=((r.year[1]-5.5)/5.5)*T.PLANET_LEAN_MAX*Math.PI/180;
       const g=gangyak(r);if(g&&g.total>0)rate=T.PLANET_SPIN_RANGE[0]+(T.PLANET_SPIN_RANGE[1]-T.PLANET_SPIN_RANGE[0])*(g.ally/g.total);}catch(e){}
@@ -12130,6 +12137,15 @@ async function sajuSelfTest(){
       rBad.ok&&rBad.data.people[0].self===null,
       rBad.ok?('self='+JSON.stringify(rBad.data.people[0].self)):('실패: '+rBad.why));
   }
+  /* [2026-09-19 U14] 추정 시각을 계산에 쓴다 — 시각 모름 + 추정이면 추정 칸 가운데(진태양시)로, 정확한 시각이 있으면 그게 이긴다.
+     자시 두 칸: 자정 넘어서 = 그날 일간 기준 子(辛일 → 戊子) · 밤 11시대 = 조자시(다음 날 천간 → 庚子), 일주는 그대로 */
+  { const base={y:1990,m:6,d:15,hour:null,lon:126.978};
+    const at=i=>{const s=EST_SLOTS[i];return sajuOf(Object.assign({},base,{est:{sijin:s.sijin,sub:s.sub,hour:s.hour}}));};
+    const hs=EST_SLOTS.map((_,i)=>pillarStr(at(i).hour)).join(' ');
+    const ex=sajuOf(Object.assign({},base,{hour:10,min:0,est:{sijin:0,sub:'23',hour:23}}));
+    T('estInCalc: 추정 13칸 시주 · 자시 두 칸 · 일주 불변 · 정확한 시각이 이김',
+      hs==='庚子 己丑 庚寅 辛卯 壬辰 癸巳 甲午 乙未 丙申 丁酉 戊戌 己亥 戊子'&&at(0).timeMode==='est'&&pillarStr(at(0).day)==='辛亥'&&ex.timeMode==='exact'&&pillarStr(ex.hour)==='癸巳',
+      hs+' · 정확 '+ex.timeMode+' '+pillarStr(ex.hour)); }
   /* [2026-09-19 U12] 관계 상태 love — v5 → v6 변환, 백업 파싱(이상한 값은 null), 로드된 전원 undefined 아님, 성별 필수(표 입력) */
   { const m=MIGRATIONS['5']({v:5,people:[{key:'lv1',name:'갑',isMe:true,self:null,birth:{y:2000,m:1,d:1,sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:'남',est:null,dayRule:null}}]});
     const bk=parseBackup(JSON.stringify({app:BACKUP_APP,v:SAVE_VER,people:[
@@ -12257,11 +12273,11 @@ function wireHelp(root){
 function sajuTableHtml(n){
   const b=n.birth; if(!b)return '';
   const r=sajuOf({y:b.y,m:b.m,d:b.d,
-    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});
+    hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});
   if(!r)return '';
   /* [L3 4단계] 열 구조는 그대로 두고 **세로로 늘린다** — 외부 만세력 두 곳과 같은 배열이라
      사용자가 다른 만세력과 나란히 놓고 볼 수 있다. 순서만 년→시로 우리 방식을 유지한다. */
-  const KEYS=['year','month','day','hour'], KO=['년주','월주','일주','시주'];
+  const KEYS=['year','month','day','hour'], KO=['년주','월주','일주',r.est?'시주 · 추정':'시주'];   /* [U14] */
   const det=sajuDetail(r);
   const cols=KEYS.map((k,i)=>{
     const p=r[k], q=det[i];
@@ -12297,7 +12313,13 @@ function sajuTableHtml(n){
 
   /* ── 안내 ── */
   const notes=[];
-  if(r.timeMode==='none'){
+  if(r.timeMode==='est'){
+    /* [U14] 추정 시각으로 본 표 — 무엇으로 봤는지 밝히고, 다시 하거나 지울 손잡이를 둔다 */
+    notes.push('<span class="estbadge">추정</span>이 표와 풀이는 답변으로 좁힌 <b>'+estSlotLabel(EST_SLOTS.findIndex(s=>s.sijin===b.est.sijin&&s.sub===b.est.sub))
+      +'</b>로 봤습니다. 정확한 시각을 알게 되면 정보 수정에서 넣어 주세요 — 그 시각이 이깁니다.'
+      +' <button type="button" class="estnotebtn" data-est="'+n.id+'">다시 추정하기</button>'
+      +' <button type="button" class="estnotebtn" data-estclear="'+n.id+'">추정 지우기</button>');
+  } else if(r.timeMode==='none'){
     /* 모름을 "부족한 선택"으로 보이게 하지 않는다(사용자 지시) — 세 기둥만으로도 충분하다는
        것을 먼저 말하고, 채울 수 있다는 것을 덧붙인다. */
     const legacy=(Number.isInteger(b.sijin)&&b.sijin>=0&&b.sijin<12)?SIJIN[b.sijin]:null;
@@ -12488,7 +12510,9 @@ function showNode(n,groupContext,targetMesh){
     : '시간 모름';
   const birthLine=n.birth?`<p style="font-size:var(--fs-sm);color:var(--mut)">${n.birth.y}.${n.birth.m}.${n.birth.d} · ${sjText} · ${bkEsc(n.birth.city)}`
     /* [2026-09-19 U11] 시각 모름 안내는 여기 한 번 — 이야기 층의 다른 다섯 곳은 뺐다(근거 층에는 남는다) */
-    +(Number.isInteger(n.birth.hour)?'':` <button type="button" class="estnotebtn" data-est="${n.id}">추정해 보기 →</button>`)+`</p>`:'';
+    +(Number.isInteger(n.birth.hour)?''
+      :(n.birth.est&&Number.isInteger(n.birth.est.hour))?` · <span class="estbadge">추정</span>${estSlotLabel(EST_SLOTS.findIndex(s=>s.sijin===n.birth.est.sijin&&s.sub===n.birth.est.sub))}로 봄 <button type="button" class="estnotebtn" data-est="${n.id}">다시 →</button>`
+      :` <button type="button" class="estnotebtn" data-est="${n.id}">추정해 보기 →</button>`)+`</p>`:'';   /* [U14] 추정으로 봤으면 그렇다고 한 번 */
   /* [2026-08-28] 성계마다 선이 생기므로 같은 상대가 여러 번 나올 수 있다 — 한 번만 보인다 */
   const relSeen=new Set();
   /* ═══ [★ 2026-08-31] 관계 목록을 **나 기준**으로 바꿨다 ═══
@@ -13579,12 +13603,14 @@ function estSave(){
   n.birth=Object.assign({},n.birth,{est:{sijin:s.sijin,sub:s.sub,hour:s.hour,
     answers:f.answers,at:nowISO()}});
   n.updatedAt=nowISO();
+  updateNodeIdentity(n);   /* [U14] 추정이 계산에 들어가므로 행성 지도(글자 수)·관계선도 다시 */
   saveState();
   closeSheets();
   showNode(n);}
 function estClear(n){
   n.birth=Object.assign({},n.birth,{est:null});
   n.updatedAt=nowISO();
+  updateNodeIdentity(n);   /* [U14] */
   saveState();
   showNode(n);}
 /** [2026-09-17 A8-2] birth.hour(정확히 아는 시각)를 EST_SLOTS 인덱스로 — 시각 검증이
@@ -13676,8 +13702,8 @@ function renderEstResult(){
   const win=f.picked!=null?f.picked:f.winners[0];
   body.innerHTML=`<p><span class="estbadge">추정</span>${bkEsc(estSlotLabel(win))}쯤으로 나왔습니다.</p>`
     +`<p class="tnote">태어난 시각을 알아내 드린 게 아니라, 답하신 내용으로 가장 가까운 쪽을 채웠습니다. `
-    +`진짜 시각을 알게 되면 언제든 바꿀 수 있습니다.</p>`
-    +`<button class="primary" id="est-save">이 추정 저장하기</button>`
+    +`저장하면 사주 표와 풀이가 이 시각으로 바뀌고, 「추정」 표시가 붙습니다. 진짜 시각을 알게 되면 언제든 바꿀 수 있습니다.</p>`
+    +`<button class="primary" id="est-save">이 시각으로 보기</button>`
     +`<button class="pbtn" id="est-restart" style="margin-top:8px">처음부터 다시 하기</button>`;
   const sv=document.getElementById('est-save'); if(sv)sv.onclick=estSave;
   const rs=document.getElementById('est-restart'); if(rs)rs.onclick=()=>estStart(f.node);}
