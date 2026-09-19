@@ -312,6 +312,11 @@
     background:rgba(255,255,255,.07);cursor:pointer;display:flex;align-items:center;gap:5px}
   .mchip .dot{width:8px;height:8px;border-radius:50%}
   .mchip.sunchip{border:1px solid var(--gold)}
+  /* [U35] 지나온 길 */
+  .pastbox{margin:6px 0}.pastrow{margin:8px 0;font-size:var(--fs-sm);line-height:1.6}
+  .pastsub{font-weight:700;margin:12px 0 4px;font-size:var(--fs-sm)}
+  .estnotebtn.on{border-color:var(--gold);color:var(--gold)}
+  .jobfit{margin-top:6px}
   /* [U34] 빈 성별·시각 묻기 */
   .maskbox{margin:10px 0 6px;padding:10px 12px;border:1px solid rgba(232,198,106,.55);border-radius:12px;background:rgba(232,198,106,.06)}
   .mask-row{margin:4px 0;font-size:var(--fs-sm);line-height:1.6}
@@ -2261,6 +2266,9 @@ function track(ev,force){
 const STEMS=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
 /* [2026-09-19 U12] 관계 상태 값 — 이 셋 말고는 전부 null로 접는다. 선언 구역(여기)에 둔다 — addNode가 부팅 중에 부른다(TDZ).
    LOVE_OK는 상수를 안 읽는다 — 함수는 호이스팅되지만 const는 아니라서 */
+/* [U35] 지나온 길 — 선언 구역(부팅 중 addNode → pastClean이 읽는다, TDZ) — 직업 칩(갈래 → 이름) · 답 값 */
+const PAST_JOB=[['관성','조직·관리·공직'],['재성','기획·사업·영업·금융'],['식상','기술·창작·표현·서비스'],['인성','연구·교육·의료·전문 자격'],['비겁','내 이름 걸고 독립·프리랜서'],['none','학생·쉬는 중']];
+const PAST_ANS={y:'맞아요',n:'아니에요','?':'기억 안 나요'};
 const LOVE_VALS=['single','dating','married'], LOVE_KO={single:'싱글',dating:'연애 중',married:'결혼'};
 function LOVE_OK(v){return v==='single'||v==='dating'||v==='married';}
 /* ═══ 테스트 늘리기 · 할수록 개인화 [2026-09-19 U15] ═══ 사용자: "심리 테스트나 상황 테스트 같은 거 추가해서 할 때마다 개인화 강화".
@@ -5592,7 +5600,8 @@ function personReading(n){
     out.push({h:'자리마다 놓인 기운',t:S.map(x=>`<p>${x}</p>`).join(''),raw:true}); }
 
   /* ══ 코너 넷 [2026-08-31] ══ 전부 이층식(해설 + 해석 층). 계산은 순수 함수가 한다 */
-  { const cj=cornerJob(cnt,gy.verdict,d,mGrp,forcesOf(r));   /* [U31] 세력 */ cj.t=cj.t.replace('<span class="nicktake-t">','<span class="nicktake-t">'+t2+' '); out.push(cj); }   /* [U22] 관심 문장을 앞머리로 */
+  { const F0=forcesOf(r), cj=cornerJob(cnt,gy.verdict,d,mGrp,F0);   /* [U31] 세력 */
+    { const prim=mGrp!=='비겁'?mGrp:(['식상','재성','관성'].sort((a,b)=>cnt[b]-cnt[a])[0]), jf=jobFitLine(n,prim,F0,gy.verdict); if(jf)cj.t+=jf; }   /* [U35] 고른 직업 한 줄 */ cj.t=cj.t.replace('<span class="nicktake-t">','<span class="nicktake-t">'+t2+' '); out.push(cj); }   /* [U22] 관심 문장을 앞머리로 */
   out.push(cornerMoney(cnt10,gy.verdict,cnt));  /* [2026-09-17 A6-3] 강/약 표 · [U23] 새는 곳·굴리는 법 */
   out.push(cornerTie(d,cnt,gy.verdict));   /* [U23] 다툴 때·맞는 사람 */
   out.push(cornerPower(sajuElements(r),d,gy.verdict));
@@ -9070,7 +9079,7 @@ let _boltG=null;function BOLT_G(){if(_boltG)return _boltG;const c=document.creat
   [[48,70],[80,112],[44,172],[72,204],[40,250]].forEach(([a,b])=>x.lineTo(a,b));x.stroke();x.lineWidth=2.5;x.stroke();return _boltG=new THREE.CanvasTexture(c);}
 /** 모든 사람의 은하 구름을 다시 붙인다 — 나(meNode)가 바뀌거나 생일이 바뀌면 관계가 달라진다 */
 function refreshGalaxyClouds(){nodes.forEach(n=>{if(!n.isMe)applyGalaxyClouds(n.mesh,n);});groupInstances.forEach(i=>applyGalaxyClouds(i.mesh,i.ref));}
-function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt,self,love,tests,title}){
+function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updatedAt,self,love,tests,title,past}){
   const el=STEM_EL[stemIdx],info=EL_INFO[el];
   /* [A] map/bumpMap/roughness/metalness를 stemSurface가 한 번에 준다 — 오행별 재질 분리
      (금 매끄럽고 반사 강하게 / 토 거칠고 무광)와 음양 요철이 전부 그 안에 들어 있다. */
@@ -9107,6 +9116,7 @@ function addNode({key,name,stemIdx,rich,pos,birth,groupsSel,isMe,createdAt,updat
     self:self===undefined?null:self,
     love:LOVE_OK(love)?love:null,   /* [U12] 관계 상태 — self와 같은 이유로 여기서만 기본값 */
     tests:testsClean(tests),        /* [U15] 테스트 답 — 모양이 틀리면 null */
+    past:pastClean(past),           /* [U35] 지나온 길 답 — 모양이 틀리면 null */
     createdAt:createdAt===undefined?null:createdAt,
     updatedAt:updatedAt===undefined?null:updatedAt};
   mesh.userData.node=node;nodes.push(node);
@@ -10002,7 +10012,8 @@ function applySeed(seed){
          자리라 다르다. p.self가 아예 없는 시드(DEMO_SEED·my-data.js)는 null로 접는다. */
       self:p.self===undefined?null:p.self,
       love:LOVE_OK(p.love)?p.love:null,   /* [U12] */
-      tests:testsClean(p.tests)});         /* [U15] */
+      tests:testsClean(p.tests),           /* [U15] */
+      past:pastClean(p.past)});            /* [U35] */
     byKey.set(p.key,n);});
 
   (seed.links||[]).forEach(([a,b])=>{
@@ -10712,7 +10723,7 @@ const JUSTLOADED_KEY='groupsaju:justloaded';   /* 새로고침 너머로 넘기�
 const BACKUP_APP='group-saju';
 const BACKUP_MAX_CHARS=2*1024*1024; /* 실측 저장 한계 5,177,344바이트 대비 여유(30인=7,931바이트) */
 const BACKUP_MAX_PEOPLE=1000;       /* 폭주 방지. 30인 7.9KB이므로 1000인도 260KB 안팎이다 */
-const SAVE_VER=8;   /* [2026-09-20 U30] 8 = 호칭(title) */
+const SAVE_VER=9;   /* [2026-09-20 U30] 8 = 호칭(title) · [U35] 9 = 지나온 길 답(past) */
 /* ═════ 마이그레이션 [틀 정비 2026-08-28] ═════
    키 'N'이 **vN → v(N+1)** 변환이다. 구조를 바꾸는 사람이 함수를 더하고 SAVE_VER을 올린다.
    규칙 전문은 CLAUDE.md "저장 형식을 바꿀 때는 변환을 함께 넣는다".
@@ -10770,6 +10781,8 @@ const MIGRATIONS={
      빈 값을 0으로 채우면 **"모르는 사람이 0시에 태어난 것"**이 되어 L2가 틀린 시주를 낸다 —
      CLAUDE.md "빠진 필드를 '없음'으로 때우지 말 것"의 반대편 경우다(여기서는 **모른다는
      사실 자체가 값**이므로 null이 맞다). */
+  /* [v8 → v9, 2026-09-20 U35] 지나온 길 답 `past` 신설 — {answers:{연도:'y'|'n'|'?'}, job:갈래|'none'|null, at} · null = 아직 답 없음 */
+  '8':d=>Object.assign({},d,{v:9,people:(d.people||[]).map(p=>Object.assign({past:null},p))}),
   /* [v7 → v8, 2026-09-20 U30] 호칭 `title` 신설 — null = 안 적음. 나(isMe)도 null */
   '7':d=>Object.assign({},d,{v:8,people:(d.people||[]).map(p=>Object.assign({title:null},p))}),
   '1':d=>Object.assign({},d,{v:2,
@@ -10889,7 +10902,7 @@ function clearDemo(){
    0,1,2…로 다시 매기므로 배치가 그대로 재현된다. */
 function serializeState(){
   return {v:SAVE_VER,savedAt:nowISO(),
-    people:nodes.map(x=>({key:x.id,name:x.name,isMe:!!x.isMe,birth:x.birth,self:x.self,love:x.love||null,tests:x.tests||null,title:x.title||null,   /* [U30] */
+    people:nodes.map(x=>({key:x.id,name:x.name,isMe:!!x.isMe,birth:x.birth,self:x.self,love:x.love||null,tests:x.tests||null,title:x.title||null,past:x.past||null,   /* [U30] · [U35] */
       createdAt:x.createdAt||null,updatedAt:x.updatedAt||null})),
     /* [2026-08-28] 성계마다 선을 긋게 되면서 같은 쌍이 여러 번 나온다. 저장본에는 한 번만
        담는다 — 어차피 불러온 뒤 그룹에서 다시 만든다(rebuildEdges). */
@@ -13213,6 +13226,18 @@ async function sajuSelfTest(){
       k1.includes('samhap')&&k1.includes('ganhap')&&Object.keys(f1.el).every(e=>e==='su'||f1.el.su>f1.el[e])
       &&!!n2&&n2.far&&!f3.notes.some(n=>n.kind==='banhap')&&/겨울에 태어나 계절은 물의 제철/.test(ss)&&!/겨울에 핀 꽃/.test(ss),
       k1.join('·')+' / 떨어진 반합 '+(n2?'있음':'없음')+' / '+ss.slice(0,40)); }
+  /* [2026-09-20 U35] 지나온 길 — v8→v9 past:null · pastClean(나쁜 값 버림) · 해 고르기(연도순·3년 간격·최대 7) · 요약 문턱 · 시각 권유는 '맞아요' 하나일 때만 */
+  { const m=MIGRATIONS['8']({v:8,people:[{key:'t1',name:'갑',isMe:true}]});
+    const pc=pastClean({answers:{2008:'y',1800:'y',2010:'x'},job:'재성'}),pbad=pastClean({answers:'x',job:'없음'});
+    const x={id:'__p',name:'가',birth:{y:1980,m:5,d:5,hour:null,min:null,sex:'남',est:null,dayRule:null,city:'서울',lon:126.978},past:null};
+    const py=pastYears(x),spaced=py.every((c,i)=>!i||(c.Y-py[i-1].Y>=2)),sorted=py.every((c,i)=>!i||c.Y>py[i-1].Y);
+    const pr=hourProbes(x,py);
+    x.past={answers:Object.fromEntries(pr.map((p,i)=>[p.Y,i===0?'y':'n'])),job:null};
+    const sm=pastSummary(x,py,pr);
+    T('past: v8→v9 · 값 거르기 · 해 고르기 · 시각 권유',
+      m.v===9&&m.people[0].past===null&&pc&&Object.keys(pc.answers).join()==='2008'&&pc.job==='재성'&&pbad===null
+      &&py.length>0&&py.length<=7&&spaced&&sorted&&pr.length>=2&&sm.hourPick===pr[0].sijin,
+      '고른 해 '+py.length+' · 시각 질문 '+pr.length+' · 권유 '+(sm.hourPick!==null?SIJIN[sm.hourPick][0]+'시':'없음')); }
   /* [2026-09-20 U34] 빈 성별·시각 묻기 — 둘 다 비면 두 줄 · 다 있으면 없음 · 추정 시각이 있으면 시각은 안 묻는다 */
   { const B={y:1990,m:5,d:5,hour:null,min:null,sex:null,est:null,city:'서울',lon:126.978};
     const h0=missingAskHtml({id:'__m0',name:'가',birth:B},false),h1=missingAskHtml({id:'__m1',name:'가',birth:Object.assign({},B,{sex:'여',hour:9,min:0})},false),
@@ -13226,7 +13251,7 @@ async function sajuSelfTest(){
   /* [2026-09-20 U32] 해석 금지어 — 등록된 모든 사람의 인물 패널 글(요즘·궁금한 것·평생 흐름·이런 사람)에 과장·정량 단정 표현이 0건이어야 한다 */
   { const BAN=['다른 인연','새 사람','힘이 반으로','떨어진 반합','40% 안팎','앞 5년','크게 도는','말다툼이 잦'],hit=[];
     nodes.forEach(n=>{if(!n.birth)return;const d=document.createElement('div');
-      d.innerHTML=askHtml(n,!!n.isMe)+nowStoryHtml(n,!!n.isMe)+lifeFlowHtml(n,!!n.isMe)+personReading(n).map(x=>x.t).join(' ');
+      d.innerHTML=askHtml(n,!!n.isMe)+nowStoryHtml(n,!!n.isMe)+lifeFlowHtml(n,!!n.isMe)+pastHtml(n,!!n.isMe)+personReading(n).map(x=>x.t).join(' ');   /* [U35] 지나온 길도 */
       const t=d.textContent;BAN.forEach(w=>{if(t.includes(w))hit.push(w);});});
     T('interpBanned: 과장·정량 단정 표현 0건(사람 전원)',hit.length===0,hit.length?[...new Set(hit)].join('·'):'0건'); }
   /* [2026-09-20 U28] 운에 따른 행성 변화 — 이름표 표시·금빛이 12달 표의 이번 달 판정과 같은지(사람 전원) */
@@ -13257,7 +13282,7 @@ async function sajuSelfTest(){
     const sub1=nodeSub({title:'엄마',stemIdx:0,el:'mok'}),sub0=nodeSub({title:null,stemIdx:0,el:'mok'});
     T('titleField: v7→v8 title:null · 이름표 "엄마 · 甲 · …" · 가족 호칭 엄마○ 친구× · 저장 title',
       m.v===8&&m.people[0].title===null&&sub1==='엄마 · 甲 · '+EL_INFO.mok.planet&&sub0==='甲 · '+EL_INFO.mok.planet
-      &&FAMILY_TITLES.has('엄마')&&!FAMILY_TITLES.has('친구')&&serializeState().people.every(p=>'title' in p)&&SAVE_VER===8, sub1); }
+      &&FAMILY_TITLES.has('엄마')&&!FAMILY_TITLES.has('친구')&&serializeState().people.every(p=>'title' in p)&&SAVE_VER>=8, sub1); }   /* [U35] v9부터는 >= */
   /* [2026-09-19 U24] 그룹을 열어 둔 채 다른 그룹 사람의 관계 줄을 누르면 그룹 패널이 사람 패널을 덮어썼다 —
      ~~showNode→focusNode~~ 순서였는데 focusNode가 그룹을 바꾸며 showGroup을 불렀다. 호출 10곳을 focusNode→showNode로. */
   { const gA=groups.find(g=>g.type==='동료')||groups[1], gB=groups[0];
@@ -13703,6 +13728,106 @@ function nudgeMeMissing(){
   showNote(`「나」의 <b>${what}</b>이 비어 있어요 — 넣으면 풀이가 훨씬 정확해져요.`,
     [['지금 넣기',()=>{document.getElementById('note').classList.remove('on');focusNode(me);showNode(me);}],
      ['나중에',()=>document.getElementById('note').classList.remove('on')]]);}
+/* ═══ [2026-09-20 U35] 지나온 길 + 답으로 보정 — 사용자: "과거 이력도 사주로 표기해야", "맞는지 받을 거면 선택으로 사주가 더 정교해지는 게 있어야" ═══
+   ① 해 고르기: 열두 살 이후 지난해까지 중 변화 압력이 큰 해 — 충(일 3 · 월 2.5 · 년 1.5 · 시 1.5) · 일지 합 1.5 · 형 .8 · 대운이 바뀐 해 1.2, 합 2.5 이상.
+      점수 높은 순으로 2년 이상 떨어진 해만 최대 일곱, 다시 연도순. 문장은 U32 기준(사건 단정 없이 "변화 압력", 괄호 안 예시만).
+   ② 답의 쓰임 — (가) 적중: 답한 해 중 맞은 비율. 낮으면 생일·시각·양력 여부를 다시 보라고 안내(음력을 양력으로 넣은 경우를 잡는다)
+      (나) 시각 좁히기: 시각을 모르면 "그 시각에서만 부딪히는 해" 셋을 더 묻고(최근 해부터, 부딪히는 시진이 겹치지 않게), '맞아요'가 딱 하나면 그 시진을 권한다 — 가능성으로만
+      (다) 직업: 지금 하는 일의 갈래를 고르면 「어울리는 일」에 사주와 이어지는 한 줄 */
+function pastClean(p){
+  if(!p||typeof p!=='object')return null;
+  const a={};if(p.answers&&typeof p.answers==='object')Object.keys(p.answers).forEach(k=>{const y=+k,v=p.answers[k];if(y>=1900&&y<=2100&&(v==='y'||v==='n'||v==='?'))a[y]=v;});
+  const job=PAST_JOB.some(j=>j[0]===p.job)?p.job:null;
+  if(!Object.keys(a).length&&!job)return null;
+  return {answers:a,job,at:typeof p.at==='string'?p.at:null};}
+function yearPillarOf(Y){return [((Y-4)%10+10)%10,((Y-4)%12+12)%12];}
+const PAST_W={day:3,month:2.5,year:1.5,hour:1.5};
+function pastYears(n){
+  const r=rOf(n),L=luckNow();if(!r||!L||!n.birth)return [];
+  const by=n.birth.y,du=daeunOf(n),cand=[];
+  for(let Y=by+12;Y<L.luckYear;Y++){
+    const t=luckTouch(n,yearPillarOf(Y));if(!t)continue;
+    let sc=0;
+    t.hits.forEach(h=>{if(h.kind==='chung')sc+=PAST_W[h.pos];else if(h.pos==='day')sc+=1.5;});
+    if(t.hyeong&&t.hyeong.length)sc+=.8;
+    const nd=!!du&&du.list.some(d=>new Date(r.utcMs+d.from*365.2425*864e5).getUTCFullYear()===Y);if(nd)sc+=1.2;   /* 대운이 실제로 바뀐 날짜의 해 — ~~생년+나이 반올림~~은 가을에 바뀐 해를 이듬해로 밀었다 */
+    if(sc>=2.5)cand.push({Y,age:Y-by,sc,t,nd});}
+  const pick=[];
+  cand.slice().sort((a,b)=>b.sc-a.sc||b.Y-a.Y).forEach(c=>{if(pick.length<7&&pick.every(q=>Math.abs(q.Y-c.Y)>=2))pick.push(c);});   /* 2년 간격 — 3년이면 전환점(대운 바뀐 해)이 가까운 충 해에 밀려 빠졌다 */
+  return pick.sort((a,b)=>a.Y-b.Y);}
+const PAST_CHUNG={day:'관계·생활방식·주거 쪽에 변화 압력이 컸던 해예요(예: 이사·독립·가까운 관계의 큰 변화).',
+  month:'일과 생활환경이 움직이기 쉬웠던 해예요(예: 진학·입대·이직·일하는 방식의 변화).',
+  year:'집안이나 오래된 관계 쪽에 변화 압력이 있었던 해예요(예: 가족의 이동·집안 일).',
+  hour:'세워 둔 계획이 틀어지거나 방향을 바꾸기 쉬웠던 해예요.'};
+const PAST_HAP='마음이 가는 사람이나 일이 생기기 쉬웠던 해예요(예: 중요한 만남·연애·결혼·새 일의 시작).';
+const PAST_DAEUN='10년 흐름이 바뀐 해라, 생활의 무게중심이 옮겨 가기 쉬웠어요.';
+const PAST_HYEONG='규칙·약속·가까운 관계에서 긴장이 쌓이기 쉬웠던 해예요.';
+function pastLine(c){
+  const P=[];
+  c.t.hits.filter(h=>h.kind==='chung').sort((a,b)=>PAST_W[b.pos]-PAST_W[a.pos]).slice(0,2).forEach(h=>P.push(PAST_CHUNG[h.pos]));
+  if(P.length<2&&c.t.hits.some(h=>h.pos==='day'&&h.kind!=='chung'))P.push(PAST_HAP);
+  if(P.length<2&&c.nd)P.push(PAST_DAEUN);
+  if(!P.length&&c.t.hyeong&&c.t.hyeong.length)P.push(PAST_HYEONG);
+  return P.join(' ')+` 그해 기운은 '${NOW_WORD[c.t.groups[0]]}' 쪽이었어요.`;}
+/** 시각 모를 때 — 그 시진에서만 부딪히는 해(최근부터, 시진 겹치지 않게) 최대 셋 */
+function hourProbes(n,shown){
+  if(!n.birth||Number.isInteger(n.birth.hour))return [];
+  const L=luckNow();if(!L)return [];
+  const by=n.birth.y,used=new Set(),out=[];
+  for(let Y=L.luckYear-1;Y>=by+15&&out.length<3;Y--){
+    if(shown.some(c=>c.Y===Y))continue;
+    const partner=(yearPillarOf(Y)[1]+6)%12;if(used.has(partner))continue;
+    used.add(partner);out.push({Y,age:Y-by,sijin:partner});}
+  return out.reverse();}
+/** 답 요약 — {yes,no,rate,msg,hourPick} */
+function pastSummary(n,main,probes){
+  const A=(n.past&&n.past.answers)||{};
+  const yes=main.filter(c=>A[c.Y]==='y').length,no=main.filter(c=>A[c.Y]==='n').length,tot=yes+no;
+  let msg='';
+  if(tot>=4){const r=yes/tot;
+    msg=r>=.7?'사주의 흐름이 지난 삶과 잘 맞는 편이에요 — 앞으로의 흐름도 이 기준으로 읽어도 좋아요.'
+      :r>=.4?'절반쯤 맞아요 — 태어난 시각이 정확한지 한 번 확인해 보면 더 맞아질 수 있어요.'
+      :'잘 맞지 않아요 — 태어난 날짜·시각·출생지를 한 번 확인해 주세요(음력 날짜를 양력으로 넣었을 수도 있어요).';}
+  let hourPick=null;
+  const pa=probes.filter(p=>A[p.Y]==='y'||A[p.Y]==='n');
+  if(pa.length>=2){const ys=pa.filter(p=>A[p.Y]==='y');if(ys.length===1)hourPick=ys[0].sijin;}
+  return {yes,no,tot,msg,hourPick};}
+function pastSecHtml(n,isMe){const ph=pastHtml(n,isMe);return ph?`<div class="psec">지나온 길</div>${ph}`:'';}
+function pastHtml(n,isMe){
+  if(!n.birth)return '';
+  const L=luckNow();if(!L||L.luckYear-n.birth.y<16)return '';
+  const main=pastYears(n);if(!main.length)return '';
+  const probes=hourProbes(n,main),A=(n.past&&n.past.answers)||{},job=n.past?n.past.job:null;
+  const btns=Y=>`<span class="mask-btns">${Object.keys(PAST_ANS).map(v=>`<button type="button" class="estnotebtn${A[Y]===v?' on':''}" data-past="${Y}" data-ans="${v}">${PAST_ANS[v]}</button>`).join('')}</span>`;
+  const rows=main.map(c=>`<div class="pastrow"><b>${c.Y}년(${c.age}살)</b> ${pastLine(c)} ${btns(c.Y)}</div>`).join('');
+  const pr=probes.length?`<div class="pastsub">태어난 시각을 좁히는 질문</div>`+probes.map(p=>`<div class="pastrow"><b>${p.Y}년(${p.age}살)</b> 이 해에 세워 둔 계획이 크게 틀어지거나 방향을 바꾼 일이 있었나요? ${btns(p.Y)}</div>`).join(''):'';
+  const jb=`<div class="pastsub">지금 하는 일은 어느 쪽에 가까워요?</div><span class="mask-btns">`
+    +PAST_JOB.map(([k,lab])=>`<button type="button" class="estnotebtn${job===k?' on':''}" data-pjob="${k}">${lab}</button>`).join('')+`</span>`;
+  const sm=pastSummary(n,main,probes);
+  let sum=sm.tot?`<p><b>답한 해 ${sm.tot}개 중 ${sm.yes}개가 맞았어요.</b> ${sm.msg}</p>`:'';
+  if(sm.hourPick!==null){const sj=SIJIN[sm.hourPick];
+    sum+=`<p>답으로 보면 태어난 시각은 <b>${sj[0]}시(${sj[1]}시)</b>일 가능성이 있어요 — 확실하진 않으니 참고로만 봐 주세요.
+      <span class="mask-btns"><button type="button" class="estnotebtn" data-pastest="${sm.hourPick}">이 시각으로 추정해 두기</button><button type="button" class="estnotebtn" data-est="${n.id}">질문으로 더 좁히기</button></span></p>`;}
+  return `<div class="pastbox"><p class="nowhint">${isMe?'지난 삶':bkEsc(n.name)+'의 지난 삶'}에서 흐름이 크게 움직였을 해를 골랐어요. 맞는지 눌러 주시면 시각·직업 풀이를 그 답에 맞춰 좁혀요.</p>${rows}${pr}${jb}${sum}</div>`;}
+/** 「어울리는 일」 끝에 붙는 한 줄 — 고른 직업이 사주의 어느 기운과 닿는지 */
+const FORM_GROUPS={식신생재:['식상','재성'],재생관:['재성','관성'],관인상생:['관성','인성'],재다신약:['재성'],군겁쟁재:['비겁']};
+function jobFitLine(n,prim,F,verdict){
+  const j=n.past&&n.past.job;if(!j||j==='none')return '';
+  const lab=PAST_JOB.find(x=>x[0]===j)[1];
+  const fit=new Set([prim]);jobForms(F,verdict).forEach(k=>FORM_GROUPS[k].forEach(g=>fit.add(g)));
+  if(F&&F.total)fit.add(['식상','재성','관성','인성'].sort((a,b)=>F.grp[b]-F.grp[a])[0]);
+  return fit.has(j)?`<p class="jobfit">지금 하는 일(${lab})은 사주의 ${GROUP_POWER[j]}과 맞닿아 있어요 — 이 방향을 길게 가져가도 좋아요.</p>`
+    :`<p class="jobfit">사주의 중심은 ${GROUP_POWER[prim]}인데, 지금 하는 일(${lab})은 결이 조금 달라요 — 일 안에서 ${JOB_SIDE[prim]}을 맡으면 덜 소모돼요.</p>`;}
+function wirePast(n,redraw){
+  const touch=()=>{n.updatedAt=nowISO();saveState();redraw();};
+  const cur=()=>n.past||{answers:{},job:null,at:null};
+  pbody.querySelectorAll('[data-past]').forEach(b=>b.onclick=()=>{const p=cur(),Y=b.dataset.past,v=b.dataset.ans;
+    const a=Object.assign({},p.answers);if(a[Y]===v)delete a[Y];else a[Y]=v;n.past=pastClean({answers:a,job:p.job,at:nowISO()});touch();});
+  pbody.querySelectorAll('[data-pjob]').forEach(b=>b.onclick=()=>{const p=cur(),k=b.dataset.pjob;
+    n.past=pastClean({answers:p.answers,job:p.job===k?null:k,at:nowISO()});touch();});
+  pbody.querySelectorAll('[data-pastest]').forEach(b=>b.onclick=()=>{const sj=+b.dataset.pastest,sl=EST_SLOTS.find(x=>x.sijin===sj);
+    n.birth=Object.assign({},n.birth,{est:{sijin:sl.sijin,sub:sl.sub,hour:sl.hour,answers:[],at:nowISO()}});
+    n.updatedAt=nowISO();updateNodeIdentity(n);saveState();redraw();});}
 function showNode(n,groupContext,targetMesh){
   activeVirtual=false; /* [§5.5] 다른 패널로 넘어감 */
   deselect();selected=n;selectedMesh=targetMesh||n.mesh;
@@ -13820,7 +13945,7 @@ function showNode(n,groupContext,targetMesh){
   const rdHtml2=storyRd2.length?yo(plain(readingHtml(storyRd2,selfFold))):'';   /* [U11] 친구 말투 · [U12] 쉬운 말 */
   const main2=(r?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')+rdHtml2;   /* [U23] ~~더 알려 주기~~ 는 궁금한 것 아래로(사용자: 보지도 못함) */   /* [U15] */
   const nowSec=n.birth?`<div class="psec">요즘</div>${nowStoryHtml(n,isMe)}<div class="psec">궁금한 것</div>${askHtml(n,isMe)}<div class="testbox">${testsSectionHtml(n)}${selfSectionHtml(n)}</div>`
-    +((lf=>lf?`<div class="psec">평생 흐름</div>${lf}`:'')(lifeFlowHtml(n,isMe))):'';   /* [U12] 궁금한 것 · [U18] 평생 흐름 */
+    +((lf=>lf?`<div class="psec">평생 흐름</div>${lf}`:'')(lifeFlowHtml(n,isMe)))+(isMe?pastSecHtml(n,isMe):''):'';   /* [U35] 나는 평생 흐름 뒤, 남은 「나와의 관계」 뒤(관계가 먼저) */   /* [U12] 궁금한 것 · [U18] 평생 흐름 */
   const basisBody=(isMe?'':egoRelLine(n))
     +(pbOpt.eight?`<div class="basisrow"><div class="basish">여덟 글자로 보면</div><p>${pbOpt.eight}</p></div>`:'')
     +nowFactsHtml(n)
@@ -13859,7 +13984,7 @@ function showNode(n,groupContext,targetMesh){
   pbody.innerHTML=`${backHtml}<div class="phero" style="--pc:${EL_INFO[n.el].css}">${portraitImg(n,'phero-img',true)}
     <div class="phero-t"><div class="phero-tags">${roleTag}<span class="tag">${EL_INFO[n.el].name}</span></div>
     <h2>${r?r.title:`${bkEsc(n.name)}${n.title?'<span class="ttl">('+bkEsc(n.title)+')</span>':''} — ${STEMS[n.stemIdx]}${EL_KO[n.el]} 일간`}</h2>
-    ${birthLine}</div></div>${missingAskHtml(n,isMe)}${portraitNoteHtml(n,isMe)}${nowSec}${relSec}${selfSec}${basisSec}
+    ${birthLine}</div></div>${missingAskHtml(n,isMe)}${portraitNoteHtml(n,isMe)}${nowSec}${relSec}${isMe?'':pastSecHtml(n,isMe)}${selfSec}${basisSec}
     <div class="panelbtns"><button class="pbtn" data-edit="${n.id}">정보 수정 · 그룹 이동</button><button class="pbtn" data-rel="${n.id}">${josa(n.name,'과와')} 다른 사람의 관계 보기</button></div>
     <div class="panelbtns"><button class="pbtn" id="vstoggle">${virtualMembers.some(c=>c.ref===n)?'가상 성계에서 빼기':'가상 성계에 담기'}</button></div>`;
   LiveHero.start(n,pbody.querySelector('.phero-img')); /* [U7-2] 살아 있는 초상 + 나와의 관계 장신구 */
@@ -13881,6 +14006,7 @@ function showNode(n,groupContext,targetMesh){
     if(B){focusNode(B);showNode(B);}});
   pbody.querySelectorAll('[data-edit]').forEach(eb=>eb.onclick=()=>openAddSheet(n)); /* [U11] 「성별 넣기」도 같은 시트 */
   wireMissingAsk(n,()=>{const top=pbody.scrollTop;showNode(n,groupContext,targetMesh);pbody.scrollTop=top;});   /* [U34] */
+  wirePast(n,()=>{const top=pbody.scrollTop;showNode(n,groupContext,targetMesh);pbody.scrollTop=top;});   /* [U35] */
   pbody.querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>testStart(n,b.dataset.test));   /* [U15] */
   wireLens(()=>showNode(n,groupContext,targetMesh));   /* [U17] 렌즈 — 다시 누르면 닫힘 · [U25] 공통 배선 */
   pbody.querySelectorAll('[data-iljucard]').forEach(b=>b.onclick=()=>openIljuCard(n));   /* [U26] */
