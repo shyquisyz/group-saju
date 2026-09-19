@@ -254,7 +254,9 @@
   .mrow.now{background:rgba(255,255,255,.06)}
   .nowbox p.nowtest{border-left:2px solid rgba(232,198,106,.4);padding-left:9px}
   .testcount{font-weight:400;color:var(--mut);margin-left:6px}
-  .testlist{margin:6px 0 14px}
+  .testbox{margin:14px 0 6px;padding:2px 12px 8px;border:1px dashed rgba(232,198,106,.5);border-radius:12px;background:rgba(232,198,106,.05)}
+  .testbox .psec{margin-top:8px}
+  .testlist{margin:6px 0 6px}
   .testrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:8px 0;border-bottom:1px solid var(--line)}
   .testt{font-size:var(--fs-base);color:var(--ink);flex:1 1 auto}
   .testr{flex-basis:100%;order:3;font-size:var(--fs-sm);color:var(--mut)}
@@ -4260,8 +4262,9 @@ const GOD_STAGE=[
    처럼 쓰이면 그 '내'가 라온을 가리켜야 하는데 읽는 사람으로 읽힌다.
    **주어를 비우면 두 자리에서 모두 맞는다** — REL_ROLE·GROUP_TOWARD를 고친 것과 같은 이유다.
    어휘표는 개인 해석과 관계 해석이 **하나를 공유**한다(사용자 지시). */
-const GROUP_POWER={비겁:'스스로 버티는 기운',식상:'만들어 내고 표현하는 기운',
-  재성:'돈과 실속을 다루는 기운',관성:'규칙과 책임을 지는 기운',인성:'배우고 받아들이는 기운'};
+/* [2026-09-19 U23] 사용자: "'스스로 버티는 기운' 이런 것도 풀어서 써야" — 갈래 이름을 무엇인지 바로 보이게. 괄호 속 용어는 plain()이 이야기 층에서 뺀다 */
+const GROUP_POWER={비겁:'나와 같은 편(친구·형제·경쟁자) 기운',식상:'꺼내 놓는(말·재주·표현) 기운',
+  재성:'돈과 결과를 챙기는 기운',관성:'자리·책임·규칙의 기운',인성:'배움과 도움을 받는 기운'};
 /** 계열들을 "이름(용어), 이름(용어) 셋" 꼴로 잇는다.
     [★] 조사는 **실제로 출력되는 문자열의 끝**을 봐야 하는데, 괄호로 끝나면 한글이 아니라
     particle이 받침을 못 읽는다. 그래서 조사 기준 낱말(base)을 따로 돌려준다 —
@@ -4768,6 +4771,12 @@ const POS_DAY=[
      '뒤로 갈수록 판이 커지고, 씀씀이도 같이 커집니다.','뒤로 갈수록 살림이 단단해지는 쪽입니다.',
      '뒤로 갈수록 짊어지는 게 늘고, 아랫사람에게 엄한 어른이 됩니다.','뒤로 갈수록 자리가 잡히고, 아랫사람이 기준으로 삼습니다.',
      '뒤로 갈수록 혼자 궁리하는 시간이 늘어납니다.','뒤로 갈수록 배우고 가르치는 자리가 늘어납니다.']; */
+/* [U23] 월간 십신 — 20~30대·일터. 사용자: "초년 청년 중년 말년처럼 자세히" */
+const POS_MONTH=['젊을 땐 동료·친구와 어깨를 겯고 일해요 — 혼자보다 같이 뛰는 판에서 커요.','젊을 땐 경쟁 속에서 커요 — 이기고 지는 판이 많은 만큼 몫 다툼도 있어요.',
+  '젊을 땐 재주와 말로 자리를 잡아요 — 만들고 보여 주는 일이 일찍 붙어요.','젊을 땐 틀을 뒤집는 쪽이에요 — 윗사람과 부딪히며 크는 시기예요.',
+  '젊을 땐 판을 벌이고 돈을 굴려요 — 기회가 많이 오는 만큼 씀씀이도 커요.','젊을 땐 착실하게 모아요 — 월급·저축처럼 꾸준한 길이 맞아요.',
+  '젊을 땐 압박이 센 자리에서 단련돼요 — 힘든 만큼 실력이 빨리 붙어요.','젊을 땐 조직에서 인정받는 길이에요 — 규칙 안에서 차근차근 올라가요.',
+  '젊을 땐 남다른 걸 배워요 — 정규 코스보다 자기만의 길로 익혀요.','젊을 땐 배움과 어른의 도움이 따라요 — 공부·자격이 밑천이 돼요.'];
 const POS_HOUR=[
   '나이 들수록 제 힘으로 서는 게 편해져요.',
   '나이 들수록 곁에 같이 뛰는 사람이 늘어나요.',
@@ -4838,7 +4847,7 @@ const JOB_BRIDGE={
     '논밭에 심긴 나무가 이 자리예요 — 받아 주는 성격 위에 책임이 얹히면 살림꾼에서 관리자가 돼요.',
     '무쇠를 벼리는 불이 이 자리예요 — 규칙과 압박 속에서 오히려 날이 서요. 편한 자리보다 빡센 자리가 맞아요.',
     '보석을 세공하는 불이 이 자리예요 — 기준이 분명한 곳에서 디테일이 인정받아요. 기준 없는 곳에선 혼자 깎여요.',
-    '흐르는 물이 지키는 자리라니 어색하죠? 이 자리는 물길을 잡는 <b>둑</b>이에요 — 큰물은 둑이 있을 때 논을 적시고, 없으면 홍수예요. 맡은 자리와 규칙이 생각의 물길을 잡아 줄 때 힘이 나요. 대신 고인 물이 되면 안 되니, 자리 안에서 흐를 일(기획·개선)을 맡으세요.',
+    '흐르는 물에게 이 자리는 물길을 잡는 <b>둑</b>이에요 — 큰물은 둑이 있을 때 논을 적시고, 없으면 홍수예요. 맡은 자리와 규칙이 생각의 물길을 잡아 줄 때 힘이 나요. 대신 고인 물이 되면 안 되니, 자리 안에서 흐를 일(기획·개선)을 맡으세요.',
     '이슬을 받아 주는 흙이 이 자리예요 — 조용한 사람이 정해진 자리에서 한마디로 판을 정리해요. 나서지 않아도 자리가 말하게 해 주세요.'],
   식상:[
     '나무에서 불이 나듯, 원칙을 세상에 꺼내는 사람이에요 — 가르치고 이끄는 자리에서 길을 내요.',
@@ -4873,9 +4882,18 @@ const JOB_BRIDGE={
     '흙에서 보석이 나듯, 깊이 팔수록 빛나요 — 전문 연구.',
     '쇠에서 물이 나듯, 지식이 흘러넘치는 사람이에요 — 연구·분석·번역. 흐르는 물에겐 깊이 파는 게 곧 흐르는 거예요.',
     '쇠에 맺힌 이슬이에요 — 조용히 오래 배워 핵심을 짚어요. 연구·기록·명리.']};
-const WORK_STYLE={창업:'일하는 방식은 <b>창업형</b>이에요 — 남의 판보다 내 판을 벌일 때 힘이 나요.',
-  프리:'일하는 방식은 <b>프리랜서형</b>이에요 — 내 이름을 걸고 내 속도로 일할 때 오래가요.',
-  회사:'일하는 방식은 <b>회사형</b>이에요 — 자리와 역할이 분명한 조직 안에서 제 몫이 커져요.'};
+/* [U23] ~~"회사형·창업형·프리랜서형"~~ 사용자: 무슨 말인지 모르겠다 → 문장으로 */
+const WORK_STYLE={창업:'남의 회사보다 내 판을 벌일 때 힘이 나는 사람이에요.',
+  프리:'조직보다 내 이름과 내 속도로 일할 때 오래가는 사람이에요.',
+  회사:'자리와 역할이 분명한 조직 안에서 제 몫이 커지는 사람이에요.'};
+/* [U23] 사용자: "공무원이 잘 어울린다니? 사주 보면서 처음 듣는 말" — ~~25칸 직업 나열~~ → 방향 한 문장 + 그 방향을 명리가 뭐라 부르는지.
+   (정관격을 흔히 공직·조직으로 보는 건 널리 쓰는 읽기지만, 직업 이름을 줄줄이 늘어놓으니 지어낸 말처럼 읽혔다) */
+const JOB_DIR={
+  식상:'재주와 말을 꺼내 쓰는 자리가 맞아요 — 명리에서 흔히 창작·교육·방송·요리처럼 "내가 만든 것"이 눈에 보이는 일로 봐요.',
+  재성:'돈과 결과를 만드는 자리가 맞아요 — 명리에서 흔히 사업·영업·유통·금융처럼 숫자로 결과가 나오는 일로 봐요.',
+  관성:'자리와 책임을 맡는 곳이 맞아요 — 명리에서 흔히 공직·큰 조직·관리·전문 자격처럼 "맡은 자리"가 분명한 일로 봐요.',
+  인성:'배우고 파고드는 자리가 맞아요 — 명리에서 흔히 연구·교육·의료·글처럼 깊이가 쌓이는 일로 봐요.'};
+const JOB_SIDE={식상:'만들고 가르치는 일',재성:'사람 만나고 파는 일',관성:'관리하고 책임지는 일',인성:'배우고 정리하는 일',비겁:'내 이름 걸고 하는 일'};
 function workStyle(cnt,verdict,top){
   /* [U21] ~~가장 많은 갈래로~~ → **격(top[0])이 정한다** — "맡아서 지키는 일 … 프리랜서형"이 16.3%에서 나왔다.
      관성·인성 = 회사형 · 식상 = 프리랜서형 · 재성 = 힘이 세면 창업형, 아니면 회사형(영업) */
@@ -4910,11 +4928,9 @@ function cornerJob(cnt,verdict,dayStem,mGrp){   /* [2026-09-17 A6-3] verdict(선
     const me=STEM_EL[dayStem];
     const prim=mGrp!=='비겁'?mGrp:(['식상','재성','관성'].sort((a,b)=>cnt[b]-cnt[a])[0]);
     const sec=top.find(k=>k!==prim&&k!=='비겁')||null;
-    const t1=(JOB_BRIDGE[prim]?JOB_BRIDGE[prim][dayStem]:JOB_LINE[prim])+(verdict?' '+JOB_TAIL[prim][STRONG_SET.has(verdict)?'강':'약']:'');   /* [U21] 일간 × 격 */
-    const j1=JOB_LIST[prim][groupEl(me,prim)];
-    const j2=sec?JOB_LIST[sec][groupEl(me,sec)].split(' · ').slice(0,3).join(' · '):'';
+    const t1=(JOB_BRIDGE[prim]?JOB_BRIDGE[prim][dayStem]:JOB_LINE[prim])+(verdict?' '+JOB_TAIL[prim][STRONG_SET.has(verdict)?'강':'약']:'');
     const fact2=`${counts} · 태어난 달의 갈래(격) <b>${mGrp}</b> — 직업은 격을 먼저, 업종은 그 갈래가 가리키는 오행(${EL_KO[groupEl(me,prim)]})으로 봅니다.`;
-    return {h:'어울리는 일',t:cornerBlk(fact2,`${t1} 예를 들면 — ${j1}.${sec?` 이쪽도 맞아요 — ${j2}.`:''} ${workStyle(cnt,verdict,[prim])}`),raw:true};}
+    return {h:'어울리는 일',t:cornerBlk(fact2,`${t1} ${JOB_DIR[prim]}${sec?` 가장 많은 기운은 ${GROUP_POWER[sec]}이라 ${JOB_SIDE[sec]}도 어색하지 않아요.`:''} ${workStyle(cnt,verdict,[prim])}`),raw:true};}
   const tail=(top.length===1&&verdict)?(' '+JOB_TAIL[top[0]][STRONG_SET.has(verdict)?'강':'약']):'';
   let jobs='';
   if(Number.isInteger(dayStem)){
@@ -4922,18 +4938,30 @@ function cornerJob(cnt,verdict,dayStem,mGrp){   /* [2026-09-17 A6-3] verdict(선
     const pick=top.length>1?top.slice(0,2).map(k=>JOB_LIST[k][el].split(' · ').slice(0,3).join(' · ')).join(' · '):JOB_LIST[top[0]][el];
     jobs=` 예를 들면 — ${pick}. ${workStyle(cnt,verdict,top)}`;}
   return {h:'어울리는 일',t:cornerBlk(fact,(top.length>1?JOB_TIE:JOB_LINE[top[0]]+tail)+jobs),raw:true};}
-function cornerMoney(cnt10,verdict){   /* [2026-09-17 A6-3] verdict(선택) — 신강·극왕이면 STRONG 표 */
+/* [U23] 사용자: "돈 스타일·관계 스타일·힘이 되는 기운이 너무 성의가 없다" — 각각 두세 문장을 더 얹는다 */
+const MONEY_LEAK={식상:'돈은 하고 싶은 일·먹고 노는 데로 새요.',비겁:'돈은 사람한테 새요 — 빌려주고 못 받거나 내가 사는 자리가 많아요.',
+  관성:'돈은 체면과 의무로 나가요 — 경조사·품위 유지비가 커요.',인성:'돈은 배우는 데와 부모 쪽으로 나가요.',재성:'새는 데는 적은데, 굴리다가 한 번에 크게 물릴 수 있어요.'};
+const MONEY_HOW={jeong:'모으는 법은 적금·연금처럼 묶어 두는 쪽이 맞아요.',pyeon:'모으는 법은 투자·사업처럼 굴리는 쪽이 맞아요 — 한 바구니만 피하세요.',
+  even:'반은 묶어 두고 반은 굴리세요.',none:'월급 들어오면 자동이체로 먼저 떼어 두세요.'};
+function cornerMoney(cnt10,verdict,cnt){   /* [2026-09-17 A6-3] verdict(선택) — 신강·극왕이면 STRONG 표 */
   const jj=cnt10[5], pp=cnt10[4];   /* TEN_GODS: 4=편재 5=정재 */
   const key=(jj===0&&pp===0)?'none':(jj>pp?'jeong':(pp>jj?'pyeon':'even'));
   const MONEY=(verdict&&STRONG_SET.has(verdict))?MONEY_LINE_STRONG:MONEY_LINE;
   /* [2026-09-09 C10] ~~`정재 ${jj} · 편재 ${pp}.`~~ — 여덟 코너에 마지막까지 남아 있던 십신 이름이었다.
      계열 이름 괄호 (재성)은 어휘 기준표라 그대로 두고, 낱개 두 갈래만 일상어로 부른다(C9 승인). */
-  return {h:'돈 스타일',t:cornerBlk(`돈과 실속을 다루는 기운(재성)은 모아 지키는 쪽 ${jj} · 크게 키우는 쪽 ${pp}입니다.`,MONEY[key]),raw:true};}
-function cornerTie(dayStem){
+  const leak=cnt?MONEY_LEAK[GROUP5.slice().sort((a,b)=>cnt[b]-cnt[a])[0]]:'';
+  return {h:'돈 스타일',t:cornerBlk(`돈과 실속을 다루는 기운(재성)은 모아 지키는 쪽 ${jj} · 크게 키우는 쪽 ${pp}입니다.`,`${MONEY[key]} ${leak} ${MONEY_HOW[key]}`),raw:true};}
+const TIE_FIGHT={식상:'서운하면 말이 먼저 나와요 — 뱉고 나서 후회하니 하루만 묵혀 보세요.',관성:'참다가 한 번에 터져요 — 쌓이기 전에 작은 것부터 말하세요.',
+  비겁:'다툴 땐 지지 않으려 해요 — 이기는 것보다 남는 게 뭔지 먼저 보세요.',재성:'계산이 서면 정리해 버려요 — 감정도 셈에 넣어 주세요.',인성:'이해하려다 혼자 삭여요 — 상대는 모르고 지나가니 티는 내세요.'};
+const EL_PEOPLE={mok:'앞으로 뻗는, 먼저 움직이는 사람',hwa:'밝고 표현이 많은 사람',to:'묵직하게 받아 주는 사람',geum:'딱 부러지는 사람',su:'생각 깊고 말이 적은 사람'};
+function cornerTie(dayStem,cnt,verdict){
   const el=STEM_EL[dayStem];
+  const fight=cnt?' '+TIE_FIGHT[GROUP5.slice().sort((a,b)=>cnt[b]-cnt[a])[0]]:'';
+  const weak=verdict==='신약'||verdict==='극약', mate=verdict?(weak?elBorn(el):GEN[el]):null;
+  const fit=mate?` 편한 상대는 ${EL_PEOPLE[mate]}이에요 — ${weak?'나를 받쳐 주는':'내가 마음껏 쏟을 수 있는'} 결이라 오래 가요.`:'';
   return {h:'관계 스타일',
     t:cornerBlk(`태어난 날 윗글자는 <b>${STEMS[dayStem]}</b>, 오행은 <b>${EL_KO[el]}</b>입니다.`,
-      TIE_STEM[dayStem]),raw:true};}   /* [2026-09-17 A6-3] ~~TIE_LINE[el]~~ → 일간별 */
+      TIE_STEM[dayStem]+fight+fit),raw:true};}   /* [2026-09-17 A6-3] ~~TIE_LINE[el]~~ → 일간별 */
 function cornerPower(sur,dayStem,verdict){
   const miss=EL_ORDER.filter(k=>!sur[k]);
   const nmEl=a=>a.map(k=>EL_KO[k]).join('·');
@@ -4942,20 +4970,15 @@ function cornerPower(sur,dayStem,verdict){
     ? `이 사람의 여덟 글자에는 <b>${nmEl(miss)}</b> 기운이 없습니다. `
       +miss.map(k=>`${EL_KO[k]} — ${EL_TRAIT[k]}`).join(' · ')+'.'
     : `다섯 기운을 빠짐없이 갖췄습니다.`;
-  let take=null;
-  if(verdict==='신약'||verdict==='신강'){
-    /* [★ 억부는 공통 골격까지만] 신약이면 나를 낳는·나와 같은 /
-       신강이면 내가 낳는·내가 다루는·나를 다스리는.
-       후보를 한 글자로 좁히는 세부 판별·조후 보정·종격 처리는 유파 간 이견 지대라
-       쓰지 않는다(HANDOFF §6.5). 화면에 "용신"이라는 말도 쓰지 않는다. */
-    const list=(verdict==='신약')?[elBorn(myEl),myEl]:[GEN[myEl],OVR[myEl],elRuled(myEl)];
-    take=`이 사람은 기운이 `
-      +`${verdict==='신약'?'약한':'센'} 편이라 <b>${nmEl(list.filter(Boolean))}</b> 기운이 힘이 됩니다. `
-      +HELP_CLOSER;
-  }else{
-    /* 극왕·극약은 억부 문장을 쓰지 않는다(사용자 결정) */
-    if(miss.length)take=HELP_CLOSER;
-    else fact+=' 어느 쪽 사람과 만나도 무리가 없습니다.';}
+  /* [U23] ~~극왕·극약은 억부 문장을 쓰지 않는다(2026-08-31 사용자 결정)~~ → 사용자: "성의 없다" — 넷 다 쓴다. 극약은 약한 쪽, 극왕은 센 쪽 규칙 그대로.
+     기운 → 사람·계절·색·방위까지. 색·방위는 오행의 널리 쓰는 대응 */
+  const EL_SEASON={mok:'봄',hwa:'여름',to:'환절기',geum:'가을',su:'겨울'}, EL_COLOR={mok:'초록·파랑',hwa:'빨강·주황',to:'노랑·베이지',geum:'흰색·은색',su:'검정·남색'}, EL_DIR={mok:'동쪽',hwa:'남쪽',to:'가운데',geum:'서쪽',su:'북쪽'};
+  const weak=verdict==='신약'||verdict==='극약';
+  const list=(weak?[elBorn(myEl),myEl]:[GEN[myEl],OVR[myEl],elRuled(myEl)]).filter(Boolean);
+  const take=verdict?`이 사람은 기운이 ${weak?'약한':'센'} 편이라 <b>${nmEl(list)}</b> 기운이 힘이 돼요. `
+    +`사람으로는 ${list.slice(0,2).map(k=>EL_PEOPLE[k]).join(', ')} — 곁에 있으면 숨통이 트여요. `
+    +`때로는 ${list.map(k=>EL_SEASON[k]).filter((x,i,a)=>a.indexOf(x)===i).join('·')}, 색은 ${list.slice(0,2).map(k=>EL_COLOR[k]).join('·')}, 자리는 ${list.slice(0,2).map(k=>EL_DIR[k]).join('·')}이 잘 맞아요. `
+    +(miss.length?`없는 ${nmEl(miss)} 기운을 가진 사람이 곁에 있으면 빈 데가 채워져요.`:'주변에 떠오르는 사람이 있다면 은하에 등록해 보세요.'):null;
   return {h:'힘이 되는 기운',t:cornerBlk(fact,take),raw:true};}
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -5164,7 +5187,7 @@ function personReading(n){
      실질 8종이었다(R2 §2-2 ④). 요소마다 받쳐 줄 때/아닐 때 한 문장을 끼워 같은 8종이라도 읽히는
      문장을 다르게 한다. 원고: A6-1 §3-H. */
   const STORY=[
-    gy.deukRyeong?'태어난 달이 이 사람 편이라, 계절이 뒤에서 밀어 줍니다.':'태어난 달이 이 사람 편은 아니라, 계절을 거슬러 서는 셈입니다.',
+    gy.deukRyeong?'태어난 달의 기운이 이 사람과 같은 편이라, 계절이 뒤에서 밀어 줘요 — 봄에 핀 꽃처럼 힘을 안 들여도 자라요.':'태어난 달의 기운이 이 사람과 반대예요 — 겨울에 핀 꽃처럼, 계절이 밀어주지 않아 스스로 버텨야 해요.',   /* [U23] 풀어 씀 */
     gy.deukJi?'태어난 날 아랫글자가 받쳐 줘서, 발밑이 단단합니다.':'태어난 날 아랫글자가 받쳐 주지 않아, 발밑이 헐겁습니다.',
     gy.deukSe?'겉에 드러난 글자에 제 편이 많아, 주변에서 힘을 얻습니다.':'겉에 드러난 글자에 제 편이 적어, 혼자 서는 셈입니다.'];
   /* [U20] ~~backing(세 조건 이름)·CNT_KO·STORY 셋~~ — 판정이 점수제로 바뀌어 "하나도 못 갖춘 상태"와 "센 편"이 한 문단에 같이 나올 수 있다.
@@ -5232,14 +5255,17 @@ function personReading(n){
     let unLine=UNSEONG_LINE[un];
     if(weak&&[0,2,3,4].indexOf(un)>=0)unLine+=' 다만 발 딛는 자리는 단단한데 전체 기운은 넉넉하지 않은 편이라, 그 자리를 옮기기보다 지키는 쪽이 맞아요.';
     if(!weak&&[6,7,8,9].indexOf(un)>=0)unLine+=' 다만 자리는 약해도 전체 기운은 센 편이라, 자리를 옮기면 오히려 풀리는 사람이에요.';
-    const s=[POS_YEAR[det[0].stemGod], POS_DAY[det[2].branchGod], unLine];
-    if(det[3])s.push(POS_HOUR[det[3].stemGod]);
-    out.push({h:'자리마다 놓인 기운',t:s.join(' ')}); }
+    /* [U23] 네 기둥 = 인생의 네 때. 년주 어릴 때·집안 / 월주 20~30대·일터 / 일주 30~40대·가까운 사람 / 시주 말년·아랫사람 */
+    const S=[`<b>어릴 때 · 집안</b> ${POS_YEAR[det[0].stemGod]}`,
+      `<b>20~30대 · 일터</b> ${POS_MONTH[det[1].stemGod]}`,
+      `<b>30~40대 · 가까운 사람</b> ${POS_DAY[det[2].branchGod]} ${unLine}`,
+      det[3]?`<b>나이 들어 · 아랫사람</b> ${POS_HOUR[det[3].stemGod]}`:`<b>나이 들어</b> 태어난 시각을 넣으면 보여요 — 시주가 말년과 아랫사람 자리예요.`];
+    out.push({h:'자리마다 놓인 기운',t:S.map(x=>`<p>${x}</p>`).join(''),raw:true}); }
 
   /* ══ 코너 넷 [2026-08-31] ══ 전부 이층식(해설 + 해석 층). 계산은 순수 함수가 한다 */
   { const cj=cornerJob(cnt,gy.verdict,d,mGrp); cj.t=cj.t.replace('<span class="nicktake-t">','<span class="nicktake-t">'+t2+' '); out.push(cj); }   /* [U22] 관심 문장을 앞머리로 */
-  out.push(cornerMoney(cnt10,gy.verdict));  /* [2026-09-17 A6-3] 강/약 표 */
-  out.push(cornerTie(d));
+  out.push(cornerMoney(cnt10,gy.verdict,cnt));  /* [2026-09-17 A6-3] 강/약 표 · [U23] 새는 곳·굴리는 법 */
+  out.push(cornerTie(d,cnt,gy.verdict));   /* [U23] 다툴 때·맞는 사람 */
   out.push(cornerPower(sajuElements(r),d,gy.verdict));
   /* [2026-08-30] key 는 제목 문자열 — 인물 패널이 일곱을 접을 때 쓴다.
      순서가 아니라 이름으로 잡아야 코너를 더하거나 옷겨도 접힘 기억이 안 엉힌다. */
@@ -12109,7 +12135,7 @@ async function sajuSelfTest(){
   const nk=pbody.querySelector('.nickname');
   const secs=[...pbody.querySelectorAll('.psec')].map(x=>x.textContent);
   T('nodePair: 인물 패널에 나와의 관계 전문이 있다',
-    !!nk && !!pbody.querySelector('#cardbtn') && secs.indexOf('나와의 관계')>=0 && secs.indexOf('나와의 관계')<=2, /* [U11] ~~secs[0]~~ — 맨 위는 「요즘」 · [U12] 그다음 「궁금한 것」 */
+    !!nk && !!pbody.querySelector('#cardbtn') && secs.indexOf('나와의 관계')>=0 && secs.indexOf('나와의 관계')<=3, /* [U11] ~~secs[0]~~ — 맨 위는 「요즘」 · [U12] 그다음 「궁금한 것」 · [U23] 그다음 「더 알려 주기」 */
     (secs.join(' / ')||'구역 없음')+' · 별명 '+(nk?nk.textContent.trim().slice(0,14):'없음'));
   /* [2026-09-19 U11] 두 층 — 사주 표·판정 근거는 이야기 층에 없고 「사주로 보면」(.basis) 안에만 있다. 이야기 층 맨 위는 「요즘」 */
   { const tbl=pbody.querySelectorAll('.sjcol'), inB=[...tbl].every(el=>!!el.closest('.basis'));
@@ -12374,18 +12400,19 @@ async function sajuSelfTest(){
         (~~'다섯 기운을 고루 갖춘 판입니다'~~ → '다섯 기운을 빠짐없이 갖췄습니다') */
      txt(evenWeak).indexOf('다섯 기운을 빠짐없이 갖췄습니다')>=0, txt(evenWeak).slice(0,40));
    const ex1=cornerPower(noTo,0,'극왕');
-   T('cnrPowerExtreme: 극왕은 억부 문장 없음',
-     txt(ex1).indexOf('억부')<0&&txt(ex1).indexOf(HELP_CLOSER)>=0, txt(ex1).slice(-46));
+   /* [2026-09-19 U23] ~~극왕은 억부 문장 없음~~ → 사용자: "성의 없다" — 극왕도 센 쪽 규칙(화·토·금)으로 말한다 */
+   T('cnrPowerExtreme: 극왕도 센 쪽 기운을 말한다',
+     /화·토·금 기운이 힘이 돼요/.test(txt(ex1))&&/색은/.test(txt(ex1)), txt(ex1).slice(0,46));
    const ex2=cornerPower(all,0,'극약');
-   T('cnrPowerExtremeFull: 극약+고루면 해석 층 생략',
+   T('cnrPowerExtremeFull: 극약+고루 — 약한 쪽 기운 + 등록 권유',
      /* [2026-09-09 C8] 같은 이유로 대조 문자열만 갱신
         (~~'어느 쪽 사람과도 잘 어울립니다'~~ → '어느 쪽 사람과 만나도 무리가 없습니다') */
-     txt(ex2).indexOf('억부')<0&&txt(ex2).indexOf('어느 쪽 사람과 만나도 무리가 없습니다')>=0
-       &&txt(ex2).indexOf(NICK_TAKE_H)<0, txt(ex2).slice(0,52));
+     /* [U23] ~~해석 층 생략~~ → 극약도 약한 쪽 규칙(수·목) + 다 갖췄으면 "등록해 보세요" */
+     /수·목 기운이 힘이 돼요/.test(txt(ex2))&&txt(ex2).indexOf('다섯 기운을 빠짐없이 갖췄습니다')>=0, txt(ex2).slice(0,52));
    /* 23. 억부 골격 — 신약은 둘, 신강은 셋 */
    const w=cornerPower(noTo,0,'신약'), st=cornerPower(noTo,0,'신강');
    T('cnrPowerYeokbu: 신약 2개 · 신강 3개',
-     /수·목 기운이 힘이 됩니다/.test(txt(w))&&/화·토·금 기운이 힘이 됩니다/.test(txt(st)),
+     /수·목 기운이 힘이 돼요/.test(txt(w))&&/화·토·금 기운이 힘이 돼요/.test(txt(st)),   /* [U23] 말투 */
      '신약→'+(txt(w).match(/편이라 ([^ ]+) 기운/)||[])[1]+' / 신강→'+(txt(st).match(/편이라 ([^ ]+) 기운/)||[])[1]);
   }
   /* 25. 관계 카드 [2026-08-30 → 2026-09-05 타로 판] — 캔버스를 뜨지 않고 **그리기 명령 목록**으로 검증한다 */
@@ -12744,9 +12771,9 @@ async function sajuSelfTest(){
   { const cells=Object.keys(JOB_LIST).flatMap(g=>Object.keys(JOB_LIST[g]).map(e=>JOB_LIST[g][e].split(' · ').length));
     const d1=luckNow(Date.UTC(2026,8,19,3)).day, d2=luckNow(Date.UTC(2000,0,1,3)).day;
     const ms=yearMonths(other);
-    const job=cornerJob({식상:0,재성:3,관성:1,인성:1,비겁:0},'신약',8).t.replace(/<[^>]+>/g,'');
+    const job=cornerJob({식상:0,재성:3,관성:1,인성:1,비겁:0},'신약',8,'관성').t.replace(/<[^>]+>/g,'');   /* [U23] 화면 경로처럼 격을 넘긴다 */
     T('jobMonthsToday: 직업 25칸×6 · 12달 첫 달 2월(寅) · 오늘 일진 대조 · 어울리는 일에 직업·방식',
-      cells.length===25&&cells.every(k=>k===6)&&ms.length===12&&ms[0].cal===2&&ms[0].pil[1]===2&&pillarStr(d1)==='丙申'&&pillarStr(d2)==='戊午'&&/예를 들면/.test(job)&&/일하는 방식/.test(job),
+      cells.length===25&&cells.every(k=>k===6)&&ms.length===12&&ms[0].cal===2&&ms[0].pil[1]===2&&pillarStr(d1)==='丙申'&&pillarStr(d2)==='戊午'&&/명리에서 흔히/.test(job)&&/사람이에요/.test(job),   /* [U23] ~~직업 나열·일하는 방식~~ → 방향 문장 */
       '칸 '+cells.length+' · 12달 '+ms.length+' 첫 '+(ms[0]&&ms[0].cal)+'월 · '+pillarStr(d1)+'/'+pillarStr(d2)); }
   /* [2026-09-19 U15] 테스트 개인화 — v6→v7 tests:null · 모르는 값은 버림 · 고민 주제가 「궁금한 것」 맨 위로 · 「요즘」에 고민 줄 */
   { const m=MIGRATIONS['6']({v:6,people:[{key:'t1',name:'갑',isMe:true,self:null,love:null,birth:{y:2000,m:1,d:1,sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:'남',est:null,dayRule:null}}]});
@@ -13223,8 +13250,8 @@ function showNode(n,groupContext,targetMesh){
     if(ss.length)storyRd1.splice(1,0,{h:'타고난 별',key:'n:타고난 별',t:ss.map(x=>SS_LINE[x.name]).join(' ')}); }
   const storyRd2=isMe?storyRd1.map(x=>Object.assign({},x,{t:String(x.t).replace(/이 사람/g,'당신')})):storyRd1;
   const rdHtml2=storyRd2.length?yo(plain(readingHtml(storyRd2,selfFold))):'';   /* [U11] 친구 말투 · [U12] 쉬운 말 */
-  const main2=(r?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')+rdHtml2+testsSectionHtml(n)+selfSectionHtml(n);   /* [U15] */
-  const nowSec=n.birth?`<div class="psec">요즘</div>${nowStoryHtml(n,isMe)}<div class="psec">궁금한 것</div>${askHtml(n,isMe)}`
+  const main2=(r?`${r.body.map(p=>`<p>${p}</p>`).join('')}<div class="tip"><b>MANAGE</b>${r.tip}</div>`:'')+rdHtml2;   /* [U23] ~~더 알려 주기~~ 는 궁금한 것 아래로(사용자: 보지도 못함) */   /* [U15] */
+  const nowSec=n.birth?`<div class="psec">요즘</div>${nowStoryHtml(n,isMe)}<div class="psec">궁금한 것</div>${askHtml(n,isMe)}<div class="testbox">${testsSectionHtml(n)}${selfSectionHtml(n)}</div>`
     +((lf=>lf?`<div class="psec">평생 흐름</div>${lf}`:'')(lifeFlowHtml(n,isMe))):'';   /* [U12] 궁금한 것 · [U18] 평생 흐름 */
   const basisBody=(isMe?'':egoRelLine(n))
     +(pbOpt.eight?`<div class="basisrow"><div class="basish">여덟 글자로 보면</div><p>${pbOpt.eight}</p></div>`:'')
