@@ -5390,6 +5390,7 @@ function mobileFocusBias(){
   if(!panelEl||!panelEl.classList.contains('open'))return 0;
   if(!focusedMesh)return 0;
   return V2_TUNABLES.MOBILE_FOCUS_BIAS_Y;}
+const _followD=new THREE.Vector3();
 function camTick(){
   syncPanelBodyClass();
   syncPanelH();
@@ -5427,6 +5428,13 @@ function camTick(){
     cam.theta+=d*.08;cam.phi+=(cam.angGoal.phi-cam.phi)*.08;
     if(Math.abs(d)<1e-3&&Math.abs(cam.angGoal.phi-cam.phi)<1e-3)cam.angGoal=null;}
   cam.r+=(cam.rTarget-cam.r)*.08;
+  /* [2026-09-19] 따라가는 행성의 이동량만큼 먼저 같이 옮긴다. lerp(.08)만 쓰면 공전하는 행성보다 늘 뒤처져서
+     (실측: 첫째 공전 5.6/초 → 지연 1.98, 거리 2.9에서 화면 반높이 1.35) 가까이 당기면 행성이 화면 밖으로 밀렸다.
+     대상이 바뀐 첫 프레임은 옮기지 않는다 — 그 이동은 아래 lerp가 부드럽게 맡는다(전환 느낌 유지). */
+  if(focusedMesh){
+    if(cam._followMesh===focusedMesh&&cam._followPrev)cam.target.add(_followD.subVectors(focusedMesh.position,cam._followPrev));
+    cam._followMesh=focusedMesh;(cam._followPrev||(cam._followPrev=new THREE.Vector3())).copy(focusedMesh.position);}
+  else cam._followMesh=null;
   cam.target.lerp(cam.targetGoal,.08);
   camera.position.set(
     cam.target.x+cam.r*Math.sin(cam.phi)*Math.sin(cam.theta),
@@ -10570,7 +10578,11 @@ canvas.addEventListener('touchmove',e=>{if(e.touches.length===2){
     const g=PINCH_GAIN, r=pinch/d;
     const up=Math.pow(1.06,g), dn=Math.pow(.94,g), f=Math.pow(r,g);
     zoomBy(f>1?Math.min(up,f):Math.max(dn,f));}
-  if(pinchCenter)panBy(cx-pinchCenter.x,cy-pinchCenter.y);
+  /* [2026-09-19 버그] 행성을 누른 채 핀치하면 행성이 공전하며 화면 밖으로 나갔다(사용자 실기기).
+     [원인] 핀치의 중심 이동을 매번 panBy로 넘겼고, panBy는 **무조건** 포커스(따라가기)를 푼다 — 손가락 중심이 1px만
+     흔들려도 풀렸다. 풀리면 zoomFloor도 R_MIN(40)으로 돌아가 행성에 다가갈 수도 없었다(F-7의 대상 기준 하한이 무력화).
+     [고침] 무언가를 따라가는 중이면 핀치는 순수 줌이다 — 중심 이동을 버린다. 따라가는 대상이 없을 때만 지금처럼 팬. */
+  if(pinchCenter&&!focusedMesh)panBy(cx-pinchCenter.x,cy-pinchCenter.y);
   pinch=d;pinchCenter={x:cx,y:cy};}},{passive:true});
 /* 핀치가 끝난 직후의 손가락 뗌이 더블탭으로 세지 않게 연쇄를 끊는다 */
 canvas.addEventListener('touchend',()=>{if(pinch)lastTapT=0;pinch=0;pinchCenter=null;});
