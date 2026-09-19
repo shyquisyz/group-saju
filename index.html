@@ -4721,7 +4721,9 @@ const V2_TUNABLES={
   /* [2026-09-19 4차] 테두리를 지형대로 울퉁불퉁하게 — 사용자 "완전 반듯한 원형인데 테두리를 각지게" → 시안 A(변위) "뚜렷하면서 더 강하게" 확정.
      노멀맵은 음영만 바꿔 윤곽은 완전한 원으로 남는다. 변위(displacement)는 지도 밝기 = 높이만큼 표면 점을 실제로 밀어낸다.
      바다 높이 0(해수면), 극지방은 높이를 줄여 뾰족해지지 않게, 3px 번짐으로 계단 없이. 시안: 3.5% 은은 · 7% 뚜렷 → 10% 확정 */
-  PLANET_DISP: 0.10,              // 변위 최대치(반지름 비). 초상·은하 공통
+  PLANET_DISP: 0.10,
+  CLOUD_R: 1.24,                  // [2026-09-19] 장신구 구름 조각의 반지름 — 솟은 땅(1.10)보다 높이 떠서 가장자리에서 테두리 밖으로 삐져나온다
+  CLOUD_ORBIT: 0.08,              // 구름 조각이 행성 둘레를 도는 속도(rad/s). 약 80초에 한 바퀴              // 변위 최대치(반지름 비). 초상·은하 공통
   GALAXY_LAVA_EM: 0.9,            // [3차] 은하 행성의 용암 발광층 세기(발광은 별도 층이라 성계 선택 시 밝아지는 연출과 안 섞인다)
   GALAXY_MAP_PX: 1024,            // [3차] ~~512~~ — 은하에서도 가까이 당기면 행성이 화면 60%까지 커져(핀치 수정 후) 512는 흐렸다             // 은하용 지도 폭(px). 은하에서 행성은 수~수십 px라 1024는 GPU 메모리만 쓴다
   PORTRAIT_BUMP: 0.03,            // 지표 굴곡(구 .015)
@@ -7392,6 +7394,17 @@ const RB={ri:1.42,ro:1.62,tilt:.42,roll:-.55,op:.9,k0:.88,k1:.999};
 const FX='assets/planet-tex/fx/';
 let R=null,cur=null,cloudIm=null,hurrT=null,aurT=null;const H={};
 function load(u){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=u;});}
+/* [2026-09-19] 위에서 본 구름 그림(투명 배경, 512²) — 종류별로 한 번만 */
+const _ctop={};
+async function cloudTopTex(kind){if(_ctop[kind])return _ctop[kind];const t=new THREE.Texture(await load(FX+'cloud_top_'+kind+'.png'));t.encoding=THREE.sRGBEncoding;t.needsUpdate=true;return _ctop[kind]=t;}
+/** 반지름 R 구면의 조각(가로·세로 L 라디안, 중심 +z)에 구름을 입히고 피벗으로 (pitch,yaw) 방향에 둔다. spin=true면 조각 중심 둘레로 돌릴 수 있게 한 겹 더 */
+function cloudPatch(tex,R,L,yaw,pitch,dark,spin){
+  const geo=new THREE.SphereGeometry(R,48,48,Math.PI/2-L/2,L,Math.PI/2-L/2,L);
+  const m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({map:tex,transparent:true,depthWrite:false,alphaTest:.02,roughness:1,metalness:0,side:THREE.DoubleSide,
+    emissive:new THREE.Color(dark?0x0a0c10:0x1a2030)})); /* 밤 쪽에서도 윤곽이 아주 옅게 남도록 */
+  m.renderOrder=30;const pivot=new THREE.Object3D(),spinner=new THREE.Object3D();spinner.add(m);pivot.add(spinner);pivot.rotation.set(pitch,yaw,0);
+  return {pivot,spinner};}
+/* ~~[U7-2] 구름 높이 지도 → 18겹 셸~~ [2026-09-19] 지금은 안 쓴다(위 cloudTopTex·cloudPatch로 교체). 되돌릴 때를 위해 남긴다 */
 async function cloudTex(kind){ /* 구름 높이 지도는 비싸서(1024×512 이분 탐색) 종류별로 한 번만 */
   if(H[kind])return H[kind];
   if(!cloudIm)cloudIm=await load(FX+'cloudmap_a.png');
@@ -7439,14 +7452,22 @@ async function build(n,force){
   if(info.season)S.add(pSeasonFilm(info.season));
   const mats=[],bolts=[],upd=[];const N=18,G=new THREE.SphereGeometry(1,96,72);const g=new THREE.Group();S.add(g);
   for(const f of fx){
-    if(f==='white'||f==='dark'||f==='storm'){const T=TYPES[f];const tex=await cloudTex(f==='white'?'white':'dark');
-      const sh=new THREE.Mesh(new THREE.SphereGeometry(1.004+V2_TUNABLES.PLANET_DISP,96,72),cloudShellMat(tex,.1,0,T,.006,true));g.add(sh);mats.push(sh.material); /* [4차] 구름 그림자·구름층을 솟은 만큼 위로 */
-      for(let i=0;i<N;i++){const fr=i/(N-1);const m=new THREE.Mesh(G,cloudShellMat(tex,.03+fr*.92,fr,T,.006,false));m.scale.setScalar(1.03+V2_TUNABLES.PLANET_DISP+fr*.11);m.renderOrder=10+i;g.add(m);mats.push(m.material);}
-      if(T.flash)for(const [d,sc] of [[FP1,1],[FP2,.8]]){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:BOLT,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));sp.position.copy(d.clone().multiplyScalar(1.08));sp.scale.set(.28*sc,.56*sc,1);sp.renderOrder=40;g.add(sp);bolts.push(sp);}}
-    if(f==='typhoon'){if(!hurrT){hurrT=new THREE.Texture(await load(FX+'hurr_a.png'));hurrT.needsUpdate=true;}
-      const C=new THREE.Vector3(.35,.32,.88).normalize();
-      const sh=new THREE.Mesh(new THREE.SphereGeometry(1.004+V2_TUNABLES.PLANET_DISP,96,72),typhoonShellMat(hurrT,.1,0,C,.35,true));g.add(sh);mats.push(sh.material);
-      for(let i=0;i<N;i++){const fr=i/(N-1);const m=new THREE.Mesh(G,typhoonShellMat(hurrT,.03+fr*.92,fr,C,.35,false));m.scale.setScalar(1.025+V2_TUNABLES.PLANET_DISP+fr*.065);m.renderOrder=10+i;g.add(m);mats.push(m.material);}}
+    /* [2026-09-19] 장신구 구름 = **위에서 본 구름 조각이 행성 위를 돈다.** 사용자: "옆에서 본 구름 말고 위에서 본 구름으로 행성을 돌았으면".
+       ~~구름 높이 지도 18겹(cloudShellMat)·태풍 18겹(typhoonShellMat)으로 표면을 덮던 방식~~ — 테두리 변위(10%) 뒤로 표면에 붙은 얼룩처럼 보였다.
+       이제 투명 배경 구름 그림(fx/cloud_top_*.png, Magnific 생성)을 구면 조각(반지름 CLOUD_R)에 입혀 띄우고, 기울어진 궤도로 천천히 돈다.
+       뜻은 그대로: 흰 = 합(날 외 자리 합 2곳 이상) · 먹 = 충 1곳 · 번개 = 충 + 다른 자리 충 1곳 · 태풍 = 충 2곳 이상. */
+    if(f==='white'||f==='dark'||f==='storm'||f==='typhoon'){
+      const orbit=new THREE.Group();orbit.rotation.z=.22;g.add(orbit);const spin=new THREE.Group();orbit.add(spin);
+      const kind=f==='white'?'white':'dark',CR=V2_TUNABLES.CLOUD_R;
+      if(f==='typhoon'){const ty=cloudPatch(await cloudTopTex('typhoon'),CR,1.15,-.2,-.1,true,true);spin.add(ty.pivot);upd.push(t=>{ty.spinner.rotation.z=-t*.35;});
+        spin.add(cloudPatch(await cloudTopTex('dark'),CR,.55,.75,.6,true).pivot);}
+      else{const tex=await cloudTopTex(kind),dark=kind==='dark';
+        const A=[[.95,-.35,-.25],[.7,.55,.45]];A.forEach(([L,yw,pt])=>spin.add(cloudPatch(tex,CR,L,yw,pt,dark).pivot));
+        /* 번개 — 두 조각 아래에서 번쩍인다(구름과 함께 돈다). 번쩍임 세기는 기존 flicker(bolts[0]·[1]) 그대로 */
+        if(f==='storm')A.forEach(([L,yw,pt],i)=>{const d=new THREE.Vector3(0,0,1).applyEuler(new THREE.Euler(pt,yw,0));
+          const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:BOLT,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));
+          sp.position.copy(d.multiplyScalar(CR+.02));sp.position.y-=.12*(i?0.8:1);const k=i?.8:1;sp.scale.set(.26*k,.52*k,1);sp.renderOrder=40;spin.add(sp);bolts.push(sp);});}
+      upd.push(t=>{spin.rotation.y=t*V2_TUNABLES.CLOUD_ORBIT;});}
     if(f==='aurora'){if(!aurT){aurT=new THREE.Texture(await load(FX+'aurora_a_band.png'));aurT.needsUpdate=true;aurT.encoding=THREE.sRGBEncoding;aurT.wrapS=THREE.RepeatWrapping;}
       const b=limbAurora(aurT);b.renderOrder=20;S.add(b);S.add(limbGlow());upd.push((t,c)=>{b.userData.update(t);b.quaternion.copy(c.quaternion);});}
     if(f==='ring'){const r=saturnRing();S.add(r);ringShadowOn(mat,r);upd.push(t=>r.userData.upd(t));}

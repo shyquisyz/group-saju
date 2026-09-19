@@ -49,3 +49,7 @@ su__mok-geum KL4qPgWkqp
 su__hwa-to CqgvlkMEEy
 su__hwa-geum TdCWfq7VNR
 su__to-geum 4RVOTB49Aa
+# 장신구 구름(위에서 본 모습, 투명 배경, 2026-09-19) — fx/cloud_top_*.png
+cloud_top_white vQLtZbSa47
+cloud_top_dark Bh5e4ERoQR
+cloud_top_typhoon xSikdy1jfW
