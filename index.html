@@ -4692,7 +4692,19 @@ const V2_TUNABLES={
   HERO_SPILL: 1.8,                // [U7-2] 살아 있는 초상 캔버스 = 정지 초상의 1.8배. 행성 크기는 같게, 고리(바깥 반경 1.9)가 안 잘리게
   SEASON_FILM_KK: 0.20,           // 계절막 진하기(가장 바깥 불투명도). 사용자 "약 20프로까지 올려줘"
   SU_ICE_KEEP: 0.5,               // 수 압도 극지방 얼음을 면적 기준 이만큼만 남긴다(1.7% -> 약 0.8%, 사용자 "작게" 확정)
-  GEUM_METALNESS: 0.55,           // 금 영역만 금속 광택(은은하게). 1이면 크롬처럼 번쩍여 흰 금속으로 돌아간다
+  GEUM_METALNESS: 0.55,
+  /* [2026-09-19] 초상 측면 조명 — 사용자 "막 이쁘진 않다" → 시안 ②(측면 조명 강화) 채택.
+     [왜] 주광이 오른쪽 위 앞(6,10,8)에서 정면으로 비추고 채움광이 커서 명암 경계가 화면 밖으로 밀려
+     색칠한 공처럼 납작했다. 주광을 왼쪽 옆(-7,5,5)으로 돌리고 채움광을 줄여 명암 경계를 행성 안으로 들인다.
+     림(뒤쪽 푸른빛)은 반대편 오른쪽 뒤로 옮겨 어두운 쪽 가장자리를 살린다. 굴곡(bump)도 2배.
+     은하·성계 장면 조명(LIGHT_*)은 건드리지 않는다 — 초상 두 곳(renderPortrait2 · LiveHero)만 쓴다.
+     계절막 반짝임 방향(-.45,.6,.65 = 왼쪽 위)과 새 주광 방향이 같은 쪽이라 어긋나지 않는다. */
+  PORTRAIT_KEY_POS: [-7,5,5],     // 주광 위치(왼쪽 옆 위)
+  PORTRAIT_KEY_MUL: 1.35,         // 주광 세기 배율(각 초상의 원래 값에 곱한다)
+  PORTRAIT_AMB_MUL: 0.45,         // 채움광 배율 — 낮출수록 그림자 쪽이 깊어진다
+  PORTRAIT_RIM_POS: [8,2,-6],     // 림 위치(오른쪽 뒤)
+  PORTRAIT_RIM_MUL: 1.4,          // 림 세기 배율
+  PORTRAIT_BUMP: 0.03,            // 지표 굴곡(구 .015)           // 금 영역만 금속 광택(은은하게). 1이면 크롬처럼 번쩍여 흰 금속으로 돌아간다
   MEMBER_MIN_GAP: 0.8,          // 0.4는 화면 최소 간격 3px(거의 닿아 보임, 실측) → 0.8
   /* [U6 2026-09-19] 성계 장면 카메라 = 궤도면 법선에서 이만큼(rad) 기운 방향. 0.25 ≈ 14° — 완전히 위에서 보면
      납작한 원판이 되어 깊이감이 사라진다. null이면 끈다(구 동작: 카메라 각도를 안 건드림). */
@@ -7064,13 +7076,14 @@ async function renderPortrait2(info){
   /* 앱 렌더러는 출력 색 변환을 안 쓴다(renderPortrait 주석) — 지도를 sRGB로 표시하면 어둡고 붉게 가라앉는다(실측으로 잡음). 그대로 둔다 */
   const map=tex(P.map);map.anisotropy=4;
   const ps=new THREE.Scene();ps.environment=scene.environment;
-  ps.add(new THREE.AmbientLight(0x8890b0,V2_TUNABLES.LIGHT_AMBIENT));
-  const key=new THREE.DirectionalLight(0xffffff,V2_TUNABLES.LIGHT_KEY);key.position.set(6,10,8);ps.add(key);
-  const rim=new THREE.DirectionalLight(0x9fc0ff,V2_TUNABLES.LIGHT_RIM);rim.position.set(-6,3,-9);ps.add(rim);
+  {const VT=V2_TUNABLES; /* [2026-09-19] 측면 조명 — VT.PORTRAIT_* 주석 */
+   ps.add(new THREE.AmbientLight(0x6070a0,VT.LIGHT_AMBIENT*VT.PORTRAIT_AMB_MUL));
+   const key=new THREE.DirectionalLight(0xfff4e6,VT.LIGHT_KEY*VT.PORTRAIT_KEY_MUL);key.position.fromArray(VT.PORTRAIT_KEY_POS);ps.add(key);
+   const rim=new THREE.DirectionalLight(0x9fc0ff,VT.LIGHT_RIM*VT.PORTRAIT_RIM_MUL);rim.position.fromArray(VT.PORTRAIT_RIM_POS);ps.add(rim);}
   /* 사람마다 아주 약한 색감(±3% 따뜻함·차가움, ±4% 밝기) — U5 권장 예시 ① */
   const u1=((info.seed>>>8)&255)/255-.5,u2=((info.seed>>>16)&255)/255-.5;
   const tint=new THREE.Color(1+u1*.06,1,1-u1*.06).multiplyScalar(1+u2*.08);
-  const mp={map:map,bumpMap:map,bumpScale:.015,roughness:.85,metalness:0,color:tint};
+  const mp={map:map,bumpMap:map,bumpScale:V2_TUNABLES.PORTRAIT_BUMP,roughness:.85,metalness:0,color:tint};
   if(P.metal){const mt=tex(P.metal);Object.assign(mp,{metalnessMap:mt,metalness:V2_TUNABLES.GEUM_METALNESS,roughness:.55,envMap:pStudioEnv(),envMapIntensity:1.0});}
   const G=new THREE.SphereGeometry(1,128,96),mats=[new THREE.MeshStandardMaterial(mp)];
   const mesh=new THREE.Mesh(G,mats[0]);
@@ -7115,7 +7128,7 @@ function portraitImg(n,cls){
    [캔버스] 정지 초상보다 HERO_SPILL배 크게 잡고 가운데 맞춘다 — 행성은 정지 초상과 같은 크기로 보이고,
      고리·별똥별은 동그란 테두리 밖으로 나온다. 렌더러는 이 초상 하나 전용(WebGL 문맥 1개 추가), 패널이 닫히면 멈춘다. */
 const LiveHero=(()=>{
-const LPOS=new THREE.Vector3(5,6,8),LDIR=LPOS.clone().normalize();
+const LPOS=new THREE.Vector3().fromArray(V2_TUNABLES.PORTRAIT_KEY_POS),LDIR=LPOS.clone().normalize(); /* [2026-09-19] 구 (5,6,8). 장신구 음영도 LDIR을 따르므로 같이 돈다 */
 function cloudHeight(im,th,cover,soft){const W=im.width,H=im.height;const src=document.createElement('canvas');src.width=W;src.height=H;const sx=src.getContext('2d');sx.drawImage(im,0,0);
   const sd=sx.getImageData(0,0,W,H);const t0=th/255;const V=new Float32Array(W*H);for(let j=0;j<W*H;j++){let x=(sd.data[j*4]/255-t0)/(1-t0);V[j]=x<0?0:x>1?1:x;}
   const hs=(x,y,z)=>{const t=Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453;return t-Math.floor(t);};
@@ -7271,12 +7284,13 @@ async function build(n,force){
   const fx=force||accessoriesFor(n); /* force = 검사용(장신구 목록을 직접 준다) */
   const P=pPrepMap(im,info.key);
   const S=new THREE.Scene();
-  S.add(new THREE.AmbientLight(0x9098b8,.5));const k=new THREE.DirectionalLight(0xfff4e6,1.35);k.position.copy(LPOS);S.add(k);
-  const rl=new THREE.DirectionalLight(0x9fc0ff,.45);rl.position.set(-6,3,-9);S.add(rl);
+  {const VT=V2_TUNABLES; /* [2026-09-19] 측면 조명 — 원래 값(.5 / 1.35 / .45)에 초상 배율을 곱한다 */
+   S.add(new THREE.AmbientLight(0x9098b8,.5*VT.PORTRAIT_AMB_MUL));const k=new THREE.DirectionalLight(0xfff4e6,1.35*VT.PORTRAIT_KEY_MUL);k.position.copy(LPOS);S.add(k);
+   const rl=new THREE.DirectionalLight(0x9fc0ff,.45*VT.PORTRAIT_RIM_MUL);rl.position.fromArray(VT.PORTRAIT_RIM_POS);S.add(rl);}
   const map=new THREE.CanvasTexture(P.map);map.encoding=THREE.sRGBEncoding;map.anisotropy=4;
   const u1=((info.seed>>>8)&255)/255-.5,u2=((info.seed>>>16)&255)/255-.5;
   const tint=new THREE.Color(1+u1*.06,1,1-u1*.06).multiplyScalar(1+u2*.08);
-  const mp={map:map,bumpMap:map,bumpScale:.015,roughness:.85,metalness:0,color:tint};
+  const mp={map:map,bumpMap:map,bumpScale:V2_TUNABLES.PORTRAIT_BUMP,roughness:.85,metalness:0,color:tint};
   if(P.metal)Object.assign(mp,{metalnessMap:new THREE.CanvasTexture(P.metal),metalness:V2_TUNABLES.GEUM_METALNESS,roughness:.55,envMap:pStudioEnv(R)});
   const mat=new THREE.MeshStandardMaterial(mp);
   const planet=new THREE.Mesh(new THREE.SphereGeometry(1,128,96),mat);
