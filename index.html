@@ -4710,7 +4710,9 @@ const V2_TUNABLES={
   PORTRAIT_RIM_POS: [8,2,-6],     // 림 위치(오른쪽 뒤)
   PORTRAIT_RIM_MUL: 1.2,          // 림 세기 배율
   /* [2026-09-19] 은하 행성 = 초상과 같은 4분할 지도(사용자 "은하 화면 행성 지도도 바꿔야"). */
-  GALAXY_MAP_EM: 0.12,            // 은하 행성의 자체 발광 바닥값(지도 색 그대로 빛남). 일간별 바닥값(stemEmissive)을 대신한다 — 지도가 같은 틀인데 화 사람만 밝으면 안 된다
+  GALAXY_MAP_EM: 0.05,            // [2026-09-19 map5] ~~0.12~~ — 밝은 조화 지도(사막·결정)에서 확대 시 하얗게 탔다(동창, 8시점 최대 7% → .05·표면 .88에서 3.6%).
+  GALAXY_MAP_TINT: 0.88,          // [map5] 은하 행성 표면 밝기 배율(지도 색은 그대로, 밝기만)
+                                  // [GALAXY_MAP_EM 원래 설명] 은하 행성의 자체 발광 바닥값(지도 색 그대로 빛남). 일간별 바닥값(stemEmissive)을 대신한다 — 지도가 같은 틀인데 화 사람만 밝으면 안 된다
   GALAXY_STAR_MAP_EM: 0.4,        // 지도를 입은 나(항성)의 발광. STAR_EMISSIVE 1.0 그대로면 지도가 스스로 꽉 차게 빛나 블룸과 겹쳐 하얗게 탔다
                                   // (사용자 실기기 갈무리 · 실측 375×812: 원 안 >245 비율 1.0 33.6% / .6 17.0% / .4 7.3% / .25 3.6%). 둘레 글로우는 그대로
   PORTRAIT_LAVA_EM: 0.9,          // [3차] 용암(밝은 주황·노랑)만 스스로 빛나는 세기 — 밤 쪽에서도 살아 있게. 시안 1차 1.3은 가운데 웅덩이가 하얗게 탔다
@@ -6989,7 +6991,10 @@ function portraitSnapshot(ps,cam,S){
    [방향] map4/facing.json — 네(세) 지형이 **빛 받는 쪽에서** 가장 고르게 보이는 방향 목록(pass, 생성기 tools/planet-maps/facing4.js).
      빛까지 따지는 이유: 측면 조명에서 그늘에 든 지형(특히 회색 금)이 안 읽혔다(실측). 옛 facing.json과 합쳐 한 표로 쓴다
      (map4 키에는 '__'가 있어 옛 키와 안 겹친다). */
-const PMAP_BASE='assets/planet-tex/map/',PMAP4_BASE='assets/planet-tex/map4/';
+/* [2026-09-19 정정] ~~map4/(4분할, 같은 크기 네 구역)~~ → **map5/(조화, 나 약 50% + 환경이 실제 지형처럼 얽힘)**.
+   사용자: "오행 넷의 표현이 전체가 조화롭지 못하다" → 시험 3장 비교 후 50장 재생성(tools/planet-maps/prompts5.py).
+   이름·규칙(나__환경)은 그대로라 경로만 바꾼다. 옛 map4/는 저장소에서 지웠다(커밋 기록에 남음). */
+const PMAP_BASE='assets/planet-tex/map/',PMAP4_BASE='assets/planet-tex/map5/';
 const _p2Cache=new Map(),_p2Pending=new Map();
 let _pFacingP=null;const _pSkyEnv=new Map(),_pStudioEnv=new Map(); /* 렌더러(WebGL 문맥)마다 따로 굽는다 */
 const P2_BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
@@ -7078,9 +7083,15 @@ function pPrepMapRaw(im,key){
   /* 금: U5 facing.py classify(geum=True)와 같은 문턱 — 채도 <.3 · 밝기 >=55 · (R-B) <50, 바다(파랑)는 뺀다 */
   const metal=key.split('-').indexOf('geum')>=0?mk((r,g,b)=>{const mx=Math.max(r,g,b),mn=Math.min(r,g,b);return((mx-mn)/(mx+1)<.3&&mx>=55&&(r-b)<50&&!(b>r+30))?255:0;}):null;
   const water=mk((r,g,b)=>(b>r+30&&b>=g-10)?255:0);
-  /* [2026-09-19 3차] 용암 마스크 — 밝은 주황·노랑만(사막 주황은 덜 밝고 파랑이 더 있다). 번짐 2px로 테두리를 부드럽게 */
+  /* [2026-09-19 3차] 용암 마스크 — 밝은 주황·노랑만. 번짐 2px로 테두리를 부드럽게
+     [map5 정정] ~~색만으로 판정~~ → **주변이 어두운 곳의 밝은 주황만.** 조화 지도(map5)의 사막은 더 밝은 주황이라
+     색이 용암과 겹쳐(사막 중앙값 230/145/60 · 용암 245/124/36) 사막 지도에서 15%가 용암으로 빛났다(갈무리로 확인).
+     용암은 검은 화산 지각에 둘러싸여 있다는 점을 쓴다 — 18px 흐림(박스 반경 32 상당)의 밝기가 120 미만인 곳만.
+     실측(map5 50장): 불 없는 지도의 오판 최대 0.91% · 평균 0.21%, 불 지도 용암 평균 1.45% 유지. */
+  const ctxL=document.createElement('canvas');ctxL.width=W;ctxL.height=H;const cL=ctxL.getContext('2d');cL.filter='grayscale(1) blur(18px)';cL.drawImage(c,0,0);
+  const dL=cL.getImageData(0,0,W,H).data;
   const lv=document.createElement('canvas');lv.width=W;lv.height=H;const lx=lv.getContext('2d'),li=lx.createImageData(W,H);let lavaAny=0;
-  for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2];if(r>200&&b<90&&r-b>150&&g>60&&(r+g)>330){li.data[i]=r;li.data[i+1]=g;li.data[i+2]=b;lavaAny++;}li.data[i+3]=255;}
+  for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2];if(r>200&&b<90&&r-b>150&&g>60&&(r+g)>330&&dL[i]<120){li.data[i]=r;li.data[i+1]=g;li.data[i+2]=b;lavaAny++;}li.data[i+3]=255;}
   lx.putImageData(li,0,0);let lava=null;
   if(lavaAny/(W*H)>.001){lava=document.createElement('canvas');lava.width=W;lava.height=H;const lbx=lava.getContext('2d');
     lbx.filter='blur(2px)';lbx.drawImage(lv,0,0);lbx.filter='none';lbx.globalCompositeOperation='lighter';lbx.drawImage(lv,0,0);}
@@ -7120,12 +7131,11 @@ function portraitNoteHtml(n,isMe){
   const self=`${STEMS[w.dayStem]}${EL_KO[w.de]}(${stemThing(w.dayStem)})`;
   const total=EL.reduce((a,e)=>a+(c[e]||0),0);
   const envKo=w.env.map(e=>EL_KO[e]).join('·');
-  const nReg=w.env.length+1;
-  const regWord=['','한','두','세','네'][nReg]||nReg;
   let lines=[];
   if(w.env.length){
-    lines.push(`이 행성이 곧 ${who}입니다. ${regWord} 지역 가운데 <b style="color:${EL_INFO[w.de].css}">${EL_KO[w.de]}</b> 지역이 ${who} 자신 — 일간 <b>${self}</b>이고, `
-      +`나머지 <b>${envKo}</b> 지역은 ${isMe?'나를':'이 사람을'} 이루는 다른 기운(사주 글자에 있는 오행)입니다.`);
+    /* [2026-09-19 map5] 네 구역이 같은 크기 → "나"가 가장 넓은 땅이고 나머지가 그 둘레에 얽힌 모양으로 바뀌어 문구도 맞춘다 */
+    lines.push(`이 행성이 곧 ${who}입니다. 가장 넓은 <b style="color:${EL_INFO[w.de].css}">${EL_KO[w.de]}</b> 지역이 ${who} 자신 — 일간 <b>${self}</b>이고, `
+      +`그 둘레에 얽힌 <b>${envKo}</b> 지역은 ${isMe?'나를':'이 사람을'} 이루는 다른 기운(사주 글자에 있는 오행)입니다.`);
     if(w.dropped.length)lines.push(`${eun(w.dropped.map(e=>EL_KO[e]).join('·'))} ${w.dropped.map(e=>c[e]).join('·')}글자로 가장 적어 뺐습니다 — 지역은 넷까지 그립니다.`);
     if(w.env.length===1)lines.push(`나 말고 다른 오행이 ${EL_KO[w.env[0]]} 하나뿐이라 두 지역으로 그렸습니다.`);}
   else lines.push(`이 행성이 곧 ${who}입니다. 사주 글자가 모두 ${EL_KO[w.de]}라 행성 전체가 ${who} 자신 — 일간 <b>${self}</b>의 모습입니다.`);
@@ -7211,7 +7221,7 @@ function applyGalaxyMap(mesh,ref,holder){
     /* [4차] 테두리 변위 — 변위는 정점 셰이더에서 재질마다 하므로 촘촘한 구 하나를 모두 같이 쓴다(공용 sphereGeo 96×72는 가까이서 계단이 졌다) */
     mesh.geometry=galaxyDispGeo();m.displacementMap=T.height;m.displacementScale=V2_TUNABLES.PLANET_DISP;
     m.roughness=T.metal?.55:.85;m.metalness=T.metal?V2_TUNABLES.GEUM_METALNESS:0;m.metalnessMap=T.metal;
-    m.color.set(0xffffff);m.envMapIntensity=1;
+    m.color.setScalar(V2_TUNABLES.GALAXY_MAP_TINT);m.envMapIntensity=1; /* [map5] 밝기 배율 */
     m.emissive.set(0xffffff);m.emissiveMap=T.map;
     if(!isMe){mesh.userData.gEm=V2_TUNABLES.GALAXY_MAP_EM;m.emissiveIntensity=V2_TUNABLES.GALAXY_MAP_EM;}
     else mesh.userData.gEm=V2_TUNABLES.GALAXY_STAR_MAP_EM; /* simulate가 항성 발광 대신 읽는다 */
