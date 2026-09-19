@@ -4203,6 +4203,7 @@ function gReportHtml(A,g){
   const deep=`<div class="gsub">사람별 12달</div>${tab}`
     +`<div class="gsub">달마다 한 줄</div>${mLines}`
     +`<div class="gsub">사람별 올해</div>${perLine}`
+    +sharedHtml(A,g)   /* [U36] 같이 겪은 해 · 앞으로 같이 움직일 해 */
     +(prs.length?`<div class="gsub">우리 궁합 순위 <span class="gwhy" style="display:inline">${lensOf} 기준 · 재미로 보는 점수</span></div>${rank}`:'');
   const ys=gSecYear(A.ms);
   return `<div class="grep"><div class="greph">${bkEsc(g.name)} · ${L.luckYear} 보고서</div>`
@@ -10040,6 +10041,7 @@ function applySeed(seed){
          그룹 key가 전부 갱신됐다. `addNode`가 사람 key를 다루는 방식과 같은 모양이다. */
       const made=createGroup(g.name,g.type,ms,g.parent?gByKey.get(g.parent).id:null,
         g.createdAt||null,g.key);
+      made.past=pastClean(g.past);   /* [U36] 같이 겪은 해 답 */
       if(g.key)seedGroupKeys.push({seed:String(g.key),made:made.id});
       gByKey.set(g.key||g.name,made);});
     if(next.length===pending.length)break; /* 한 바퀴 돌아 하나도 못 만들면 고리다 */
@@ -10723,7 +10725,7 @@ const JUSTLOADED_KEY='groupsaju:justloaded';   /* 새로고침 너머로 넘기�
 const BACKUP_APP='group-saju';
 const BACKUP_MAX_CHARS=2*1024*1024; /* 실측 저장 한계 5,177,344바이트 대비 여유(30인=7,931바이트) */
 const BACKUP_MAX_PEOPLE=1000;       /* 폭주 방지. 30인 7.9KB이므로 1000인도 260KB 안팎이다 */
-const SAVE_VER=9;   /* [2026-09-20 U30] 8 = 호칭(title) · [U35] 9 = 지나온 길 답(past) */
+const SAVE_VER=10;   /* [2026-09-20 U30] 8 = 호칭(title) · [U35] 9 = 지나온 길 답(past) · [U36] 10 = 그룹의 같이 겪은 해 답(group.past) */
 /* ═════ 마이그레이션 [틀 정비 2026-08-28] ═════
    키 'N'이 **vN → v(N+1)** 변환이다. 구조를 바꾸는 사람이 함수를 더하고 SAVE_VER을 올린다.
    규칙 전문은 CLAUDE.md "저장 형식을 바꿀 때는 변환을 함께 넣는다".
@@ -10782,6 +10784,8 @@ const MIGRATIONS={
      CLAUDE.md "빠진 필드를 '없음'으로 때우지 말 것"의 반대편 경우다(여기서는 **모른다는
      사실 자체가 값**이므로 null이 맞다). */
   /* [v8 → v9, 2026-09-20 U35] 지나온 길 답 `past` 신설 — {answers:{연도:'y'|'n'|'?'}, job:갈래|'none'|null, at} · null = 아직 답 없음 */
+  /* [v9 → v10, 2026-09-20 U36] 그룹마다 「같이 겪은 해」 답 `past` — 사람의 past와 같은 모양(job은 안 씀) · null = 답 없음 */
+  '9':d=>Object.assign({},d,{v:10,groups:(d.groups||[]).map(g=>Object.assign({past:null},g))}),
   '8':d=>Object.assign({},d,{v:9,people:(d.people||[]).map(p=>Object.assign({past:null},p))}),
   /* [v7 → v8, 2026-09-20 U30] 호칭 `title` 신설 — null = 안 적음. 나(isMe)도 null */
   '7':d=>Object.assign({},d,{v:8,people:(d.people||[]).map(p=>Object.assign({title:null},p))}),
@@ -10912,7 +10916,7 @@ function serializeState(){
       return out;})(),
     groups:groups.slice().sort((a,b)=>a.orderIndex-b.orderIndex)
       .map(g=>({key:g.id,name:g.name,type:g.type,parent:g.parentId||null,
-        members:g.members.map(m=>m.id),createdAt:g.createdAt||null}))};}
+        members:g.members.map(m=>m.id),createdAt:g.createdAt||null,past:g.past||null}))};}   /* [U36] */
 
 let saveFailWarned=false;
 function saveState(){
@@ -11962,6 +11966,9 @@ function showGroup(g){
   wireHelp(pbody);        /* [2026-08-31] 흐름의 "흐름 읽는 법" */
   wireGSections(pbody);   /* [2026-08-31] 케미 쌍 → 관계 패널 */
   {const gc=document.getElementById('gcard'); if(gc)gc.onclick=()=>openGroupCard(g);}   /* [U26] */
+  pbody.querySelectorAll('[data-gpast]').forEach(b=>b.onclick=()=>{   /* [U36] 같이 겪은 해 — 다시 누르면 지움 */
+    const a=Object.assign({},(g.past&&g.past.answers)||{}),Y=b.dataset.gpast,v=b.dataset.ans;if(a[Y]===v)delete a[Y];else a[Y]=v;
+    g.past=pastClean({answers:a,job:null,at:nowISO()});saveState();const top=pbody.scrollTop;showGroup(g);pbody.scrollTop=top;});
   pbody.querySelectorAll('[data-cv]').forEach(b=>b.onclick=()=>{   /* [U27] 중심 바꿔 보기 — 켜진 칩을 다시 누르면 나 중심 */
     const n=b.dataset.cv?nodes.find(x=>x.id===b.dataset.cv):null;
     setCenterView(g,n&&cvPivotFor(topSystemOf(g))===n?null:n);const top=pbody.scrollTop;showGroup(g);pbody.scrollTop=top;});
@@ -13226,6 +13233,15 @@ async function sajuSelfTest(){
       k1.includes('samhap')&&k1.includes('ganhap')&&Object.keys(f1.el).every(e=>e==='su'||f1.el.su>f1.el[e])
       &&!!n2&&n2.far&&!f3.notes.some(n=>n.kind==='banhap')&&/겨울에 태어나 계절은 물의 제철/.test(ss)&&!/겨울에 핀 꽃/.test(ss),
       k1.join('·')+' / 떨어진 반합 '+(n2?'있음':'없음')+' / '+ss.slice(0,40)); }
+  /* [2026-09-20 U36] 같이 겪은 해 — v9→v10 group.past:null · 둘 이상·절반 이상만 · 고른 해는 연도순·2년 간격 · 문장은 변화 압력 틀 */
+  { const m=MIGRATIONS['9']({v:9,people:[],links:[],groups:[{key:'g1',name:'가',type:'가족',members:[]}]});
+    const mk=(y,mo,d)=>({id:'__s'+y,name:'가'+y,isMe:false,birth:{y,m:mo,d,hour:null,min:null,sex:'남',est:null,dayRule:null,city:'서울',lon:126.978}});
+    const G=[mk(1975,3,3),mk(1978,7,9),mk(2003,1,20),mk(2006,10,2)];
+    const L0=luckNow(),all=sharedYears(G,L0.luckYear-25,L0.luckYear-1),pk=pickShared(all,5);
+    const okRule=all.every(s0=>s0.hit.length>=2&&s0.hit.length*2>=s0.alive),okPick=pk.every((c,i)=>!i||c.Y-pk[i-1].Y>=2);
+    const ln=pk.length?sharedLine(pk[0],false):'';
+    T('shared: v9→v10 · 둘 이상·절반 이상 · 연도순 2년 간격 · 변화 압력 틀',
+      m.v===10&&m.groups[0].past===null&&okRule&&okPick&&pk.length<=5&&(!pk.length||/변화 압력/.test(ln)),'후보 '+all.length+' · 고른 해 '+pk.length); }
   /* [2026-09-20 U35] 지나온 길 — v8→v9 past:null · pastClean(나쁜 값 버림) · 해 고르기(연도순·3년 간격·최대 7) · 요약 문턱 · 시각 권유는 '맞아요' 하나일 때만 */
   { const m=MIGRATIONS['8']({v:8,people:[{key:'t1',name:'갑',isMe:true}]});
     const pc=pastClean({answers:{2008:'y',1800:'y',2010:'x'},job:'재성'}),pbad=pastClean({answers:'x',job:'없음'});
@@ -13741,17 +13757,78 @@ function pastClean(p){
   if(!Object.keys(a).length&&!job)return null;
   return {answers:a,job,at:typeof p.at==='string'?p.at:null};}
 function yearPillarOf(Y){return [((Y-4)%10+10)%10,((Y-4)%12+12)%12];}
+/** [U35·U36] 한 사람의 한 해 변화 압력 — 충(자리별) · 일지 합 · 형 · 대운이 실제로 바뀐 날짜의 해(~~생년+나이 반올림~~은 가을 전환을 이듬해로 밀었다) */
+function yearPressure(n,Y,r,du){
+  r=r||rOf(n);if(!r)return null;if(du===undefined)du=daeunOf(n);
+  const t=luckTouch(n,yearPillarOf(Y));if(!t)return null;
+  let sc=0;
+  t.hits.forEach(h=>{if(h.kind==='chung')sc+=PAST_W[h.pos];else if(h.pos==='day')sc+=1.5;});
+  if(t.hyeong&&t.hyeong.length)sc+=.8;
+  const nd=!!du&&du.list.some(d=>new Date(r.utcMs+d.from*365.2425*864e5).getUTCFullYear()===Y);if(nd)sc+=1.2;
+  return {sc,t,nd};}
+/** 압력의 영역 이름 — 그룹 문장에서 "몇 명이 같은 쪽인가"를 셀 때 쓴다 */
+function pressureAreas(t,nd){
+  const a=[];t.hits.forEach(h=>{if(h.kind==='chung')a.push({day:'관계·주거',month:'일·환경',year:'집안',hour:'계획'}[h.pos]);else if(h.pos==='day')a.push('만남·끌림');});
+  if(nd)a.push('10년 흐름 전환');if(!a.length&&t.hyeong&&t.hyeong.length)a.push('긴장');
+  return [...new Set(a)];}
+/* ═══ [2026-09-20 U36] 그룹 「같이 겪은 해」 — 사용자: 권장대로 ═══
+   구성원(생일 있음, 그해 7살 이상) 중 **둘 이상이면서 절반 이상**이 같은 해에 변화 압력(yearPressure SHARED_MIN 1.5 이상)을 받은 해.
+   지난 25년에서 최대 다섯(2년 간격, 사람 수 우선), 앞으로 5년에서 최대 셋. 가장 많은 영역이 둘 이상에게 겹치면 "집 전체가…"처럼 한 문장,
+   아니면 사람별 영역. 지난 해에는 그룹 단위로 맞아요/아니에요(group.past, 저장 v10). 문장은 U32 기준(변화 압력, 괄호 예시) */
+const AREA_SHARED={
+  '관계·주거':['집 전체가 움직이기 쉬웠어요(예: 이사·새 식구·생활 방식의 변화).','집 전체가 움직이기 쉬운 해라, 이사·생활 방식 같은 큰 결정은 같이 의논하세요.'],
+  '관계·주거:따로':['각자 사는 곳이나 가까운 관계가 한꺼번에 움직이기 쉬웠어요(예: 이사·독립·관계의 변화).','각자 사는 곳이나 가까운 관계가 움직이기 쉬운 해라, 서로 근황을 자주 나눠 보세요.'],   /* 같이 안 사는 그룹 */
+  '일·환경':['각자의 일과 생활환경이 한꺼번에 움직이기 쉬웠어요(예: 이직·진학·전학).','각자의 일과 환경이 한꺼번에 움직이기 쉬워요 — 서로의 일정을 미리 나눠 두세요.'],
+  '집안':['집안이나 오래된 관계 쪽 일이 겹치기 쉬웠어요(예: 집안 어른의 일·가족 모임의 변화).','집안 일이 겹치기 쉬운 해라, 어른들 일을 미리 챙겨 두세요.'],
+  '만남·끌림':['새로운 사람이나 일이 들어오기 쉬웠어요(예: 새 만남·새 식구·새 출발).',   /* ~~결혼~~ — 아이가 끼는 해에도 나와 어색했다 */'새로운 사람이나 일이 들어오기 쉬운 해예요 — 반가운 변화일 수 있어요.'],
+  '10년 흐름 전환':['여럿의 10년 흐름이 함께 바뀐 해라, 생활의 무게중심이 옮겨 가기 쉬웠어요.','여럿의 10년 흐름이 함께 바뀌는 해라, 생활의 무게중심이 옮겨 가기 쉬워요.'],
+  '계획':['세워 둔 계획이 여럿에게서 한꺼번에 틀어지기 쉬웠어요.','세워 둔 계획이 여럿에게서 틀어지기 쉬우니, 큰 일정은 여유를 두세요.'],
+  '긴장':['규칙·약속을 두고 서로 긴장이 쌓이기 쉬웠어요.','규칙·약속을 두고 긴장이 쌓이기 쉬우니, 서운한 건 그때그때 푸세요.']};
+/* 그룹에서는 한 사람의 문턱을 1.5(충·일지 합 하나 이상)로 — 개인 「지나온 길」(2.5)로 세면 가족 4인 그룹에 해가 하나도 안 나왔다(실측: 25년간 0).
+   "여럿이 같은 해에 움직였다"가 이미 강한 신호라 한 사람 몫은 낮춰도 된다 [권장] */
+const SHARED_MIN=1.5;
+function sharedYears(ms,Y0,Y1){
+  const P=ms.filter(x=>x.birth).map(x=>({x,r:rOf(x),du:daeunOf(x)})).filter(p=>p.r);
+  if(P.length<2)return [];
+  const out=[];
+  for(let Y=Y0;Y<=Y1;Y++){
+    const alive=P.filter(p=>Y-p.x.birth.y>=7);if(alive.length<2)continue;
+    const hit=[];alive.forEach(p=>{const yp=yearPressure(p.x,Y,p.r,p.du);if(yp&&yp.sc>=SHARED_MIN)hit.push({x:p.x,sc:yp.sc,areas:pressureAreas(yp.t,yp.nd)});});
+    if(hit.length>=2&&hit.length*2>=alive.length)out.push({Y,hit,alive:alive.length,score:hit.length*10+hit.reduce((a,h)=>a+h.sc,0)});}
+  return out;}
+function pickShared(list,max){
+  const pick=[];list.slice().sort((a,b)=>b.score-a.score||b.Y-a.Y).forEach(c=>{if(pick.length<max&&pick.every(q=>Math.abs(q.Y-c.Y)>=2))pick.push(c);});
+  return pick.sort((a,b)=>a.Y-b.Y);}
+function sharedLine(s,future,home){
+  const nmOf=x=>x.isMe?'나':bkEsc(x.name),names=s.hit.map(h=>nmOf(h.x)).join('·');
+  const who=`${names} — `+(s.hit.length===s.alive?`우리 ${KO_CNT(s.alive)} 명 모두가`:`우리 ${KO_CNT(s.alive)} 명 중 ${KO_CNT(s.hit.length)} 명이`);   /* 조사가 괄호 뒤에 붙지 않게 이름을 앞으로 */
+  const cnt={};s.hit.forEach(h=>h.areas.forEach(a=>cnt[a]=(cnt[a]||0)+1));
+  const top=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];
+  let area;
+  if(top&&cnt[top]>=2)area=(cnt[top]===s.hit.length?`${KO_CNT(cnt[top])} 명 다`:`그중 ${KO_CNT(cnt[top])} 명이`)+` ${top} 쪽이에요 — `+AREA_SHARED[top==='관계·주거'&&!home?'관계·주거:따로':top][future?1:0];
+  else area=s.hit.map(h=>`${nmOf(h.x)}${h.x.isMe?'는':particle(h.x.name,'은는')} ${h.areas[0]||'변화'}`).join(', ')+(future?' 쪽이 움직이기 쉬워요.':' 쪽이 움직였을 수 있어요.');
+  return future?`${who} 함께 움직이기 쉬운 해예요. ${area}`:`${who} 함께 변화 압력을 받은 해예요. ${area}`;}
+function sharedHtml(A,g){
+  const L=luckNow();if(!L)return '';
+  const ms=A.ms.filter(x=>x.birth);if(ms.length<2)return '';
+  const past=pickShared(sharedYears(ms,L.luckYear-25,L.luckYear-1),5),next=pickShared(sharedYears(ms,L.luckYear,L.luckYear+5),3);
+  if(!past.length&&!next.length)return '';
+  const Ans=(g.past&&g.past.answers)||{},home=['가족','부부','연인'].includes(g.type);   /* 같이 사는 그룹만 "집 전체" */
+  const btns=Y=>`<span class="mask-btns">${Object.keys(PAST_ANS).map(v=>`<button type="button" class="estnotebtn${Ans[Y]===v?' on':''}" data-gpast="${Y}" data-ans="${v}">${PAST_ANS[v]}</button>`).join('')}</span>`;
+  let h='';
+  if(past.length){h+=`<div class="gsub">같이 겪은 해 <span class="gwhy" style="display:inline">맞는지 눌러 보세요</span></div>`
+    +past.map(s0=>`<div class="pastrow"><b>${s0.Y}년</b> ${sharedLine(s0,false,home)} ${btns(s0.Y)}</div>`).join('');
+    const yes=past.filter(s0=>Ans[s0.Y]==='y').length,no=past.filter(s0=>Ans[s0.Y]==='n').length;
+    if(yes+no)h+=`<p class="gsecp"><b>우리가 답한 해 ${yes+no}개 중 ${yes}개가 맞았어요.</b>${yes+no>=3?(yes/(yes+no)>=.6?' 이 그룹의 흐름은 이 기준으로 읽어도 좋아요.':' 잘 안 맞으면 구성원의 생일·시각을 한 번 확인해 보세요.'):''}</p>`;}
+  if(next.length)h+=`<div class="gsub">앞으로 같이 움직일 해</div>`+next.map(s0=>`<p class="gsecp"><b>${s0.Y}년</b> ${sharedLine(s0,true,home)}</p>`).join('');
+  return h;}
 const PAST_W={day:3,month:2.5,year:1.5,hour:1.5};
 function pastYears(n){
   const r=rOf(n),L=luckNow();if(!r||!L||!n.birth)return [];
   const by=n.birth.y,du=daeunOf(n),cand=[];
   for(let Y=by+12;Y<L.luckYear;Y++){
-    const t=luckTouch(n,yearPillarOf(Y));if(!t)continue;
-    let sc=0;
-    t.hits.forEach(h=>{if(h.kind==='chung')sc+=PAST_W[h.pos];else if(h.pos==='day')sc+=1.5;});
-    if(t.hyeong&&t.hyeong.length)sc+=.8;
-    const nd=!!du&&du.list.some(d=>new Date(r.utcMs+d.from*365.2425*864e5).getUTCFullYear()===Y);if(nd)sc+=1.2;   /* 대운이 실제로 바뀐 날짜의 해 — ~~생년+나이 반올림~~은 가을에 바뀐 해를 이듬해로 밀었다 */
-    if(sc>=2.5)cand.push({Y,age:Y-by,sc,t,nd});}
+    const yp=yearPressure(n,Y,r,du);if(!yp)continue;   /* [U36] 그룹과 같은 판정 */
+    if(yp.sc>=2.5)cand.push({Y,age:Y-by,sc:yp.sc,t:yp.t,nd:yp.nd});}
   const pick=[];
   cand.slice().sort((a,b)=>b.sc-a.sc||b.Y-a.Y).forEach(c=>{if(pick.length<7&&pick.every(q=>Math.abs(q.Y-c.Y)>=2))pick.push(c);});   /* 2년 간격 — 3년이면 전환점(대운 바뀐 해)이 가까운 충 해에 밀려 빠졌다 */
   return pick.sort((a,b)=>a.Y-b.Y);}
