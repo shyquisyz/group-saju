@@ -4883,6 +4883,7 @@ const V2_TUNABLES={
      패널이 아래 52%를 덮으므로 남는 곳은 위 48%, 그 한가운데가 24%다.
      0.22를 밀면 대상이 정중앙(50%)에서 28%로 올라와 시트 위에 넉넉히 들어온다.
      **카메라가 바라보는 점만 옮긴다 — 궤도·크기 상수는 그대로다.** */
+  PICK_NEAR_FIRST_PX: 10,          // [2026-09-19] 행성 이만큼 안을 누르면 그룹 이름표보다 행성이 먼저(손가락 끝 오차 폭)
   MOBILE_FOCUS_BIAS_Y: 0.22,       // [2026-09-19] 안 쓴다 — 패널 보정은 applyViewInset(투영 중심 이동)으로 옮김
   CENTER_LABEL_TARGET_PX: 15,     // = --fs-sm(최소 토큰). [2026-08-30] 11 → 15, 접근성 개편.
                                   // [F-1] 구 AVATAR_LABEL_TARGET_PX — 이름표를 반지가 이어받았다
@@ -10763,7 +10764,21 @@ function nearestMeshOnScreen(targets,cx,cy,cr){
     if(v.z>1)return;
     const d=Math.hypot((v.x+1)/2*cr.width-cx,(1-v.y)/2*cr.height-cy);
     if(d<bestD){bestD=d;best=m;}});
-  return best?{object:best}:null;}
+  return best?{object:best,d:bestD}:null;}  /* [2026-09-19] d — 사람 근접을 그룹보다 먼저 볼지 가르는 데 쓴다 */
+/** [2026-09-19] 누른 자리가 그 천체 화면 원반의 중심에서 반지름의 몇 배 떨어졌나(0 = 한가운데, 1 = 가장자리) */
+function screenDiscFrac(m,cx,cy,cr){
+  const c=m.getWorldPosition(new THREE.Vector3());
+  const rW=(m.geometry&&m.geometry.boundingSphere?m.geometry.boundingSphere.radius:1)*m.getWorldScale(new THREE.Vector3()).x;
+  const up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1);
+  const a=c.clone().project(camera),b=c.clone().addScaledVector(up,rW).project(camera);
+  const ax=(a.x+1)/2*cr.width,ay=(1-a.y)/2*cr.height,rPx=Math.hypot((b.x+1)/2*cr.width-ax,(1-b.y)/2*cr.height-ay);
+  return rPx>0?Math.hypot(cx-ax,cy-ay)/rPx:Infinity;}
+/** [2026-09-19] 두 판정 결과 중 화면에서 중심이 누른 자리에 더 가까운 것. 하나만 있으면 그것 */
+function closerOnScreen(a,b,cx,cy,cr){
+  if(!a||!b)return a||b||null;
+  const d=h=>{const v=h.object.getWorldPosition(new THREE.Vector3()).project(camera);
+    return Math.hypot((v.x+1)/2*cr.width-cx,(1-v.y)/2*cr.height-cy);};
+  return d(a)<=d(b)?a:b;}
 /* ═══ 이름표 누르기 [2026-09-17] ═══
    [문제 — 사용자 보고·실측] 그룹 화면에서 행성 **아래 이름 글자**를 누르면 사람이 안 잡히고
    "빈 곳 클릭"으로 처리돼 그룹 패널로 돌아갔다. 이름표는 행성에서 LABEL_GAP만큼 아래라
@@ -10864,9 +10879,35 @@ canvas.addEventListener('click',e=>{
   /* [2026-09-17] 이름표를 **맨 먼저** 본다 — 이름표는 깊이 검사 없이 맨 위에 그려지므로(makeLabel
      depthTest:false) 글자 밑에 다른 행성이 있어도 사용자가 누른 것은 글자다. 실측: 그룹 가족에서
      「아내」 글자가 큰 항성(나) 위에 겹쳐, 레이캐스트를 먼저 하면 「나」가 잡혔다. */
-  const hit=labelHitOnScreen(targets,e.clientX-cr.left,e.clientY-cr.top,cr)
-    ||ray.intersectObjects(targets)[0]
-    ||nearestMeshOnScreen(targets,e.clientX-cr.left,e.clientY-cr.top,cr);
+  /* [2026-09-19] 사용자: "행성을 클릭하면 행성이 나와야 하고 그룹을 클릭하면 그룹이 나와야 함".
+     ~~이름표(그룹 포함) → 레이캐스트 → 근접~~ 한 줄로 보면 **그룹 이름표의 누르는 판**(글자 두 줄, 넓다)이
+     근처 행성 위를 덮어, 행성 한가운데를 눌러도 그룹이 열렸다.
+     실측(375×812 은하 조망, 24위상 × 화면 안 행성 73회): 행성 58 · **그룹 6**(모두 그룹 이름표가 잡음) · 다른 사람 9.
+     이제 **사람을 먼저, 그룹은 그다음** — 사람 이름표 → 사람 레이캐스트 → 사람 근접(PICK_NEAR_FIRST_PX) →
+     그룹 이름표 → 그룹 레이캐스트 → 전체 근접(종전 44px 폴백). 그룹 쪽은 그룹 한가운데·이름 글자를 누르면 여전히 잡힌다. */
+  const isGrpT=m=>!!(m&&(m.userData.group||m.userData.virtualSlotHit));
+  const pT=targets.filter(m=>!isGrpT(m)), gT=targets.filter(isGrpT);
+  const px=e.clientX-cr.left,py=e.clientY-cr.top;
+  /* [같은 날 2차] 「나」(항성)는 크고 이름표도 커서 옆 행성·그룹 중심을 가로챘다(행성 76회 중 6회, 그룹 중심 56회 중 8회 —
+     은하 조망에서 성계 중심이 항성과 6~13px로 겹쳐 보인다). 그래서 **행성을 정통으로 맞힌 것**이 이름표보다 먼저이고,
+     「나」를 맞힌 것은 그룹보다 뒤다. 이름표가 「나」 위에 겹친 옛 사례(2026-09-17, 「아내」 글자)는 그대로 이름표가 이긴다. */
+  const notMe=h=>h&&!(h.object.userData.node&&h.object.userData.node.isMe);
+  const isMeT=m=>!!(m.userData.node&&m.userData.node.isMe);
+  const rayP=ray.intersectObjects(pT)[0];
+  const pO=pT.filter(m=>!isMeT(m)), pMe=pT.filter(isMeT);
+  const nearP=nearestMeshOnScreen(pO,px,py,cr);
+  /* 「나」 원반의 **안쪽 60%**를 누른 것은 그 위에 그룹 이름표가 겹쳐도 「나」다(실측: 은하 조망 24위상 중 4번,
+     이름표가 성계 중심에서 34~61px 떨어진 채 항성 한가운데를 덮었다). 가장자리는 종전대로 이름표가 이긴다. */
+  const meCore=!notMe(rayP)&&rayP&&screenDiscFrac(rayP.object,px,py,cr)<.6?rayP:null;
+  const hit=(notMe(rayP)?rayP:null)
+    ||labelHitOnScreen(pO,px,py,cr)
+    ||meCore
+    ||(nearP&&nearP.d<=V2_TUNABLES.PICK_NEAR_FIRST_PX?nearP:null)
+    ||labelHitOnScreen(gT,px,py,cr)
+    ||closerOnScreen(ray.intersectObjects(gT)[0],notMe(rayP)?null:rayP,px,py,cr) /* 성계 중심과 「나」가 겹쳐 보이면 누른 자리에 더 가까운 쪽 */
+    ||labelHitOnScreen(pMe,px,py,cr)
+    ||rayP
+    ||nearestMeshOnScreen(targets,px,py,cr);
   if(hit&&hit.object.userData.virtualSlotHit){showVirtualSlot();}
   else if(hit&&hit.object.userData.group){selectGroup(hit.object.userData.group);}
   else if(hit){
