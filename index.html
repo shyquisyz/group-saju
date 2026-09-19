@@ -3136,6 +3136,15 @@ const BRANCH_KO=['자','축','인','묘','진','사','오','미','신','유','�
 const YUKHAP=[[0,1],[2,11],[3,10],[4,9],[5,8],[6,7]];
 /* 지지 충 6쌍 — 자오 · 축미 · 인신 · 묘유 · 진술 · 사해 */
 const CHUNG=[[0,6],[1,7],[2,8],[3,9],[4,10],[5,11]];
+/* ═══ [2026-09-20 U33] 형(刑) — 사용자: "형은 권장대로 넣자"(U16의 "형·파·해 안 씀"을 형만 뒤집는다. 파·해는 계속 안 쓴다) ═══
+   삼형 寅巳申(무은지형)·丑戌未(지세지형) 둘씩 · 子卯(무례지형) · 자형 辰午酉亥(같은 글자 둘). 널리 쓰는 네 묶음만.
+   문장은 사건이 아니라 **긴장·마찰** 틀로만 쓴다(U32 기준). 같은 자리에 충이 이미 있으면(寅申·丑未) 형 문장은 붙이지 않는다 — 같은 말 두 번 */
+const HYEONG_PAIRS=[[2,5],[5,8],[2,8],[1,10],[10,7],[1,7],[0,3]];   /* 寅巳 巳申 寅申 丑戌 戌未 丑未 子卯 */
+const JAHYEONG=new Set([4,6,9,11]);   /* 辰 午 酉 亥 */
+function hyeongOf(a,b){
+  if(a===b)return JAHYEONG.has(a)?'jahyeong':null;
+  return HYEONG_PAIRS.some(([x,y])=>(x===a&&y===b)||(x===b&&y===a))?'hyeong':null;}
+function isChung(a,b){return CHUNG.some(([x,y])=>(x===a&&y===b)||(x===b&&y===a));}
 /* 천간합 5쌍 — 갑기 · 을경 · 병신 · 정임 · 무계 */
 const GANHAP=[[0,5],[1,6],[2,7],[3,8],[4,9]];
 /* [★ 우선순위] 충 > 천간합 > 육합. 한 쌍에 딱지는 하나만 붙는다(사용자 결정).
@@ -3422,7 +3431,10 @@ function luckTouch(x,pil){
   const v=gangyak(r), vd=v?v.verdict:'';
   const judge=vd==='신약'||vd==='신강', weak=vd==='신약';
   const helpful=g=>{const grp=TEN_GOD_GROUP[g];return weak?(grp==='비겁'||grp==='인성'):(grp!=='비겁'&&grp!=='인성');};
-  return {stemGod,branchGod,groups:[TEN_GOD_GROUP[stemGod],TEN_GOD_GROUP[branchGod]],hits,
+  /* [U33] 형 — 원국 지지와 운 지지. 충이 겹치는 자리는 뺀다 */
+  const hyeong=[];[['year',r.year],['month',r.month],['day',r.day],['hour',r.hour]].forEach(([pos,pp])=>{
+    if(!pp||isChung(pp[1],pil[1]))return;const k=hyeongOf(pp[1],pil[1]);if(k)hyeong.push({pos,kind:k});});
+  return {stemGod,branchGod,groups:[TEN_GOD_GROUP[stemGod],TEN_GOD_GROUP[branchGod]],hits,hyeong,
     verdict:vd,helps:judge?[helpful(stemGod),helpful(branchGod)]:null};}
 
 /* ═══ 「요즘」 원고 [2026-09-19 U11] — 친구 말투(사용자 선택: A안) ═══
@@ -3449,6 +3461,17 @@ const NOW_HIT={
          ganhap:'태어난 달 글자와 붙어서, 일에서 손발 맞는 사람을 만나기 좋아요.',yukhap:'태어난 달 글자와 붙어서, 일에서 손발 맞는 사람을 만나기 좋아요.'},
   hour:{chung:'태어난 시각 글자와 부딪혀서, 속으로 세운 계획이나 아랫사람 쪽에 변화 압력이 생길 수 있어요.',
         ganhap:'태어난 시각 글자와 붙어서, 미뤄 둔 계획이 슬슬 풀려요.',yukhap:'태어난 시각 글자와 붙어서, 미뤄 둔 계획이 슬슬 풀려요.'}};
+/* [U33] 올해 형 — 자리별 긴장·마찰 한 문장(자형은 따로). 한 해에 하나만(일 > 월 > 년 > 시) */
+const NOW_HYEONG={
+  day:'태어난 날 아랫글자와 형(刑)으로도 걸려요 — 가까운 관계나 생활 규칙에서 긴장·마찰이 생기기 쉬우니, 말과 약속을 한 번 더 확인하세요.',
+  month:'태어난 달 글자와 형(刑)으로 걸려요 — 일터의 규칙·절차·계약에서 마찰이 생기기 쉬운 해예요.',
+  year:'태어난 해 글자와 형(刑)으로 걸려요 — 집안이나 오래된 관계에서 서운함이 쌓이기 쉬워요.',
+  hour:'태어난 시각 글자와 형(刑)으로 걸려요 — 세워 둔 계획이나 아랫사람과의 사이에서 마찰이 생기기 쉬워요.',
+  jahyeong:'같은 글자가 겹쳐 걸리는(자형) 해라, 스스로를 몰아세우기 쉬워요 — 혼자 끙끙대지 말고 털어놓으세요.'};
+function hyeongLine(t){
+  if(!t||!t.hyeong||!t.hyeong.length)return '';
+  const ORD=['day','month','year','hour'],h=t.hyeong.slice().sort((a,b)=>ORD.indexOf(a.pos)-ORD.indexOf(b.pos))[0];
+  return h.kind==='jahyeong'?NOW_HYEONG.jahyeong:NOW_HYEONG[h.pos];}
 const NOW_MONTH={
   비겁:'이번 달은 같은 편이 곁에 붙는 달이에요. 혼자 들던 걸 나눠 들어도 돼요.',
   식상:'이번 달은 말하고 만들고 싶어지는 달이에요. 미뤄 둔 걸 꺼내기 좋아요.',
@@ -3685,6 +3708,10 @@ function daeunLines(n,isMe){
       const joined=c.kind==='banhap'?`사주 속 ${c.others.map(x=>BRANCHES[x]).join('·')}와 이어져 ${EL_PLAIN[c.el]} 기운 쪽으로 더 기울어요(반합)`
         :`사주 속 ${c.others.filter(x=>x!==d.pillar[1]).map(x=>BRANCHES[x]).join('·')}와 모여 ${EL_PLAIN[c.el]} 기운 ${c.kind==='samhap'?'삼합':'방합'}이 이루어져요`;   /* [U32] 원국만일 땐 반합(기울어짐), 대운이 채우면 삼합 성립 — 단계별 */
       line+=` 대운의 ${BRANCHES[d.pillar[1]]}가 ${joined} — ${EL_PLAIN[c.el]}${particle(EL_PLAIN[c.el],'은는')} ${isMe?'당신':'이 사람'}에게 ${GROUP_POWER[g]}이라, ${good?'모자란 힘을 채워 주는 쪽이에요.':'그쪽 일이 커지는 만큼 힘 조절이 필요해요.'}`;}
+    {const hs=[r.year,r.month,r.day,r.hour].filter(Boolean).map(p=>p[1]).filter(x=>hyeongOf(x,d.pillar[1])&&!isChung(x,d.pillar[1]));   /* [U33] 대운 형 */
+     const ja=hs.includes(d.pillar[1]),ot=[...new Set(hs.filter(x=>x!==d.pillar[1]))];   /* 같은 글자면 자형 — 말을 따로 */
+     if(ot.length)line+=` 대운의 ${BRANCHES[d.pillar[1]]}는 사주 속 ${ot.map(x=>BRANCHES[x]).join('·')} 글자와 형(刑)으로도 걸려요 — 이 10년엔 일과 관계에서 긴장·마찰이 생기기 쉬우니, 규칙과 계약을 꼼꼼히 챙기세요.`;
+     if(ja)line+=` 사주에 있는 ${BRANCHES[d.pillar[1]]} 글자가 대운에서 한 번 더 겹쳐(자형) — 스스로를 몰아세우기 쉬운 10년이라, 쉬는 날을 먼저 정해 두세요.`;}
     rows.push(`<p>${line}</p>`);});
   return rows.join('');}
 function lifeFlowHtml(n,isMe){
@@ -3855,6 +3882,7 @@ function nowStoryHtml(n,isMe){
       :'반은 힘이 되고, 반은 짐이에요.');}
   const ORD=['day','year','month','hour'];
   y.hits.slice().sort((a,b)=>ORD.indexOf(a.pos)-ORD.indexOf(b.pos)).slice(0,2).forEach(h=>{t+=' '+NOW_HIT[h.pos][h.kind];});
+  {const hl=hyeongLine(y);if(hl)t+=' '+hl;}   /* [U33] 형 */
   ps.push(`<p>${t}</p>`);
   /* [U15] 요즘 고민(테스트) — 고민 주제가 올해 기운과 맞는지. 성향 테스트의 "마음 쓰이는 일"(self.situation)도 주제로 받는다 */
   { const T=n.tests||{}, cp=T.concern?T.concern.picks:null;
@@ -4041,7 +4069,8 @@ function nowFactsHtml(n){
   const L=luckNow(); if(!L||!n.birth)return '';
   const y=luckTouch(n,L.year), m=luckTouch(n,L.month); if(!y||!m)return '';
   const HC={chung:'충',ganhap:'천간합',yukhap:'육합'}, POS={year:'년',month:'월',day:'일',hour:'시'};
-  const hs=t=>t.hits.length?' · '+t.hits.map(h=>POS[h.pos]+'주와 '+HC[h.kind]).join(', '):'';
+  const HY={hyeong:'형',jahyeong:'자형'};   /* [U33] */
+  const hs=t=>{const a=t.hits.map(h=>POS[h.pos]+'주와 '+HC[h.kind]).concat((t.hyeong||[]).map(h=>POS[h.pos]+'주와 '+HY[h.kind]));return a.length?' · '+a.join(', '):'';};
   const td=L.day?luckTouch(n,L.day):null;
   const rows=[`올해 ${pillarStr(L.year)}년 — ${TEN_GODS[y.stemGod]}·${TEN_GODS[y.branchGod]}${hs(y)}`,
     ...(td?[`오늘 ${pillarStr(L.day)}일 — ${TEN_GODS[td.stemGod]}·${TEN_GODS[td.branchGod]}${hs(td)}`]:[]),
@@ -4439,6 +4468,15 @@ const SEASON_OF=[ 'su','su','mok','mok','mok','hwa','hwa','hwa','geum','geum','g
 const SEASON_KO={su:'겨울',mok:'봄',hwa:'여름',geum:'가을'};
 const WEAK_WHY={식상:'재주와 말로 기운을 계속 쏟아내기(식상)',재성:'돈과 일을 벌이느라 기운이 새기(재성)',관성:'책임과 규칙이 위에서 누르기(관성)'};
 const DRAIN_KO={식상:'재주와 말로 기운을 쏟아내는 쪽(식상)',재성:'돈과 일을 벌이는 쪽(재성)',관성:'책임과 규칙이 누르는 쪽(관성)'};
+/** [U33] 원국 지지끼리의 형(충이 겹치면 뺀다) */
+function innerHyeongLines(r){
+  const P=[r.year,r.month,r.day,r.hour].filter(Boolean).map(p=>p[1]),seen=new Set(),out=[];
+  for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){
+    const a=P[i],b=P[j],k=hyeongOf(a,b);if(!k||isChung(a,b))continue;
+    const key=Math.min(a,b)+'|'+Math.max(a,b);if(seen.has(key))continue;seen.add(key);
+    out.push(k==='jahyeong'?`${BRANCHES[a]} 글자가 둘이라(자형) 스스로를 몰아세우는 버릇이 생기기 쉬워요.`
+      :`${BRANCHES[a]}·${BRANCHES[b]} 두 글자는 형(刑)으로 걸려 있어, 그 자리의 일에서 긴장이 쌓이기 쉬워요.`);}
+  return out;}
 function strengthStory(r,gy){
   const F=forcesOf(r),me=F.me,mb=r.month[1],se=SEASON_OF[mb],own=se===me,feed=GEN[se]===me;
   let s;
@@ -4449,7 +4487,7 @@ function strengthStory(r,gy){
   if(weak){s+=` 약한 진짜 이유는 ${WEAK_WHY[top]} 때문이에요.`;   /* 관성은 빠져나가는 게 아니라 누른다 — 갈래마다 말을 달리 */
     if(top==='재성'&&F.grp.재성>=F.total*.3)s+=' 돈이 눈에 보이는데 혼자 쥐기엔 힘이 부치는, 명리에서 말하는 재다신약 쪽이에요.';}
   else s+=` 힘이 남는 만큼 ${DRAIN_KO[top]}으로 흘려보낼 곳이 있어야 좋아요.`;
-  const cl=comboLines(F);if(cl.length)s+=' 여덟 글자 안에서는 '+cl.join(' ');
+  const cl=comboLines(F).concat(innerHyeongLines(r));if(cl.length)s+=' 여덟 글자 안에서는 '+cl.join(' ');   /* [U33] 원국 안의 형도 */
   return s;}
 /** 지장간까지 포함한 오행 개수. 가중치는 주지 않는다 — 여기·중기·정기에 몇 점씩 줄지가
     곧 유파 선택이라, 그냥 **글자 수**를 센다. */
@@ -13169,6 +13207,11 @@ async function sajuSelfTest(){
       k1.includes('samhap')&&k1.includes('ganhap')&&Object.keys(f1.el).every(e=>e==='su'||f1.el.su>f1.el[e])
       &&!!n2&&n2.far&&!f3.notes.some(n=>n.kind==='banhap')&&/겨울에 태어나 계절은 물의 제철/.test(ss)&&!/겨울에 핀 꽃/.test(ss),
       k1.join('·')+' / 떨어진 반합 '+(n2?'있음':'없음')+' / '+ss.slice(0,40)); }
+  /* [2026-09-20 U33] 형 — 표(寅巳·子卯·丑未 형, 午午 자형, 子子 없음) · 충과 겹치면 문장 없음 · 문장은 긴장·마찰 틀 */
+  { const ok=hyeongOf(2,5)==='hyeong'&&hyeongOf(0,3)==='hyeong'&&hyeongOf(1,7)==='hyeong'&&hyeongOf(6,6)==='jahyeong'&&hyeongOf(0,0)===null&&hyeongOf(0,6)===null;
+    const il=innerHyeongLines({year:[0,2],month:[2,5],day:[8,6],hour:[5,8]});   /* 寅·巳·午·申 — 寅巳·巳申은 형, 寅申은 충이라 뺀다 */
+    const words=Object.values(NOW_HYEONG).every(t=>/긴장|마찰|몰아세우|서운함/.test(t));
+    T('hyeong: 형 표 · 충 겹치면 뺌 · 긴장·마찰 틀',ok&&il.length===2&&words,'원국 형 '+il.length+'줄'); }
   /* [2026-09-20 U32] 해석 금지어 — 등록된 모든 사람의 인물 패널 글(요즘·궁금한 것·평생 흐름·이런 사람)에 과장·정량 단정 표현이 0건이어야 한다 */
   { const BAN=['다른 인연','새 사람','힘이 반으로','떨어진 반합','40% 안팎','앞 5년','크게 도는','말다툼이 잦'],hit=[];
     nodes.forEach(n=>{if(!n.birth)return;const d=document.createElement('div');
