@@ -245,6 +245,7 @@
   .gtab th,.gtab td{border:1px solid var(--line);padding:3px 5px;text-align:center;white-space:nowrap;color:var(--mut)}
   .gtab th{color:var(--ink);font-weight:700}.gtab td:first-child{color:var(--ink);font-weight:700}
   .gtab td.g{color:var(--gold)}.gtab td.w{color:#ff8a6a}.gtab tr.now td{background:rgba(255,255,255,.06)}
+  .gtab td.ln{text-align:left;white-space:normal;min-width:120px}
   .gm.now{border-left:2px solid rgba(232,198,106,.5);padding-left:8px}
   .groles{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
   .grep .gsecp{margin:0 0 6px}.groles span{padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-size:var(--fs-sm);color:var(--ink)}
@@ -3539,6 +3540,37 @@ const LENS_KEYS=['애인','배우자','친구','상사','동업자'];
 const LENS_BONUS={애인:{관성:6,재성:6,식상:3},배우자:{재성:5,관성:5,인성:4},친구:{비겁:6,식상:4},상사:{관성:6,인성:5},동업자:{비겁:3,재성:5,식상:4}};
 const HC_LENS={chung:'둘의 태어난 날 글자가 부딪혀서, 불꽃이 튀는 만큼 부딪힘도 잦아요.',ganhap:'둘의 태어난 날 윗글자가 짝을 이뤄서, 처음부터 묘하게 끌려요.',yukhap:'둘의 태어난 날 아랫글자가 붙어서, 같이 있으면 손발이 맞아요.'};
 const lensPick={};   /* 사람 id → 고른 렌즈(화면 상태, 저장 안 함). 선언 구역 — 부팅 중 패널을 그려도 TDZ 없음 */
+/* [2026-09-19 U25] 관계 패널 유료 수준 — 사용자: 권장대로(R5 ②). 렌즈마다 점수 이유 · 둘의 12달 표 · 하면 좋은 것/피할 것(25칸) */
+const LENS_DO={
+  애인:{비겁:['같이 몸 쓰는 취미를 하나 두세요 — 경쟁이 아니라 같은 편이 되는 시간이에요.','누가 더 옳은지 따지는 말싸움'],식상:['내가 표현하는 만큼 상대의 반응을 기다려 주세요 — 늦게 오는 답도 답이에요.','내가 다 챙겨 주고 나서 서운해하기'],재성:['데이트 코스를 가끔은 상대에게 맡기세요 — 리드를 나누면 오래가요.','상대를 내 계획대로 움직이려 하기'],관성:['서운한 걸 그날 말하세요 — 이 관계에서 나는 참는 쪽이에요.','눈치 보다 하고 싶은 말을 삼키기'],인성:['받은 만큼 작은 것으로 갚으세요 — 편지 한 장, 밥 한 끼면 돼요.','기대기만 하고 상대 얘기는 안 듣기']},
+  배우자:{비겁:['집안 결정권을 영역별로 나누세요 — 돈은 누가, 아이는 누가.','같은 일을 둘 다 맡고 서로 고치기'],식상:['"고마워"를 달라고 말하세요 — 내가 챙기는 만큼 인정이 필요해요.','말없이 챙기다가 한 번에 터뜨리기'],재성:['상대 지출을 잔소리 대신 예산으로 정하세요.','작은 낭비마다 한마디 하기'],관성:['내 방·내 시간 하나는 지키세요 — 규칙 안에서 숨 쉴 틈이에요.','상대 기준에 다 맞춰 주다 지치기'],인성:['힘든 날은 먼저 말하세요 — 상대가 기댈 언덕이 되어 줄 준비가 돼 있어요.','도움받는 걸 당연하게 여기기']},
+  친구:{비겁:['같이 겁 없이 벌이는 일을 하나 두세요 — 이 친구와는 그게 우정이에요.','같은 걸 두고 겨루기(승진·연애·돈)'],식상:['내 얘기 셋에 이 친구 얘기 하나는 물어보세요.','만날 때마다 내 고민만 풀기'],재성:['정보·맛집·재테크 얘기를 나누세요 — 이 친구는 실속이에요.','돈 빌리고 빌려주기'],관성:['쓴소리를 들을 각오로 물어보세요 — 이 친구 말이 결국 맞아요.','조언을 듣고 삐치기'],인성:['먼저 연락하세요 — 늘 받아 주는 친구라 잊기 쉬워요.','힘들 때만 찾기']},
+  상사:{비겁:['공과 사를 내가 먼저 나누세요 — 편한 만큼 선이 흐려져요.','회식 자리 얘기를 업무로 끌고 오기'],식상:['아이디어를 낼 때 뒷정리 계획까지 같이 내세요.','벌여만 놓고 마무리를 넘기기'],재성:['보고는 숫자와 결과부터 — 과정은 물어볼 때만.','성과 없이 노력만 설명하기'],관성:['마감은 하루 먼저 — 이 사람은 시간을 믿음으로 봐요.','예외를 사전 설명 없이 만들기'],인성:['배운 걸 써먹은 걸 보여 주세요 — 그때 가장 크게 밀어 줘요.','챙김을 받기만 하고 보답이 없기']},
+  동업자:{비겁:['지분·역할을 계약서로 먼저 — 힘이 두 배인 만큼 몫 다툼도 두 배예요.','구두 약속으로 시작하기'],식상:['내가 만들고 상대가 받치는 구조로 — 쉬는 규칙도 계약에 넣으세요.','내가 다 하다가 지쳐서 판 접기'],재성:['돈은 내가 굴리되 결산은 둘이 같이 보세요.','결정권이 내 쪽이라고 보고를 건너뛰기'],관성:['규칙은 상대에게 맡기고 나는 자유 영역을 확보하세요.','시스템을 답답해하며 우회하기'],인성:['자금·인맥은 받되 결정은 내가 — 의존이 커지지 않게 선을 그으세요.','상대 조언에 결정을 다 맡기기']}};
+/** [U25] 렌즈 칩 배선 — 인물 패널·관계 패널 공통. redraw = 그 패널을 다시 그리는 함수 */
+function wireLens(redraw){
+  pbody.querySelectorAll('[data-lens]').forEach(b=>b.onclick=()=>{
+    const box=b.closest('.lens'), meId=box.dataset.lensme, oId=box.dataset.lenso, meN=nodes.find(x=>x.id===meId);
+    const key=meN&&meN.isMe?oId:meId+'|'+oId;
+    lensPick[key]=lensPick[key]===b.dataset.lens?null:b.dataset.lens;
+    const top=pbody.scrollTop; redraw(); pbody.scrollTop=top;});}
+/** 점수의 이유 — lensScore와 같은 셈을 조각으로 */
+function lensScoreWhy(me,o,lens){
+  const g=TEN_GOD_GROUP[relGod(me,o)], rel=relation(me.el,o.el), hc=(hapChung(me,o)||{}).kind, W=[];
+  W.push(rel.kind==='saeng'?'서로 북돋는 오행 +12':rel.kind==='bi'?'같은 결 +6':'서로 다그치는 오행 −4');
+  if(hc==='ganhap')W.push('태어난 날 윗글자 끌림 +12'); else if(hc==='yukhap')W.push('태어난 날 아랫글자 붙음 +10'); else if(hc==='chung')W.push(lens==='애인'?'태어난 날 부딪힘(불꽃) +2':'태어난 날 부딪힘 −6');
+  const P=b=>sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});
+  const rm=me.birth?P(me.birth):null, ro=o.birth?P(o.birth):null;
+  if(rm&&ro){const a=sajuElements(rm),b=sajuElements(ro);const k=EL_ORDER.filter(x=>!a[x]&&b[x]);if(k.length)W.push(`내게 없는 ${k.map(x=>EL_KO[x]).join('·')} 기운을 채워 줌 +${Math.min(12,k.length*4)}`);}
+  const bo=(LENS_BONUS[lens]||{})[g]; if(bo)W.push(`${lens}로 잘 맞는 결 +${bo}`);
+  return '기본 60에 '+W.join(', ')+'.';}
+/** 둘의 12달 표 */
+function lensMonthsHtml(me,o,meName){
+  const A=yearMonths(me), B=yearMonths(o); if(!A.length||!B.length)return '';
+  const rows=A.map((a,i)=>{const b=B[i]; if(!b)return '';
+    const line=a.good&&b.good?'같이 좋은 달 — 큰 약속·여행':a.warn&&b.warn?'둘 다 예민 — 거리 두기':a.warn?`${meName} 예민 — 내가 말 아끼기`:b.warn?`${bkEsc(o.name)} 예민 — 건드리지 않기`:a.good||b.good?`${a.good?meName:bkEsc(o.name)} 좋은 달 — 부탁은 이때`:'';
+    return `<tr${a.now?' class="now"':''}><td>${a.cal}월</td><td class="${a.good?'g':''}${a.warn?' w':''}">${MONTH_WORD[a.g]}${a.good?' 😊':''}${a.warn?' ⚡':''}</td><td class="${b.good?'g':''}${b.warn?' w':''}">${MONTH_WORD[b.g]}${b.good?' 😊':''}${b.warn?' ⚡':''}</td><td class="ln">${line}</td></tr>`;}).join('');
+  return `<div class="gtabw"><table class="gtab"><tr><th></th><th>${meName}</th><th>${bkEsc(o.name)}</th><th></th></tr>${rows}</table></div>`;}
 function lensScore(me,o,lens){
   const g=TEN_GOD_GROUP[relGod(me,o)], rel=relation(me.el,o.el), hc=(hapChung(me,o)||{}).kind;
   let sc=60+(rel.kind==='saeng'?12:rel.kind==='bi'?6:-4);
@@ -3549,19 +3581,20 @@ function lensScore(me,o,lens){
   sc+=(LENS_BONUS[lens]||{})[g]||0;
   return Math.max(45,Math.min(97,sc));}
 function lensHtml(me,o){
-  const cur=lensPick[o.id]||null;
+  const key=me.isMe?o.id:me.id+'|'+o.id, cur=lensPick[key]||null;   /* [U25] 제3자 쌍은 두 id로 */
   const chips=LENS_KEYS.map(k=>`<button type="button" class="estnotebtn${k===cur?' on':''}" data-lens="${k}">${k}</button>`).join(' ');
   let body='';
   if(cur){
     const g=TEN_GOD_GROUP[relGod(me,o)], hc=(hapChung(me,o)||{}).kind, sc=lensScore(me,o,cur);
     const L=luckNow(), ya=L?luckTouch(me,L.year):null, yb=L?luckTouch(o,L.year):null;
     const both=ya&&yb?(ya.groups[0]===yb.groups[0]?`올해 둘은 같은 과제('${NOW_WORD[ya.groups[0]]}')를 받아 한 방향으로 가기 좋아요.`
-      :`올해 나는 '${NOW_WORD[ya.groups[0]]}', ${bkEsc(o.name)}${particle(o.name,'은는')} '${NOW_WORD[yb.groups[0]]}'의 해라 서로 바빠요 — 약속은 미리 잡으세요.`):'';
+      :`올해 ${me.isMe?'나는':bkEsc(me.name)+particle(me.name,'은는')} '${NOW_WORD[ya.groups[0]]}', ${bkEsc(o.name)}${particle(o.name,'은는')} '${NOW_WORD[yb.groups[0]]}'의 해라 서로 바빠요 — 약속은 미리 잡으세요.`):'';
     body=`<div class="lensbox"><div class="lensscore"><b>${sc}</b>점 <span>${cur} 궁합 · 재미로 보는 점수</span></div>`
-      +`<p>${LENS_LINE[cur][g].replace(/이 사람/g,bkEsc(o.name))}</p>${hc?`<p>${HC_LENS[hc]}</p>`:''}${both?`<p>${both}</p>`:''}${lensDeepHtml(me,o,cur)}</div>`;}   /* [U18] 더 깊게 */
+      +`<p>${LENS_LINE[cur][g].replace(/이 사람/g,bkEsc(o.name)).replace(/\b내가\b/g,me.isMe?'내가':bkEsc(me.name)+particle(me.name,'이가')).replace(/\b나를\b/g,me.isMe?'나를':bkEsc(me.name)+particle(me.name,'을를'))}</p>${hc?`<p>${HC_LENS[hc]}</p>`:''}${both?`<p>${both}</p>`:''}${lensDeepHtml(me,o,cur)}</div>`;}   /* [U18] 더 깊게 */
   /* [2026-09-19 U20] 여덟 글자 전체로 본 한 줄 — 사용자: 권장대로(R4 ②). 관계 문단은 두 사람 일간 하나(relGod)로 정해져 거칠었다.
      상대의 여덟(여섯) 글자를 내 일간 기준으로 세어 가장 많은 갈래가 일간 관계와 다르면 그 결을 덧붙인다 */
-  return `<div class="lens"><div class="lensq">만약 ${bkEsc(o.name)}${particle(o.name,'이가')} 나의 …라면?</div><div class="lenschips">${chips}</div>${body}</div>`;}
+  const whoM=me.isMe?'나':bkEsc(me.name);
+  return `<div class="lens" data-lensme="${me.id}" data-lenso="${o.id}"><div class="lensq">만약 ${bkEsc(o.name)}${particle(o.name,'이가')} ${whoM}의 …라면?</div><div class="lenschips">${chips}</div>${body}</div>`;}
 /** [U22] 여덟 글자 전체로 본 한 줄 — 「서로에게」 블록 뒤에 따로 둔다(버튼 밑에 묻히지 않게) */
 function lensWholeHtml(me,o){
   const sp=relSpread(me,o), dg=TEN_GOD_GROUP[relGod(me,o)];
@@ -3620,9 +3653,13 @@ function lensDeepHtml(me,o,lens){
   const g=TEN_GOD_GROUP[relGod(me,o)], f=FIGHT[g], tip=LENS_TIP[lens];
   const A=yearMonths(me), B=yearMonths(o), both=[], sharp=[];
   for(let i=0;i<Math.min(A.length,B.length);i++){if(A[i].good&&B[i].good)both.push(A[i].cal+'월');if(A[i].warn||B[i].warn)sharp.push(A[i].cal+'월');}
-  return `<p><b>싸움 포인트</b> ${f[0]} → <b>화해법</b> ${f[1]}</p>`
+  const d=LENS_DO[lens][g], meName=me.isMe?'나':bkEsc(me.name);
+  return `<p class="nowhint">${lensScoreWhy(me,o,lens)}</p>`
+    +`<p><b>싸움 포인트</b> ${f[0]} → <b>화해법</b> ${f[1]}</p>`
     +`<p><b>${tip.h}</b> ${tip[o.el]}</p>`
-    +(both.length||sharp.length?`<p><b>올해 둘의 달</b> ${both.length?`같이 좋은 달 ${both.join('·')}`:''}${both.length&&sharp.length?' · ':''}${sharp.length?`예민한 달 ${sharp.slice(0,3).join('·')}`:''}</p>`:'');}
+    +`<p><b>하면 좋은 것</b> ${d[0]}</p><p><b>피할 것</b> ${d[1]}</p>`
+    +(both.length||sharp.length?`<p><b>올해 둘의 달</b> ${both.length?`같이 좋은 달 ${both.join('·')}`:''}${both.length&&sharp.length?' · ':''}${sharp.length?`예민한 달 ${sharp.slice(0,3).join('·')}`:''}</p>`:'')
+    +lensMonthsHtml(me,o,meName);}
 /* ═══ [U18] 그룹 — 우리 역할 · 제일 잘 맞는 짝 / 제일 불꽃 튀는 짝 ═══ 역할 = 그 사람 사주에서 가장 많은 갈래(동률이면 앞) */
 const GROLE_KO={식상:['🎤','분위기 메이커'],재성:['💳','지갑'],관성:['🛑','브레이크'],인성:['📚','멘토'],비겁:['💪','해결사']};
 function gRoleHtml(ms,nm){
@@ -13353,9 +13390,7 @@ function showNode(n,groupContext,targetMesh){
     if(B){focusNode(B);showNode(B);}});
   pbody.querySelectorAll('[data-edit]').forEach(eb=>eb.onclick=()=>openAddSheet(n)); /* [U11] 「성별 넣기」도 같은 시트 */
   pbody.querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>testStart(n,b.dataset.test));   /* [U15] */
-  pbody.querySelectorAll('[data-lens]').forEach(b=>b.onclick=()=>{   /* [U17] 렌즈 — 다시 누르면 닫힘 */
-    lensPick[n.id]=lensPick[n.id]===b.dataset.lens?null:b.dataset.lens;
-    const top=pbody.scrollTop; showNode(n,groupContext,targetMesh); pbody.scrollTop=top;});
+  wireLens(()=>showNode(n,groupContext,targetMesh));   /* [U17] 렌즈 — 다시 누르면 닫힘 · [U25] 공통 배선 */
   /* [U12] 관계 상태 — 누르면 저장하고 그 답을 펼친 채로 다시 그린다 */
   pbody.querySelectorAll('[data-love]').forEach(b=>b.onclick=()=>{
     const v=b.dataset.love; n.love=(n.love===v)?null:v; n.updatedAt=nowISO();
@@ -13431,7 +13466,7 @@ function showEdge(e){
   const rel=PB.rel;
   /* [2026-08-30] 십신 세 문단을 얹는다. 오행 문구(pairPhrase)는 ②에 그대로 남는다 —
      기존 카피 15개는 "성질까지 간다"는 원칙으로 쓴 자산이라 버리지 않는다. */
-  const relHtml=yo(plain(PB.reading));   /* [2026-09-19 U11] 친구 말투 · [U12] 쉬운 말 */
+  const relHtml=(e.a.birth&&e.b.birth?lensHtml(e.a,e.b):'')+yo(plain(PB.reading))+(e.a.birth&&e.b.birth?lensWholeHtml(e.a,e.b):'');   /* [2026-09-19 U11] 친구 말투 · [U12] 쉬운 말 · [U25] 관계 패널에도 만약 ~라면 */
   /* [★ 2026-08-31] rich 제목이 있어도 **"A ↔ B"를 h2로 먼저** 놓는다.
      구 코드는 rich가 있으면 h2를 r.title("서로를 비추는 두 사람" 같은 별칭)으로 덮어써서
      **누구와 누구의 관계인지가 화면 어디에도 크게 안 나왔다.** 관계를 잘못 열었을 때
@@ -13455,6 +13490,7 @@ function showEdge(e){
      쓰지 않고는 나갈 수 없었다(실측). 이력이 비면 두 사람 중 앞사람으로 보낸다. */
   navPrependBack(e.a.name,()=>showNode(e.a));
   wirePairCard(e.a,e.b,pbody);
+  wireLens(()=>showEdge(e));   /* [U25] */
   pbody.querySelectorAll('.pairname').forEach(b=>b.onclick=()=>{
     const t=nodes.find(x=>x.id===b.dataset.go);
     if(t){focusNode(t);showNode(t);}});
