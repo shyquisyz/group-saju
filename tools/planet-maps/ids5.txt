@@ -26,7 +26,7 @@ to__hwa-geum-su YMhGInGWeC
 to__mok-hwa MBu0CasDCm
 to__mok-geum p8FVuE2ehw
 to__mok-su yi07WWUPW9
-to__hwa-geum Cqgvsl8EEy
+to__hwa-geum ks9b63T16B  # 2026-09-19 재생성(결정 지역 2.3%→8.3%, "each clearly visible" 추가). 첫 생성 Cqgvsl8EEy
 to__hwa-su u5Ufg7JQLD
 to__geum-su YMhGtfhWeC
 geum__mok-hwa-to nVmAIfuYQD
