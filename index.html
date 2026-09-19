@@ -4101,8 +4101,18 @@ function gangyak(r){
     if(!p)return;
     if(i!==2){total++;if(isAlly(tenGod(d,p.stem)))ally++;}
     total++;if(isAlly(p.branchGod))ally++;});
+  /* ═══ [2026-09-19 U20] 판정을 **점수제**로 — 사용자: 권장대로(R4). ~~verdict:GANGYAK[cnt](세 조건 중 몇 개)~~ 는
+     구조적으로 '약하다'가 쉬웠다(무작위 4,000명: 시각 모름 78.8% · 있음 68.2%가 약한 편). 년지·시지는 아예 안 셌다.
+     점수제 = 일간 뺀 모든 글자를 자리별 무게(월지 3 · 일지 1.5 · 나머지 천간·지지 1, 지지는 정기 십신)로 세어 내 편(비겁·인성) 비율.
+     중립점이 약 0.4(다섯 갈래 중 둘)라 0.2 / 0.4 / 0.62에서 가른다 → 극약 18.9 · 신약 31.2 · 신강 27.6 · 극왕 22.4%(약·강 반반).
+     옛 세 조건은 oldVerdict로 남겨 근거 층에 "전통 세 조건"으로 보여 준다. 가중치는 널리 쓰는 경향 [권장] — 유파마다 다르다 */
+  const WS=[];const addW=(god,w)=>WS.push([isAlly(god),w]);
+  [r.year,r.month,r.hour].forEach(p=>{if(p)addW(tenGod(d,p[0]),1);});
+  if(r.year)addW(branchTenGod(d,r.year[1]),1); addW(mGod,3); addW(branchTenGod(d,r.day[1]),1.5); if(r.hour)addW(branchTenGod(d,r.hour[1]),1);
+  const wTot=WS.reduce((a,x)=>a+x[1],0), score=wTot?WS.filter(x=>x[0]).reduce((a,x)=>a+x[1],0)/wTot:0;
+  const verdict=score<.2?'극약':score<.4?'신약':score<.62?'신강':'극왕';
   return {deukRyeong:deukRyeong,deukJi:deukJi,deukSe:deukSe,count:cnt,
-    verdict:GANGYAK[cnt], hasTime:r.hasTime,
+    verdict:verdict, oldVerdict:GANGYAK[cnt], score:score, hasTime:r.hasTime,
     mGod:mGod, mBranch:mBranch, dUn:dUn,
     allyStems:allyStems, stemCount:others.length,
     ally:ally, total:total};}
@@ -5015,7 +5025,10 @@ function personReading(n){
     gy.deukRyeong?'태어난 달이 이 사람 편이라, 계절이 뒤에서 밀어 줍니다.':'태어난 달이 이 사람 편은 아니라, 계절을 거슬러 서는 셈입니다.',
     gy.deukJi?'태어난 날 아랫글자가 받쳐 줘서, 발밑이 단단합니다.':'태어난 날 아랫글자가 받쳐 주지 않아, 발밑이 헐겁습니다.',
     gy.deukSe?'겉에 드러난 글자에 제 편이 많아, 주변에서 힘을 얻습니다.':'겉에 드러난 글자에 제 편이 적어, 혼자 서는 셈입니다.'];
-  let t3=`${backing}(${CNT_KO[gy.count]} 상태). ${STORY.join(' ')} ${CONC[gy.verdict]}`;
+  /* [U20] ~~backing(세 조건 이름)·CNT_KO·STORY 셋~~ — 판정이 점수제로 바뀌어 "하나도 못 갖춘 상태"와 "센 편"이 한 문단에 같이 나올 수 있다.
+     점수(내 편 %)와 가장 무게가 큰 태어난 달 한 문장만 남긴다 */
+  void backing; void CNT_KO;
+  let t3=`여덟 글자에서 이 사람 편이 되는 기운이 <b>${Math.round(gy.score*100)}%</b>예요(보통은 40% 안팎). ${STORY[0]} ${CONC[gy.verdict]}`;
   /* [2026-09-19 U11] ~~if(!r.hasTime)t3+=' 출생 시각을 모르고 본 결과라…'~~ — 시각 모름 안내가 한 패널에 여섯 번 나왔다(U10).
      이제 머리 날짜 줄 옆 한 번(「시간 모름 · 추정해 보기」)과 근거 층에만 둔다. */
   out.push({h:'기운의 세기',t:t3});
@@ -12826,10 +12839,13 @@ function sajuTableHtml(n){
   const OX=v=>v?'<b class="ox on">○</b>':'<span class="ox">✕</span>';
   const gyHtml=gy?`
     <div class="sjgy">
-      <div class="sjgyhead"><b>${gy.verdict}</b> <span class="sjgycnt">${gy.count} / 3</span>
+      <div class="sjgyhead"><b>${gy.verdict}</b> <span class="sjgycnt">내 편 ${Math.round(gy.score*100)}%</span>
         ${gy.hasTime?'':'<span class="sjgyref">시주 미상 · 참고용</span>'}</div>
       <div class="sjgydef">여덟 글자 안에서 나를 나타내는 글자(<b>일간</b> — 태어난 날의 위 글자)의
         힘이 <b>${GANGYAK_DEF[GANGYAK.indexOf(gy.verdict)]}</b> 편이라는 뜻입니다.</div>
+      <div class="sjgydef">점수제 — 일간을 뺀 글자를 자리별 무게(태어난 달 3 · 태어난 날 아랫글자 1.5 · 나머지 1)로 세어 나를 돕는 쪽(비겁·인성) 비율을 봅니다.
+        보통은 40% 안팎이고, 20% 미만 극약 · 40% 미만 신약 · 62% 미만 신강 · 그 이상 극왕.
+        전통 세 조건(아래)으로는 <b>${gy.oldVerdict}</b>(${gy.count}/3)${gy.oldVerdict!==gy.verdict?' — 두 방식이 다르게 봅니다':''}.</div>
       <div class="sjgyox">득령 ${OX(gy.deukRyeong)} · 득지 ${OX(gy.deukJi)} · 득세 ${OX(gy.deukSe)}
         <span class="sjgynum">일간을 돕는 글자 ${gy.ally}/${gy.total}</span></div>
       ${sjHelp('gyterm','풀이 보기',`<p>${GY_TERM_DEF}</p>`,'득령 · 득지 · 득세 풀이')}
