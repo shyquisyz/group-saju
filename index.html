@@ -4756,7 +4756,10 @@ function workStyle(cnt,verdict,top){
   if(cnt['재성']>=2&&(verdict==='신강'||verdict==='극왕'))return WORK_STYLE.창업;
   if(top.some(k=>k==='식상'||k==='비겁'))return WORK_STYLE.프리;
   return WORK_STYLE.회사;}
-function cornerJob(cnt,verdict,dayStem){   /* [2026-09-17 A6-3] verdict(선택) — 있으면 세기 꼬리를 붙인다 · [U16] dayStem(선택) — 있으면 직업 목록·일하는 방식 */
+/** [2026-09-19 U20] 갈래가 가리키는 오행 — 일간 오행 기준(비겁 같은 오행 · 식상 내가 낳는 · 재성 내가 다루는 · 관성 나를 다스리는 · 인성 나를 낳는) */
+function groupEl(myEl,grp){return grp==='비겁'?myEl:grp==='식상'?GEN[myEl]:grp==='재성'?OVR[myEl]:grp==='관성'?elRuled(myEl):elBorn(myEl);}
+function cornerJob(cnt,verdict,dayStem,mGrp){   /* [2026-09-17 A6-3] verdict(선택) — 있으면 세기 꼬리를 붙인다 · [U16] dayStem(선택) — 있으면 직업 목록·일하는 방식
+   · [U20] mGrp(선택) — 월지 갈래(격). 있으면 직업 방향을 격으로 잡는다 */
   const mx=Math.max.apply(null,CNR_GRP5.map(k=>cnt[k]));
   const top=CNR_GRP5.filter(k=>cnt[k]===mx);
   const counts=CNR_GRP5.map(k=>`${k} ${cnt[k]}`).join(' · ');
@@ -4773,6 +4776,18 @@ function cornerJob(cnt,verdict,dayStem){   /* [2026-09-17 A6-3] verdict(선택) 
     :top.length>1
     ?`${counts} — 가장 많은 갈래가 <b>${top.join('·')}</b>${ro(top[top.length-1])} 갈립니다.`
     :`${counts} — 가장 많은 갈래는 <b>${top[0]}</b>입니다.`;
+  /* ═══ [2026-09-19 U20] 사용자: "직장이 뭐에 어울리는지가 좀 안 맞는 것 같다". ~~가장 많은 갈래 × 일간 오행~~ →
+     **태어난 달의 갈래(격)가 주 방향**(전통적으로 직업을 가장 크게 가르는 자리), 격이 비겁이면 식상·재성·관성 중 많은 쪽.
+     업종은 **그 갈래가 가리키는 오행**(壬수의 재성 = 화 → 마케팅·외식). 가장 많은 갈래가 다르면 "이쪽도"로 붙인다 */
+  if(mGrp&&Number.isInteger(dayStem)){
+    const me=STEM_EL[dayStem];
+    const prim=mGrp!=='비겁'?mGrp:(['식상','재성','관성'].sort((a,b)=>cnt[b]-cnt[a])[0]);
+    const sec=top.find(k=>k!==prim&&k!=='비겁')||null;
+    const t1=JOB_LINE[prim]+(verdict?' '+JOB_TAIL[prim][STRONG_SET.has(verdict)?'강':'약']:'');
+    const j1=JOB_LIST[prim][groupEl(me,prim)];
+    const j2=sec?JOB_LIST[sec][groupEl(me,sec)].split(' · ').slice(0,3).join(' · '):'';
+    const fact2=`${counts} · 태어난 달의 갈래(격) <b>${mGrp}</b> — 직업은 격을 먼저, 업종은 그 갈래가 가리키는 오행(${EL_KO[groupEl(me,prim)]})으로 봅니다.`;
+    return {h:'어울리는 일',t:cornerBlk(fact2,`${t1} 예를 들면 — ${j1}.${sec?` 이쪽도 맞아요 — ${j2}.`:''} ${workStyle(cnt,verdict,[prim])}`),raw:true};}
   const tail=(top.length===1&&verdict)?(' '+JOB_TAIL[top[0]][STRONG_SET.has(verdict)?'강':'약']):'';
   let jobs='';
   if(Number.isInteger(dayStem)){
@@ -5089,7 +5104,7 @@ function personReading(n){
     out.push({h:'자리마다 놓인 기운',t:s.join(' ')}); }
 
   /* ══ 코너 넷 [2026-08-31] ══ 전부 이층식(해설 + 해석 층). 계산은 순수 함수가 한다 */
-  out.push(cornerJob(cnt,gy.verdict,d));    /* [2026-09-17 A6-3] 세기 꼬리 · [U16] 일간 → 직업 목록 */
+  out.push(cornerJob(cnt,gy.verdict,d,mGrp));   /* [2026-09-17 A6-3] 세기 꼬리 · [U16] 일간 → 직업 목록 · [U20] 격(월지 갈래) */
   out.push(cornerMoney(cnt10,gy.verdict));  /* [2026-09-17 A6-3] 강/약 표 */
   out.push(cornerTie(d));
   out.push(cornerPower(sajuElements(r),d,gy.verdict));
