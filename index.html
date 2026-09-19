@@ -1503,6 +1503,8 @@
     scrollbar-width:none;-ms-overflow-style:none}
   /* 우주 위에 스크롤바가 뜨면 그것 자체가 다시 UI 바가 된다 — 방금 없앤 것과 같은 문제 */
   #tagbar::-webkit-scrollbar{display:none}
+  #tagbar{user-select:none;-webkit-user-select:none} /* [2026-09-19] 마우스로 끌 때 글자가 선택되지 않게 */
+  #tagbar.dragging{cursor:grabbing}
   #tagbar .tb-sys{display:inline-flex;align-items:center;margin:0 12px 0 0;vertical-align:middle}
   /* ── [2026-08-24] 대괄호 표기 → 중첩 캡슐 ──
      소속을 문자열 규칙(대괄호·소괄호·꺾쇠)이 아니라 "어느 알약 안에 들어 있는가"라는 공간
@@ -5406,7 +5408,11 @@ function mobileFocusBias(){
   if(!panelEl)panelEl=document.getElementById('panel');
   if(!panelEl||!panelEl.classList.contains('open'))return 0;
   if(!focusedMesh)return 0;
-  return V2_TUNABLES.MOBILE_FOCUS_BIAS_Y;}
+  /* [2026-09-19] ~~고정 MOBILE_FOCUS_BIAS_Y(0.22)~~ → **실제 패널 높이의 절반.** 사용자: "패널이 화면 절반이면 남은 반의 가운데에
+     행성이 보여야 하는데 여전히 가운데 반만 보인다". 보이는 영역(0~패널 윗변)의 가운데는 화면 가운데보다 패널높이/2만큼 위다.
+     크게 펼친(tall) 패널이면 그만큼 더 올린다. 실측값(syncPanelH의 --panel-h)이 없을 때만 옛 고정값 */
+  const h=panelHLast>0?panelHLast:0;
+  return h>0?Math.min(.45,h/(2*(innerHeight||1))):V2_TUNABLES.MOBILE_FOCUS_BIAS_Y;}
 const _followD=new THREE.Vector3();
 function camTick(){
   syncPanelBodyClass();
@@ -5431,15 +5437,12 @@ function camTick(){
        3D 궤도 역학 상수는 건드리지 않는다. 카메라가 무엇을 바라보는지만 바꾼다. */
     const bias=mobileFocusBias();
     if(bias>0){
-      const dir=new THREE.Vector3(
-        Math.sin(cam.phi)*Math.sin(cam.theta),Math.cos(cam.phi),Math.sin(cam.phi)*Math.cos(cam.theta));
-      const right=new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0),dir);
-      if(right.lengthSq()>1e-8){
-        right.normalize();
-        const up=new THREE.Vector3().crossVectors(dir,right).normalize();
-        /* 보이는 세로 세계 길이 = 2·r·tan(fov/2). 그 비율만큼 아래로 민다 */
-        const world=2*cam.r*Math.tan(camera.fov*Math.PI/360);
-        cam.targetGoal.addScaledVector(up,-bias*world);}}}
+      /* [2026-09-19] ~~세계 위(0,1,0)에서 만든 up~~ → **지금 카메라의 화면 위쪽**(직전 프레임 행렬). 행성을 누르면 화면이
+         그 행성의 자전축에 맞춰 기운다(U6-3) — 세계 위로 밀면 보정이 비스듬히 들어가 행성이 패널 쪽에 남았다(실측 y 339, 패널 윗변 390) */
+      const up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1).normalize();
+      /* 보이는 세로 세계 길이 = 2·r·tan(fov/2). 그 비율만큼 아래로 민다 */
+      const world=2*cam.r*Math.tan(camera.fov*Math.PI/360);
+      cam.targetGoal.addScaledVector(up,-bias*world);}}
   if(cam.angGoal){ /* [U6] 성계 궤도면을 향해 부드럽게 돈다 — theta는 짧은 쪽으로 */
     let d=cam.angGoal.theta-cam.theta;d=Math.atan2(Math.sin(d),Math.cos(d));
     cam.theta+=d*.08;cam.phi+=(cam.angGoal.phi-cam.phi)*.08;
@@ -9016,6 +9019,17 @@ function renderSystemHTML(g,depth,topGroup){
   return`<span class="cap cap-d${Math.min(depth,2)}">${tbGroupSpan(g)}`
     +(inner?`<i class="tb-div"></i>`:'')+`${inner}</span>`;}
 const tagbarEl=document.getElementById('tagbar');
+/* ═══ [2026-09-19] 그룹 줄을 마우스로 좌우 이동 ═══ 사용자: "은하 하단 그룹이 움직이지 않음. 마우스로 좌측우측 이동이 가능해야".
+   [원인] overflow-x:auto지만 스크롤바를 숨겨 두어(우주 위에 바가 뜨지 않게) 마우스로는 옮길 방법이 없었다 — 휠은 세로로만 돈다.
+   손가락은 원래 밀린다. [고침] ① 마우스로 끌기 ② 세로 휠을 가로 이동으로. 4px 넘게 끌었으면 이어지는 클릭(그룹 선택)은 삼킨다. */
+(function(){let down=false,sx=0,sl=0,moved=0;
+  tagbarEl.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0)return;down=true;sx=e.clientX;sl=tagbarEl.scrollLeft;moved=0;});
+  window.addEventListener('pointermove',e=>{if(!down)return;const dx=e.clientX-sx;moved=Math.max(moved,Math.abs(dx));
+    if(moved>4){tagbarEl.scrollLeft=sl-dx;tagbarEl.classList.add('dragging');}});
+  window.addEventListener('pointerup',()=>{if(!down)return;down=false;tagbarEl.classList.remove('dragging');});
+  tagbarEl.addEventListener('click',e=>{if(moved>4){e.stopPropagation();e.preventDefault();moved=0;}},true); /* 캡처 단계 — 칩의 onclick보다 먼저 */
+  tagbarEl.addEventListener('wheel',e=>{if(tagbarEl.scrollWidth<=tagbarEl.clientWidth)return;
+    if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){tagbarEl.scrollLeft+=e.deltaY;e.preventDefault();}},{passive:false});})();
 function renderTagbar(){
   if(!tagbarEl)return;
   const systems=topLevelSystems();
