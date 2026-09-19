@@ -4708,6 +4708,8 @@ const V2_TUNABLES={
   PORTRAIT_RIM_MUL: 1.5,          // 림 세기 배율
   /* [2026-09-19] 은하 행성 = 초상과 같은 4분할 지도(사용자 "은하 화면 행성 지도도 바꿔야"). */
   GALAXY_MAP_EM: 0.12,            // 은하 행성의 자체 발광 바닥값(지도 색 그대로 빛남). 일간별 바닥값(stemEmissive)을 대신한다 — 지도가 같은 틀인데 화 사람만 밝으면 안 된다
+  GALAXY_STAR_MAP_EM: 0.4,        // 지도를 입은 나(항성)의 발광. STAR_EMISSIVE 1.0 그대로면 지도가 스스로 꽉 차게 빛나 블룸과 겹쳐 하얗게 탔다
+                                  // (사용자 실기기 갈무리 · 실측 375×812: 원 안 >245 비율 1.0 33.6% / .6 17.0% / .4 7.3% / .25 3.6%). 둘레 글로우는 그대로
   GALAXY_MAP_PX: 512,             // 은하용 지도 폭(px). 은하에서 행성은 수~수십 px라 1024는 GPU 메모리만 쓴다
   PORTRAIT_BUMP: 0.03,            // 지표 굴곡(구 .015)
   PORTRAIT_REFLECT: 0.75,         // 금속·바다가 비추는 배경(스튜디오·하늘)의 세기. 이 배경은 빛 방향과 무관해서, 높으면 금·수 행성의 그늘 쪽도 밝게 남는다(초승달 시안 실측)           // 금 영역만 금속 광택(은은하게). 1이면 크롬처럼 번쩍여 흰 금속으로 돌아간다
@@ -7160,6 +7162,7 @@ function applyGalaxyMap(mesh,ref,holder){
     m.color.set(0xffffff);m.envMapIntensity=1;
     m.emissive.set(0xffffff);m.emissiveMap=T.map;
     if(!isMe){mesh.userData.gEm=V2_TUNABLES.GALAXY_MAP_EM;m.emissiveIntensity=V2_TUNABLES.GALAXY_MAP_EM;}
+    else mesh.userData.gEm=V2_TUNABLES.GALAXY_STAR_MAP_EM; /* simulate가 항성 발광 대신 읽는다 */
     /* 겉유리(applyShell)가 바꿔 둔 것 되돌리기 — 불투명·앞면·깊이 쓰기. transparent는 장면 전환 페이드 때문에 켜 둔다 */
     m.opacity=1;m.side=THREE.FrontSide;m.depthWrite=true;delete mesh.userData.baseOpacity;
     m.needsUpdate=true;});}
@@ -10483,7 +10486,7 @@ function simulate(){
     if(n.isMe){ /* §2.1: 본체 항성 — STAR_SCALE, 글로우, 맥동은 유지하되 발광은 [버그 1 수정] 항상 최대 고정 */
       const p=V2_TUNABLES.STAR_SCALE+Math.sin(t*1.8)*.04*(V2_TUNABLES.STAR_SCALE/1.6);n.mesh.scale.set(p,p,p);
       const gs=V2_TUNABLES.STAR_GLOW_PEAK+Math.sin(t*1.8)*.5*(V2_TUNABLES.STAR_GLOW_PEAK/7);n.glow.scale.set(gs,gs,1);
-      n.mesh.material.emissiveIntensity=V2_TUNABLES.STAR_EMISSIVE;} // "꽉 찬 발광" — 펄스 없이 항상 1.0
+      n.mesh.material.emissiveIntensity=n.mesh.userData.gEm!==undefined?n.mesh.userData.gEm:V2_TUNABLES.STAR_EMISSIVE;} /* [2026-09-19] 지도 입은 항성은 GALAXY_STAR_MAP_EM */ // "꽉 찬 발광" — 펄스 없이 항상 1.0
     /* [버그 2 수정] 지시선 폐기, 라벨을 노드 바로 아래로: 라벨은 scene 직속(mesh 자식이면
        PLANET_SCALE만큼 같이 줄어 글자를 못 읽음)이라 월드 좌표를 직접 계산해야 한다.
        오프셋은 노드 자신의 반경(항성/행성)에 비례 — 큰 노드일수록 라벨이 더 아래로 밀림. */
