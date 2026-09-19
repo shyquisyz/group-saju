@@ -3616,7 +3616,7 @@ function iljuHtml(n,isMe){
   const c=ilju(n); if(!c)return '';
   return `<div class="iljucard" style="--pc:${EL_INFO[c.el].css}"><div class="iljut">${isMe?'나는':bkEsc(n.name)+particle(n.name,'은는')}</div>`
     +`<div class="ijname">${c.name}</div><div class="ijgz">${c.gz}</div>`
-    +`<div class="ijkeys">${c.keys.map(k=>`<span>#${k}</span>`).join('')}</div></div>`;}   /* [U22] ~~한 줄 문장~~ — 바로 아래 「어떤 사람인가」·「자리마다」와 글자까지 같았다 */
+    +`<div class="ijkeys">${c.keys.map(k=>`<span>#${k}</span>`).join('')}</div><button type="button" class="estnotebtn" data-iljucard="${n.id}">카드로 저장·공유 →</button></div>`;}   /* [U22] ~~한 줄 문장~~ — 바로 아래 「어떤 사람인가」·「자리마다」와 글자까지 같았다 · [U26] 카드 */
 /** 평생 흐름 — 대운별 {from,to,money,work,love,cur} (성별 없으면 null) */
 function lifeFlow(n){
   const du=daeunOf(n); if(!du)return null;
@@ -11576,10 +11576,11 @@ function showGroup(g){
     </div>${lineLegend}`,null,false)}</div>
     <div class="members">${mchips}</div>
     ${total===2?`<div class="panelbtns"><button class="pbtn" id="gpair">두 사람의 관계 자세히 보기</button></div>`:''}
-    <div class="panelbtns"><button class="pbtn" id="gedit">그룹 수정 · 삭제</button></div>`;
+    <div class="panelbtns"><button class="pbtn" id="gcard">우리 그룹 카드 — 저장·공유</button><button class="pbtn" id="gedit">그룹 수정 · 삭제</button></div>`;   /* [U26] */
   navPrependBack('은하 전체',()=>selectGroup(null));
   wireHelp(pbody);        /* [2026-08-31] 흐름의 "흐름 읽는 법" */
   wireGSections(pbody);   /* [2026-08-31] 케미 쌍 → 관계 패널 */
+  {const gc=document.getElementById('gcard'); if(gc)gc.onclick=()=>openGroupCard(g);}   /* [U26] */
   pbody.querySelectorAll('[data-glens]').forEach(b=>b.onclick=()=>{   /* [U19] 그룹 상황 — 다시 누르면 닫힘 */
     gLensPick[g.id]=gLensPick[g.id]===b.dataset.glens?null:b.dataset.glens; const top=pbody.scrollTop; showGroup(g); pbody.scrollTop=top;});
   panel.classList.add('open');
@@ -12811,6 +12812,13 @@ async function sajuSelfTest(){
     const seat=personReading({birth:{y:1986,m:5,d:16,hour:null}}).find(x=>x.h==='자리마다 놓인 기운').t;
     T('consistency: 일간×격 40칸 · 壬×관성=둑 · 지키는 자리+프리랜서형 0 · 약한데 자리 셈이면 꼬리',
       cells&&/둑/.test(job)&&bad===0&&/발 딛는 자리는 단단한데/.test(seat), '충돌 '+bad+'건'); }
+  /* [2026-09-20 U26] 공유 카드 둘 — 그룹 카드(사람 수만큼 행성)·일주 카드가 캔버스로 그려지고, 관계 카드 도우미 이름과 겹치지 않는다 */
+  try{const g0=groups.find(g=>(g.analysis||analyzeGroup(g)).ms.filter(x=>x.birth).length>=2);
+    const cg=g0?await renderGroupCard(g0):null, ci=await renderIljuCard(me);
+    T('shareCards: 그룹 카드·일주 카드 캔버스 1080폭 · 관계 카드 cardWrap 그대로',
+      !!cg&&cg.width===1080&&cg.height>1000&&ci.width===1080&&ci.height===1350&&cardWrap.length===4,
+      (cg?cg.width+'x'+cg.height:'그룹 없음')+' · '+ci.width+'x'+ci.height);
+  }catch(e){T('shareCards: 그룹 카드·일주 카드',false,'예외 '+e.message);}
   /* [2026-09-19 U24] 그룹을 열어 둔 채 다른 그룹 사람의 관계 줄을 누르면 그룹 패널이 사람 패널을 덮어썼다 —
      ~~showNode→focusNode~~ 순서였는데 focusNode가 그룹을 바꾸며 showGroup을 불렀다. 호출 10곳을 focusNode→showNode로. */
   { const gA=groups.find(g=>g.type==='동료')||groups[1], gB=groups[0];
@@ -13391,6 +13399,7 @@ function showNode(n,groupContext,targetMesh){
   pbody.querySelectorAll('[data-edit]').forEach(eb=>eb.onclick=()=>openAddSheet(n)); /* [U11] 「성별 넣기」도 같은 시트 */
   pbody.querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>testStart(n,b.dataset.test));   /* [U15] */
   wireLens(()=>showNode(n,groupContext,targetMesh));   /* [U17] 렌즈 — 다시 누르면 닫힘 · [U25] 공통 배선 */
+  pbody.querySelectorAll('[data-iljucard]').forEach(b=>b.onclick=()=>openIljuCard(n));   /* [U26] */
   /* [U12] 관계 상태 — 누르면 저장하고 그 답을 펼친 채로 다시 그린다 */
   pbody.querySelectorAll('[data-love]').forEach(b=>b.onclick=()=>{
     const v=b.dataset.love; n.love=(n.love===v)?null:v; n.updatedAt=nowISO();
@@ -13756,7 +13765,7 @@ const createsheet=document.getElementById('createsheet'),relsheet=document.getEl
    [경로] navigator.share가 **파일을 받을 수 있으면** 공유 시트, 아니면 이미지 다운로드.
    canShare({files})까지 확인한다 — share는 있는데 파일은 못 받는 브라우저가 있다.
    [취소] 사용자가 공유 시트를 닫으면 AbortError가 온다. 실패가 아니므로 조용히 돌아간다. */
-let cardPair=null, cardCanvas=null, cardBusy=false;
+let cardPair=null, cardCanvas=null, cardBusy=false, shareRatio=0;   /* [U26] shareRatio — 공유 카드(그룹·일주)의 세로/가로. 관계 카드는 0 */
 function cardMsg(t){const el=document.getElementById('card-msg');if(el)el.textContent=t||'';}
 /** [2026-09-06 3f] 카드 미리보기 폭을 100%로 두되(위 CSS), 남는 세로 공간을 넘으면 그 높이에
     맞춰 줄인다 — "폭 100%와 높이 상한 중 작은 쪽"을 코드로 정확히 재서 정한다(다른 요소 —
@@ -13778,7 +13787,7 @@ function syncCardPrevCap(){
      양옆이 비었다(3f 실측). 폭은 언제나 모달 내용 폭 100%, 높이는 폭×5/4. 모달이 뷰포트보다 길어지면
      `.sheet{overflow-y:auto}`가 안에서 스크롤한다(버튼은 스크롤 끝에서 보이면 된다). 재는 방법은 3f 보고서에 남아 있다. */
   /* ~~const RATIO=1350/1080~~ → [3i] 캔버스 높이/폭은 쌍마다 계획이 정한다(딱지 유무). 열려 있는 쌍의 계획을 쓴다 */
-  const RATIO=(typeof cardPair!=='undefined'&&cardPair&&cardPair.a)?cardPlan(cardPair.a,cardPair.b).h/CARD_W:1350/1080;
+  const RATIO=shareRatio||((typeof cardPair!=='undefined'&&cardPair&&cardPair.a&&cardPair.a.birth)?cardPlan(cardPair.a,cardPair.b).h/CARD_W:1350/1080);   /* [U26] 공유 카드는 사람 쌍이 아니다 */
   const w=contentW, h=w*RATIO;
   document.documentElement.style.setProperty('--cardprev-w',Math.floor(w)+'px');
   document.documentElement.style.setProperty('--cardprev-h',Math.floor(h)+'px');}
@@ -13807,7 +13816,7 @@ function fillCardPicDesc(a,b){
     if(d.scrollWidth>d.clientWidth)d.textContent=desc;});
   box.hidden=!box.firstChild;}
 function openCardSheet(a,b){
-  cardPair={a,b};cardCanvas=null;
+  cardPair={a,b};cardCanvas=null;shareRatio=0;   /* [U26] */
   track('card-created');                     /* [계측] 카드 생성 */
   const sheet=document.getElementById('cardsheet');
   const host=document.getElementById('card-prev');
@@ -13847,6 +13856,80 @@ function openCardSheet(a,b){
     cardMsg('카드를 만들지 못했습니다. 다시 눌러 주세요.');
     console.error('[card]',err);});}
 /** 이 브라우저가 **파일을 담은** 공유를 받는가 */
+/* ═══ [2026-09-19 U26] 공유 카드 둘 — 우리 그룹 한 장 · 일주 캐릭터 카드 ═══ 사용자: 권장대로(R5 ③ "퍼지는 장치").
+   관계 카드(openCardSheet)와 같은 시트·같은 공유/저장 버튼을 쓴다. 그림은 캔버스 2D로 직접 그린다(우주 배경 + 행성 초상 + 글).
+   초상은 인물 패널과 같은 것(_p2Cache의 4분할 지도 초상, 없으면 일간 초상). 이름·생일은 그림에만 들어가고 어디로도 안 간다(관계 카드와 같은 원칙). */
+async function portraitFor(n){
+  const info=planetMapInfo(n);
+  if(info){
+    if(_p2Cache.has(info.id))return _p2Cache.get(info.id);
+    queuePortrait2(info);const pend=_p2Pending.get(info.id);if(pend){try{await pend;}catch(e){}}
+    if(_p2Cache.has(info.id))return _p2Cache.get(info.id);}
+  return planetPortrait(n)||'';}
+function shareLoadImg(src){return new Promise(res=>{if(!src)return res(null);const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src;});}
+function shareSpace(W,H){
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
+  const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0a0c18');g.addColorStop(1,'#171a33');x.fillStyle=g;x.fillRect(0,0,W,H);
+  let seed=11;const rnd=()=>(seed=(seed*1103515245+12345)%2147483648)/2147483648;
+  for(let i=0;i<260;i++){x.globalAlpha=.2+rnd()*.7;x.fillStyle='#fff';x.beginPath();x.arc(rnd()*W,rnd()*H,rnd()*1.7+.3,0,Math.PI*2);x.fill();}
+  x.globalAlpha=1;return {cv,x};}
+function shareWrap(x,text,maxW){const out=[];let line='';for(const w of String(text).split(' ')){const t=line?line+' '+w:w;if(x.measureText(t).width>maxW&&line){out.push(line);line=w;}else line=t;}if(line)out.push(line);return out;}
+function shareCircle(x,im,cx,cy,r,ring){
+  if(ring){x.save();x.shadowColor=ring;x.shadowBlur=r*.5;x.fillStyle=ring;x.globalAlpha=.55;x.beginPath();x.arc(cx,cy,r*1.02,0,Math.PI*2);x.fill();x.restore();}
+  if(!im){x.fillStyle=ring||'#556';x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.fill();return;}
+  x.save();x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.clip();x.drawImage(im,cx-r,cy-r,r*2,r*2);x.restore();}
+/* CARD_FONT는 관계 카드 쪽 상수를 그대로 쓴다 */
+/** 우리 그룹 한 장 — 구성원 행성 + 이름 + 올해 과제 한 단어 + 그룹 한 줄 */
+async function renderGroupCard(g){
+  const A=g.analysis||analyzeGroup(g), L=luckNow(), me=nodes.find(x=>x.isMe);
+  const R=A.ms.filter(x=>x.birth);
+  const ims=await Promise.all(R.map(x=>portraitFor(x).then(shareLoadImg)));
+  const W=1080, cols=R.length<=4?2:3, rows=Math.ceil(R.length/cols), cell=W/cols, r=Math.min(150,cell*.32);
+  const top=250, rowH=r*2+150, H=top+rows*rowH+230;
+  const {cv,x}=shareSpace(W,H);
+  x.textAlign='center';x.fillStyle='#e8c66a';x.font=`700 30px ${CARD_FONT}`;x.fillText((L?L.luckYear+'년 ':'')+'우리 은하',W/2,86);
+  x.fillStyle='#fff';x.font=`800 64px ${CARD_FONT}`;x.fillText(g.name,W/2,170);
+  R.forEach((n,i)=>{const cx=cell*(i%cols)+cell/2, cy=top+Math.floor(i/cols)*rowH+r+10;
+    shareCircle(x,ims[i],cx,cy,r,n.isMe?'#e8c66a':EL_INFO[n.el].css);
+    x.fillStyle='#fff';x.font=`700 38px ${CARD_FONT}`;x.fillText(n.isMe?'나':n.name,cx,cy+r+58);
+    const t=L?luckTouch(n,L.year):null;
+    x.fillStyle='#cfd3e6';x.font=`400 28px ${CARD_FONT}`;x.fillText(t?'올해 · '+NOW_WORD[t.groups[0]]:(STEMS[n.stemIdx]+EL_KO[n.el]),cx,cy+r+100);});
+  const ys=gSecYear(A.ms); const line=ys?ys.html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().split(/(?<=요\.)\s/)[1]||'':'';
+  let y=top+rows*rowH+30; x.fillStyle='#e8c66a';x.font=`500 30px ${CARD_FONT}`;
+  shareWrap(x,line,W-160).slice(0,2).forEach(l=>{x.fillText(l,W/2,y);y+=44;});
+  x.fillStyle='#8a90b0';x.font=`400 26px ${CARD_FONT}`;x.fillText(CARD_URL.replace(/^https?:\/\//,'').replace(/\/$/,''),W/2,H-50);
+  return cv;}
+/** 일주 캐릭터 카드 — 초상 크게 + "곧게 뻗은 말" + 일주 + 키워드 + 한 줄 */
+async function renderIljuCard(n){
+  const c=ilju(n); if(!c)throw new Error('no ilju');
+  const im=await portraitFor(n).then(shareLoadImg);
+  const W=1080,H=1350,{cv,x}=shareSpace(W,H), col=EL_INFO[c.el].css;
+  shareCircle(x,im,W/2,430,300,col);
+  x.textAlign='center';x.fillStyle='#cfd3e6';x.font=`500 34px ${CARD_FONT}`;x.fillText((n.isMe?'나는':n.name+particle(n.name,'은는')),W/2,830);
+  x.fillStyle='#fff';x.font=`800 84px ${CARD_FONT}`;x.fillText(c.name,W/2,930);
+  x.fillStyle=col;x.font=`600 40px ${CARD_FONT}`;x.fillText(c.gz,W/2,995);
+  x.fillStyle='#e8c66a';x.font=`500 32px ${CARD_FONT}`;x.fillText(c.keys.map(k=>'#'+k).join('  '),W/2,1070);
+  x.fillStyle='#cfd3e6';x.font=`400 30px ${CARD_FONT}`;let y=1150;
+  shareWrap(x,STEM_BLURB[n.stemIdx][0],W-160).slice(0,2).forEach(l=>{x.fillText(l,W/2,y);y+=44;});
+  x.fillStyle='#8a90b0';x.font=`400 26px ${CARD_FONT}`;x.fillText(CARD_URL.replace(/^https?:\/\//,'').replace(/\/$/,''),W/2,H-50);
+  return cv;}
+/** 관계 카드 시트를 빌려 쓴다 — 제목·파일 이름·그리는 함수만 다르다 */
+function openImageCard(title,nameA,nameB,renderFn){
+  cardPair={a:{name:nameA},b:{name:nameB}};cardCanvas=null;shareRatio=1350/1080;   /* 이름만 — 파일 이름에 쓴다. 비율은 그린 뒤 다시 맞춘다 */
+  track('card-created');
+  const sheet=document.getElementById('cardsheet'), host=document.getElementById('card-prev'), wait=document.getElementById('card-wait');
+  document.getElementById('cardsheet-h').textContent=title;
+  [...host.querySelectorAll('canvas')].forEach(c=>c.remove());cardMsg('');
+  wait.style.display='none';const slow=setTimeout(()=>{wait.style.display='flex';},1000);
+  const go=document.getElementById('cardgo'), sv=document.getElementById('cardsave');go.disabled=true;if(sv)sv.disabled=true;
+  const lb=document.getElementById('card-long'); if(lb)lb.hidden=true;
+  {const ct=document.getElementById('card-copytext'); if(ct)ct.hidden=!isDesktopPC();}
+  {const pd=document.getElementById('card-picdesc'); if(pd){pd.hidden=true;pd.innerHTML='';}}
+  syncCardPrevCap();closeSheets();sheet.classList.add('open');dim.classList.add('on');
+  renderFn().then(cv=>{clearTimeout(slow);wait.style.display='none';cardCanvas=cv;shareRatio=cv.height/cv.width;syncCardPrevCap();host.appendChild(cv);go.disabled=false;if(sv)sv.disabled=false;})
+    .catch(err=>{clearTimeout(slow);wait.style.display='none';go.disabled=false;if(sv)sv.disabled=false;cardMsg('카드를 만들지 못했습니다. 다시 눌러 주세요.');console.error('[card]',err);});}
+function openGroupCard(g){openImageCard(g.name+' 카드',g.name,(luckNow()||{}).luckYear||'',()=>renderGroupCard(g));}
+function openIljuCard(n){const c=ilju(n);openImageCard((n.isMe?'나':n.name)+' — '+(c?c.name:'')+' 카드',n.name,c?c.gz:'일주',()=>renderIljuCard(n));}
 function cardCanShare(){
   try{
     if(!navigator.share||!navigator.canShare)return false;
