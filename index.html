@@ -4699,12 +4699,15 @@ const V2_TUNABLES={
      림(뒤쪽 푸른빛)은 반대편 오른쪽 뒤로 옮겨 어두운 쪽 가장자리를 살린다. 굴곡(bump)도 2배.
      은하·성계 장면 조명(LIGHT_*)은 건드리지 않는다 — 초상 두 곳(renderPortrait2 · LiveHero)만 쓴다.
      계절막 반짝임 방향(-.45,.6,.65 = 왼쪽 위)과 새 주광 방향이 같은 쪽이라 어긋나지 않는다. */
-  PORTRAIT_KEY_POS: [-7,5,5],     // 주광 위치(왼쪽 옆 위)
-  PORTRAIT_KEY_MUL: 1.35,         // 주광 세기 배율(각 초상의 원래 값에 곱한다)
-  PORTRAIT_AMB_MUL: 0.45,         // 채움광 배율 — 낮출수록 그림자 쪽이 깊어진다
+  /* [2026-09-19 2차] 사용자 "초승달은 너무 어둡고 반달보다 좀 더 밝게" → 시안 A2. 초상 256px 평균 밝기(인물 4명)
+     1차 측면 164/86/90/125 · 반달 136/55/75/109 · **A2 143/77/78/112**(넷 다 반달보다 밝고 1차보다 어둡다). */
+  PORTRAIT_KEY_POS: [-9,4,2.5],   // 주광 위치(왼쪽 옆, 1차 (-7,5,5)보다 더 옆으로)
+  PORTRAIT_KEY_MUL: 1.75,         // [2차] 1.35 → 1.75. 주광 세기 배율(각 초상의 원래 값에 곱한다)
+  PORTRAIT_AMB_MUL: 0.42,         // [2차] 0.45 → 0.42. 채움광 배율 — 낮출수록 그림자 쪽이 깊어진다
   PORTRAIT_RIM_POS: [8,2,-6],     // 림 위치(오른쪽 뒤)
-  PORTRAIT_RIM_MUL: 1.4,          // 림 세기 배율
-  PORTRAIT_BUMP: 0.03,            // 지표 굴곡(구 .015)           // 금 영역만 금속 광택(은은하게). 1이면 크롬처럼 번쩍여 흰 금속으로 돌아간다
+  PORTRAIT_RIM_MUL: 1.5,          // 림 세기 배율
+  PORTRAIT_BUMP: 0.03,            // 지표 굴곡(구 .015)
+  PORTRAIT_REFLECT: 0.75,         // 금속·바다가 비추는 배경(스튜디오·하늘)의 세기. 이 배경은 빛 방향과 무관해서, 높으면 금·수 행성의 그늘 쪽도 밝게 남는다(초승달 시안 실측)           // 금 영역만 금속 광택(은은하게). 1이면 크롬처럼 번쩍여 흰 금속으로 돌아간다
   MEMBER_MIN_GAP: 0.8,          // 0.4는 화면 최소 간격 3px(거의 닿아 보임, 실측) → 0.8
   /* [U6 2026-09-19] 성계 장면 카메라 = 궤도면 법선에서 이만큼(rad) 기운 방향. 0.25 ≈ 14° — 완전히 위에서 보면
      납작한 원판이 되어 깊이감이 사라진다. null이면 끈다(구 동작: 카메라 각도를 안 건드림). */
@@ -7084,13 +7087,13 @@ async function renderPortrait2(info){
   const u1=((info.seed>>>8)&255)/255-.5,u2=((info.seed>>>16)&255)/255-.5;
   const tint=new THREE.Color(1+u1*.06,1,1-u1*.06).multiplyScalar(1+u2*.08);
   const mp={map:map,bumpMap:map,bumpScale:V2_TUNABLES.PORTRAIT_BUMP,roughness:.85,metalness:0,color:tint};
-  if(P.metal){const mt=tex(P.metal);Object.assign(mp,{metalnessMap:mt,metalness:V2_TUNABLES.GEUM_METALNESS,roughness:.55,envMap:pStudioEnv(),envMapIntensity:1.0});}
+  if(P.metal){const mt=tex(P.metal);Object.assign(mp,{metalnessMap:mt,metalness:V2_TUNABLES.GEUM_METALNESS,roughness:.55,envMap:pStudioEnv(),envMapIntensity:V2_TUNABLES.PORTRAIT_REFLECT});}
   const G=new THREE.SphereGeometry(1,128,96),mats=[new THREE.MeshStandardMaterial(mp)];
   const mesh=new THREE.Mesh(G,mats[0]);
   const pass=F.pass&&F.pass.length?F.pass:[[F.pitch,Math.round(F.yaw*180/Math.PI)]];
   const pick=pass[info.seed%pass.length];
   mesh.rotation.set(pick[0],pick[1]*Math.PI/180,.08);ps.add(mesh);
-  if(P.water){const wm=new THREE.MeshStandardMaterial({map:map,metalness:0,roughness:.16,envMap:pSkyEnv(),envMapIntensity:1.0,
+  if(P.water){const wm=new THREE.MeshStandardMaterial({map:map,metalness:0,roughness:.16,envMap:pSkyEnv(),envMapIntensity:V2_TUNABLES.PORTRAIT_REFLECT,
       alphaMap:tex(P.water),transparent:true,alphaTest:.5,color:tint});mats.push(wm);
     const w=new THREE.Mesh(G,wm);w.scale.setScalar(1.001);w.rotation.copy(mesh.rotation);ps.add(w);}
   if(info.season){const f=pSeasonFilm(info.season);mats.push(f.material);ps.add(f);}
@@ -7291,12 +7294,12 @@ async function build(n,force){
   const u1=((info.seed>>>8)&255)/255-.5,u2=((info.seed>>>16)&255)/255-.5;
   const tint=new THREE.Color(1+u1*.06,1,1-u1*.06).multiplyScalar(1+u2*.08);
   const mp={map:map,bumpMap:map,bumpScale:V2_TUNABLES.PORTRAIT_BUMP,roughness:.85,metalness:0,color:tint};
-  if(P.metal)Object.assign(mp,{metalnessMap:new THREE.CanvasTexture(P.metal),metalness:V2_TUNABLES.GEUM_METALNESS,roughness:.55,envMap:pStudioEnv(R)});
+  if(P.metal)Object.assign(mp,{metalnessMap:new THREE.CanvasTexture(P.metal),metalness:V2_TUNABLES.GEUM_METALNESS,roughness:.55,envMap:pStudioEnv(R),envMapIntensity:V2_TUNABLES.PORTRAIT_REFLECT});
   const mat=new THREE.MeshStandardMaterial(mp);
   const planet=new THREE.Mesh(new THREE.SphereGeometry(1,128,96),mat);
   const pass=F.pass&&F.pass.length?F.pass:[[F.pitch,Math.round(F.yaw*180/Math.PI)]];
   const pick=pass[info.seed%pass.length];planet.rotation.set(pick[0],pick[1]*Math.PI/180,.08);S.add(planet);
-  if(P.water){const w=new THREE.Mesh(planet.geometry,new THREE.MeshStandardMaterial({map:map,metalness:0,roughness:.16,envMap:pSkyEnv(R),
+  if(P.water){const w=new THREE.Mesh(planet.geometry,new THREE.MeshStandardMaterial({map:map,metalness:0,roughness:.16,envMap:pSkyEnv(R),envMapIntensity:V2_TUNABLES.PORTRAIT_REFLECT,
       alphaMap:new THREE.CanvasTexture(P.water),transparent:true,alphaTest:.5,color:tint}));w.scale.setScalar(1.001);w.rotation.copy(planet.rotation);S.add(w);}
   if(info.season)S.add(pSeasonFilm(info.season));
   const mats=[],bolts=[],upd=[];const N=18,G=new THREE.SphereGeometry(1,96,72);const g=new THREE.Group();S.add(g);
