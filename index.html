@@ -221,6 +221,15 @@
   .askdis{display:block;margin-top:6px;font-size:var(--fs-sm);color:var(--mut)}
   .lovepick{display:block;margin-top:8px;font-size:var(--fs-sm);color:var(--mut)}
   .askturn{display:block;margin-top:6px}
+  .nowbox p.nowtoday{background:rgba(232,198,106,.07);border-radius:8px;padding:8px 10px}
+  .daylucky{display:block;margin-top:3px;font-size:var(--fs-sm);color:var(--gold)}
+  .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:8px 0}
+  .mrow{border:1px solid var(--line);border-radius:6px;padding:5px 6px;font-size:var(--fs-sm);line-height:1.4}
+  .mrow .mcal{font-weight:700;color:var(--ink);margin-right:4px}.mrow .mw{color:var(--mut)}
+  .mrow .mt{display:block;font-size:var(--fs-sm);color:var(--mut-2)}
+  .mrow.good{border-color:rgba(232,198,106,.55)}.mrow.good .mt{color:var(--gold)}
+  .mrow.warn{border-color:rgba(255,138,106,.5)}.mrow.warn .mt{color:#ff8a6a}
+  .mrow.now{background:rgba(255,255,255,.06)}
   .nowbox p.nowtest{border-left:2px solid rgba(232,198,106,.4);padding-left:9px}
   .testcount{font-weight:400;color:var(--mut);margin-left:6px}
   .testlist{margin:6px 0 14px}
@@ -3324,7 +3333,7 @@ function luckNow(atMs){
   if(!r)return null;
   /* 세운의 해 = 입춘 기준 연도 — 1월~입춘 전이면 달력 연도보다 하나 작다. 연주 60갑자 번호로 가린다 */
   const Y=w.getUTCFullYear(), yk=gzIndex(r.year[0],r.year[1]);
-  return {year:r.year,month:r.month,luckYear:(((Y-4)%60+60)%60===yk)?Y:Y-1,atMs:ms};}
+  return {year:r.year,month:r.month,day:r.day,luckYear:(((Y-4)%60+60)%60===yk)?Y:Y-1,atMs:ms};}   /* [U16] day = 오늘의 일진 */
 /** 그 사람의 대운. 성별·생일이 없으면 null.
     {forward, startYears(만 나이, 소수), list:[{k, pillar:[s,b], from, to}], ageNow, cur(지금 대운 또는 null — 시작 전)} */
 function daeunOf(x,atMs){
@@ -3423,6 +3432,43 @@ function plain(t){
     .replace(/\s?\((?:[목화토금수]\s?→\s?[목화토금수]|[목화토금수]·[목화토금수])\)/g,'');
   PLAIN_SWAP.forEach(([a,b])=>{x=x.split(a).join(b);});
   return x;}
+/* ═══ [2026-09-19 U16] 오늘의 한마디 · 올해 12달 ═══ 사용자(권장대로): "매일 다시 열 이유"와 "몇 월에"가 없었다.
+   오늘 = 오늘 일진(日辰)이 이 사람에게 무엇인가 — 천간 갈래로 한 줄 + 지지 갈래로 "작은 행운" + 일지와 합충.
+   12달 = 올해(입춘~) 월주 열둘 — 지지 갈래로 한 단어, 좋은 달(신약·신강이면 둘 다 도움 / 일지와 합) · 조심할 달(일지와 충). */
+const DAY_LINE={비겁:'오늘은 내 편이 곁에 있는 날이에요. 혼자 끙끙대지 말고 한 명을 불러 보세요.',
+  식상:'오늘은 말이 술술 나오는 날이에요. 미뤄 둔 연락이나 글을 꺼내 보세요.',
+  재성:'오늘은 돈과 일이 눈에 잘 들어오는 날이에요. 장바구니는 한 번 더 보고 결제하세요.',
+  관성:'오늘은 할 일이 나를 부르는 날이에요. 약속엔 5분 일찍.',
+  인성:'오늘은 한 박자 쉬어도 되는 날이에요. 좋은 글 하나 읽고 가세요.'};
+const DAY_LUCK={비겁:'땀 한 번 흘리기',식상:'누군가 칭찬하기',재성:'지갑·통장 정리',관성:'책상 정리',인성:'일찍 자기'};
+const DAY_HIT={chung:'가까운 사람과 말이 엇갈리기 쉬우니 말끝을 부드럽게.',ganhap:'누군가에게 마음이 쏠리는 날이에요.',yukhap:'손발 맞는 사람을 만나기 좋은 날이에요.'};
+const MONTH_WORD={비겁:'같은 편',식상:'꺼내기',재성:'돈·일',관성:'일정·책임',인성:'쉼·배움'};
+function todayHtml(n){
+  const L=luckNow(); if(!L||!L.day||!n.birth)return '';
+  const t=luckTouch(n,L.day); if(!t)return '';
+  const dh=t.hits.find(h=>h.pos==='day');
+  return `<p class="nowtoday">${DAY_LINE[t.groups[0]]}${dh?' '+DAY_HIT[dh.kind]:''} <span class="daylucky">오늘의 작은 행운: ${DAY_LUCK[t.groups[1]]}</span></p>`;}
+/** 올해 입춘부터 열두 달 — {pil, cal(달력 달 1~12), g, good, warn, now} */
+function yearMonths(n){
+  const L=luckNow(); if(!L||!n.birth)return [];
+  const ys=L.year[0], out=[];
+  for(let i=0;i<12;i++){
+    const br=(2+i)%12, st=(((ys%5)*2+2)+i)%10, pil=[st,br], t=luckTouch(n,pil); if(!t)continue;
+    const dh=t.hits.find(h=>h.pos==='day');
+    const good=(t.helps&&t.helps.every(Boolean))||(dh&&dh.kind!=='chung');
+    const warn=dh&&dh.kind==='chung';
+    out.push({pil,cal:((1+i)%12)+1,g:t.groups[1],good:!!good&&!warn,warn:!!warn,now:br===L.month[1]});}
+  return out;}
+function monthsHtml(n){
+  const ms=yearMonths(n); if(!ms.length)return '';
+  const L=luckNow();
+  const rows=ms.map(m=>`<div class="mrow${m.now?' now':''}${m.good?' good':''}${m.warn?' warn':''}"><span class="mcal">${m.cal}월</span>`
+    +`<span class="mw">${MONTH_WORD[m.g]}</span><span class="mt">${m.good?'좋은 달':m.warn?'조심할 달':''}${m.now?' · 이번 달':''}</span></div>`).join('');
+  const goods=ms.filter(m=>m.good).map(m=>m.cal+'월'), warns=ms.filter(m=>m.warn).map(m=>m.cal+'월');
+  const sum=(goods.length?`올해 좋은 달은 <b>${goods.join('·')}</b>`:'올해는 튀는 좋은 달 없이 고르게 가요')
+    +(warns.length?`, 조심할 달은 <b>${warns.join('·')}</b>이에요.`:'.');
+  return sjHelp('months',`올해 12달 흐름 (${L.luckYear}년 입춘~)`,
+    `<p>${sum}</p><div class="mgrid">${rows}</div><p class="nowhint">운에서 한 달은 달력 1일이 아니라 절기(매달 4~8일쯤)에 바뀌어요.</p>`,null,false);}
 /** 받침에 따라 이에요/예요 */
 function ieyo(w){const c=w.charCodeAt(w.length-1);return(c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28)?'이에요':'예요';}
 /** 「요즘」 이야기 층. isMe면 "당신" */
@@ -3479,7 +3525,7 @@ function nowStoryHtml(n,isMe){
       const nt=luckTouch(n,nx.pillar);
       td+=` ${left<1?'올해 안에':`${Math.max(1,Math.round(left))}년쯤 뒤`}(${Math.round(nx.from)}살 무렵)부터는 '${DAEUN_WORD[nt.groups[0]]}' 10년이 시작돼요.`;}
     ps.push(`<p>${td}</p>`);}
-  return `<div class="nowbox">${ps.join('')}</div>`;}
+  return `<div class="nowbox">${todayHtml(n)}${ps.join('')}${monthsHtml(n)}</div>`;}   /* [U16] 오늘 · 12달 */
 /* ═══ 「궁금한 것」 [2026-09-19 U12] ═══ 사용자: "결국 사람들이 궁금해할 건 돈은 언제 버나, 건강은? 연애운은? 자식은 어떻게 되나 —
    이런 질문에 답이 있어야 할 듯. 아직 읽다 만 느낌". 질문 넷(18살 미만은 공부·재능 + 건강)을 접힌 제목으로 두고 누르면 답이 펼쳐진다.
    [읽는 규칙 — 명리의 널리 쓰는 대응, 유파 이견이 적은 것만]
@@ -3616,7 +3662,9 @@ function nowFactsHtml(n){
   const y=luckTouch(n,L.year), m=luckTouch(n,L.month); if(!y||!m)return '';
   const HC={chung:'충',ganhap:'천간합',yukhap:'육합'}, POS={year:'년',month:'월',day:'일',hour:'시'};
   const hs=t=>t.hits.length?' · '+t.hits.map(h=>POS[h.pos]+'주와 '+HC[h.kind]).join(', '):'';
+  const td=L.day?luckTouch(n,L.day):null;
   const rows=[`올해 ${pillarStr(L.year)}년 — ${TEN_GODS[y.stemGod]}·${TEN_GODS[y.branchGod]}${hs(y)}`,
+    ...(td?[`오늘 ${pillarStr(L.day)}일 — ${TEN_GODS[td.stemGod]}·${TEN_GODS[td.branchGod]}${hs(td)}`]:[]),
     `이번 달 ${pillarStr(L.month)}월 — ${TEN_GODS[m.stemGod]}·${TEN_GODS[m.branchGod]}${hs(m)}`];
   const du=daeunOf(n);
   if(du)rows.push(`대운(${du.forward?'순행':'역행'}, ${du.startYears.toFixed(1)}세 시작) — `
@@ -4435,7 +4483,24 @@ function cornerBlk(fact,take){
    극왕극약)는 실제 인물에 없을 수 있어, 합성 입력으로 시험할 길이 있어야 한다.
    sajuSelfTest가 이 넷을 직접 부른다. */
 const CNR_GRP5=['식상','재성','관성','인성','비겁'];
-function cornerJob(cnt,verdict){   /* [2026-09-17 A6-3] verdict(선택) — 있으면 세기 꼬리를 붙인다 */
+/* ═══ [2026-09-19 U16] 어울리는 일 — 실제 직업 이름 ═══ 사용자: "어울리는 일 같은 경우에도 실제로 어떤 일을 추천하는지 내용이 있어야".
+   갈래(가장 많은 기운) × 태어난 날 오행 25칸, 칸마다 여섯. 오행은 "어떤 재료로 일하나"(목 사람·교육 / 화 드러냄 / 토 땅·살림 / 금 기술·규칙 / 수 흐름·지식),
+   갈래는 "어떤 방식으로 일하나". 예시일 뿐이라 "예를 들면"으로 연다.
+   일하는 방식 — 재성 둘 이상+힘 셈 = 창업형 · 식상·비겁이 1순위 = 프리랜서형 · 나머지 = 회사형 [권장] */
+const JOB_LIST={
+  식상:{mok:'작가 · 기획자 · 교사 · 코치 · 출판 편집자 · 교육 콘텐츠 제작자',hwa:'콘텐츠 크리에이터 · 강사 · 공연·방송 · 광고 기획 · 요리사 · 이벤트 연출',to:'상담사 · 제과·요리 · 공예가 · 커뮤니티 매니저 · 교육 운영 · 식품 개발',geum:'디자이너 · 사진가 · 기술 강사 · 평론가 · 편집 디자이너 · UX 라이터',su:'작가 · 번역가 · 작곡가 · 카피라이터 · 해설 유튜버 · 연구 강연자'},
+  재성:{mok:'교육 사업 · 출판 사업 · 원예·식물 사업 · 스타트업 기획 · 유통 MD · 헬스케어 영업',hwa:'마케터 · 영업 · 이벤트 기획 · 쇼핑몰 운영 · 브랜드 매니저 · 여행업',to:'부동산 · 농식품 유통 · 외식업 운영 · 건설 관리 · 물류 운영 · 프랜차이즈',geum:'금융 · 투자 · 회계 · 보석·귀금속 · 자동차 영업 · IT 영업',su:'무역 · 유통 · 물류·해운 · 음료·주류 사업 · 온라인 커머스 · 수산업'},
+  관성:{mok:'공무원(교육·복지) · 학교 관리직 · 병원 행정 · 인사 담당 · 비영리 단체 운영 · 산림·환경 관리',hwa:'언론·방송 책임자 · 홍보 책임자 · 정치·정책 · 소방 · 전기·에너지 관리 · 공연 제작 관리',to:'공무원 · 총무·관리직 · 부동산 관리 · 건설 감리 · 보험 · 조합 운영',geum:'법조 · 경찰 · 군인 · 감사 · 품질 관리 · 보안',su:'행정 · 외교 · 물류 관리 · 운항 관리 · 데이터 관리 · 연구소 운영'},
+  인성:{mok:'교수 · 연구원 · 교사 · 한의사 · 출판 편집 · 사서',hwa:'심리 연구 · 미디어 연구 · 문화재 해설 · 교육 연구 · 종교·명상 지도 · 큐레이터',to:'상담 심리 · 사회복지 · 요양·돌봄 · 교육 행정 · 감정평가 · 향토 연구',geum:'약사 · 의사 · 엔지니어 · 법학 연구 · 검사원 · 기술 연구',su:'연구원 · 데이터 분석가 · 번역 · 철학·인문 연구 · 기록 연구 · 명리·상담'},
+  비겁:{mok:'1인 창업 · 코치 · 트레이너 · 농장 운영 · 프리랜서 기획자 · 공방',hwa:'1인 방송 · 스포츠 · 강연가 · 인플루언서 · 자영업 · 공연 예술가',to:'자영업(가게) · 중개업 · 프랜차이즈 점주 · 농업 · 공방 운영 · 임대업',geum:'운동선수 · 경호 · 기술 자영업(정비·수리) · 외과 의사 · 장인 · 목수·금속공예',su:'프리랜서 개발자 · 여행 작가 · 1인 무역 · 컨설턴트 · 개인 투자자 · 온라인 강의'}};
+const WORK_STYLE={창업:'일하는 방식은 <b>창업형</b>이에요 — 남의 판보다 내 판을 벌일 때 힘이 나요.',
+  프리:'일하는 방식은 <b>프리랜서형</b>이에요 — 내 이름을 걸고 내 속도로 일할 때 오래가요.',
+  회사:'일하는 방식은 <b>회사형</b>이에요 — 자리와 역할이 분명한 조직 안에서 제 몫이 커져요.'};
+function workStyle(cnt,verdict,top){
+  if(cnt['재성']>=2&&(verdict==='신강'||verdict==='극왕'))return WORK_STYLE.창업;
+  if(top.some(k=>k==='식상'||k==='비겁'))return WORK_STYLE.프리;
+  return WORK_STYLE.회사;}
+function cornerJob(cnt,verdict,dayStem){   /* [2026-09-17 A6-3] verdict(선택) — 있으면 세기 꼬리를 붙인다 · [U16] dayStem(선택) — 있으면 직업 목록·일하는 방식 */
   const mx=Math.max.apply(null,CNR_GRP5.map(k=>cnt[k]));
   const top=CNR_GRP5.filter(k=>cnt[k]===mx);
   const counts=CNR_GRP5.map(k=>`${k} ${cnt[k]}`).join(' · ');
@@ -4453,7 +4518,12 @@ function cornerJob(cnt,verdict){   /* [2026-09-17 A6-3] verdict(선택) — 있�
     ?`${counts} — 가장 많은 갈래가 <b>${top.join('·')}</b>${ro(top[top.length-1])} 갈립니다.`
     :`${counts} — 가장 많은 갈래는 <b>${top[0]}</b>입니다.`;
   const tail=(top.length===1&&verdict)?(' '+JOB_TAIL[top[0]][STRONG_SET.has(verdict)?'강':'약']):'';
-  return {h:'어울리는 일',t:cornerBlk(fact,top.length>1?JOB_TIE:JOB_LINE[top[0]]+tail),raw:true};}
+  let jobs='';
+  if(Number.isInteger(dayStem)){
+    const el=STEM_EL[dayStem];
+    const pick=top.length>1?top.slice(0,2).map(k=>JOB_LIST[k][el].split(' · ').slice(0,3).join(' · ')).join(' · '):JOB_LIST[top[0]][el];
+    jobs=` 예를 들면 — ${pick}. ${workStyle(cnt,verdict,top)}`;}
+  return {h:'어울리는 일',t:cornerBlk(fact,(top.length>1?JOB_TIE:JOB_LINE[top[0]]+tail)+jobs),raw:true};}
 function cornerMoney(cnt10,verdict){   /* [2026-09-17 A6-3] verdict(선택) — 신강·극왕이면 STRONG 표 */
   const jj=cnt10[5], pp=cnt10[4];   /* TEN_GODS: 4=편재 5=정재 */
   const key=(jj===0&&pp===0)?'none':(jj>pp?'jeong':(pp>jj?'pyeon':'even'));
@@ -4760,7 +4830,7 @@ function personReading(n){
     out.push({h:'자리마다 놓인 기운',t:s.join(' ')}); }
 
   /* ══ 코너 넷 [2026-08-31] ══ 전부 이층식(해설 + 해석 층). 계산은 순수 함수가 한다 */
-  out.push(cornerJob(cnt,gy.verdict));      /* [2026-09-17 A6-3] 세기 꼬리 */
+  out.push(cornerJob(cnt,gy.verdict,d));    /* [2026-09-17 A6-3] 세기 꼬리 · [U16] 일간 → 직업 목록 */
   out.push(cornerMoney(cnt10,gy.verdict));  /* [2026-09-17 A6-3] 강/약 표 */
   out.push(cornerTie(d));
   out.push(cornerPower(sajuElements(r),d,gy.verdict));
@@ -12226,6 +12296,14 @@ async function sajuSelfTest(){
       rBad.ok&&rBad.data.people[0].self===null,
       rBad.ok?('self='+JSON.stringify(rBad.data.people[0].self)):('실패: '+rBad.why));
   }
+  /* [2026-09-19 U16] 직업 목록 25칸 × 6 · 올해 12달(寅~丑) · 오늘 일진(외부 대조: 2026-09-19 丙申, 2000-01-01 戊午) */
+  { const cells=Object.keys(JOB_LIST).flatMap(g=>Object.keys(JOB_LIST[g]).map(e=>JOB_LIST[g][e].split(' · ').length));
+    const d1=luckNow(Date.UTC(2026,8,19,3)).day, d2=luckNow(Date.UTC(2000,0,1,3)).day;
+    const ms=yearMonths(other);
+    const job=cornerJob({식상:0,재성:3,관성:1,인성:1,비겁:0},'신약',8).t.replace(/<[^>]+>/g,'');
+    T('jobMonthsToday: 직업 25칸×6 · 12달 첫 달 2월(寅) · 오늘 일진 대조 · 어울리는 일에 직업·방식',
+      cells.length===25&&cells.every(k=>k===6)&&ms.length===12&&ms[0].cal===2&&ms[0].pil[1]===2&&pillarStr(d1)==='丙申'&&pillarStr(d2)==='戊午'&&/예를 들면/.test(job)&&/일하는 방식/.test(job),
+      '칸 '+cells.length+' · 12달 '+ms.length+' 첫 '+(ms[0]&&ms[0].cal)+'월 · '+pillarStr(d1)+'/'+pillarStr(d2)); }
   /* [2026-09-19 U15] 테스트 개인화 — v6→v7 tests:null · 모르는 값은 버림 · 고민 주제가 「궁금한 것」 맨 위로 · 「요즘」에 고민 줄 */
   { const m=MIGRATIONS['6']({v:6,people:[{key:'t1',name:'갑',isMe:true,self:null,love:null,birth:{y:2000,m:1,d:1,sijin:12,hour:null,min:null,city:'서울',lon:126.978,sex:'남',est:null,dayRule:null}}]});
     const cl=testsClean({concern:{picks:['돈','start'],at:'x'},stress:{picks:['엉뚱']},zzz:{picks:[]}});
