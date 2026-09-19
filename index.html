@@ -312,6 +312,18 @@
     background:rgba(255,255,255,.07);cursor:pointer;display:flex;align-items:center;gap:5px}
   .mchip .dot{width:8px;height:8px;border-radius:50%}
   .mchip.sunchip{border:1px solid var(--gold)}
+  /* [U27] 중심 바꿔 보기 */
+  .cvbox{margin:12px 0 4px;padding:10px 12px;border:1px solid var(--line);border-radius:12px}
+  .cvh{font-weight:700;margin-bottom:6px}.cvh small{font-weight:400;color:var(--mut);margin-left:6px}
+  .cvchips{display:flex;flex-wrap:wrap;gap:6px}
+  .cvchip{font:inherit;font-size:var(--fs-sm);font-weight:600;padding:5px 11px;border-radius:99px;cursor:pointer;
+    background:rgba(255,255,255,.07);color:var(--ink);border:1px solid transparent}
+  .cvchip.on{border-color:var(--gold);color:var(--gold)}
+  .cvrows{margin-top:8px}.cvrows p{margin:6px 0}
+  #cvbar{position:fixed;z-index:6;transform:translateX(-50%);white-space:nowrap;display:inline-flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;border-radius:99px;
+    background:rgba(20,22,40,.82);border:1px solid rgba(232,198,106,.55);color:var(--gold);font-size:var(--fs-sm);font-weight:600}
+  #cvbar[hidden]{display:none}
+  #cvbar button{font:inherit;font-size:var(--fs-sm);padding:3px 10px;border-radius:99px;border:1px solid rgba(255,255,255,.25);background:transparent;color:var(--ink);cursor:pointer}
   .mchip .vmremove{margin-left:2px;opacity:.6;font-weight:400}
   .mchip .vmremove:hover{opacity:1}
   .legendrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:var(--fs-sm);color:var(--mut)}
@@ -1741,6 +1753,9 @@
   <div class="eyebrow">SAJU GALAXY · STELLAR 0.7</div>
   <h1>사주은하</h1>
 </header>
+<!-- [2026-09-20 U27] 중심 바꿔 보기 중이라는 표시 — 내 데이터가 바뀐 게 아니라 잠깐 보는 중임을 3D 위에서도 알린다.
+     헤더 안에 두면 데스크톱에서 왼쪽 패널에 가려져(실측) 3D 영역 위쪽 가운데에 따로 띄운다(renderCvBar가 자리를 잡는다) -->
+<div id="cvbar" hidden><span id="cvbar-t"></span><button type="button" id="cvbar-x">원래대로</button></div>
 <!-- [UI재검토 6] +/− 두 칸 → ⌖ 하나. 연속 줌은 휠·핀치가 이미 담당한다(canvas wheel / touchmove) -->
 <div id="zoomctl">
   <button id="z-fit" aria-label="은하로 돌아가기" title="은하로 돌아가기">⌖</button>
@@ -3996,6 +4011,42 @@ function nowFactsHtml(n){
 /* ═══ [2026-09-19 U17] 그룹 = 「우리 ○○ 올해 보고서」 ═══ 사용자: "그룹 화면이 부족해. 보고서처럼 만드는 거 좋아 — 살을 더 붙여야 할 듯.
    그룹·내·타인 패널이 읽을 게 많고 재미있어야 함 — 이게 본질". 재료는 사람마다의 올해·이번 달·12달(luckTouch·yearMonths) — 새 계산 없음.
    순위는 **자격이 되는 사람만** 올린다(억지 1등 금지). 챙김 짝은 오행 상생(기운을 대 주는 쪽 → 받는 쪽). */
+/* ═══ [2026-09-20 U27] 중심 바꿔 보기 — 사용자: "권장대로"(Gemini 제안 채택) ═══
+   그룹 패널의 칩으로 가운데 사람을 잠깐 바꾼다. 3D: 그 사람이 성계 중심(반경 0, 항성의 0.8배), 나머지(나 포함)가 그 사람과의 관계로 궤도·크기를 다시 받는다.
+   나와의 관계를 뜻하는 고리·장신구 구름은 걷는다. 글: 「○○ 눈으로 본 우리」 — 그 사람에게 각자가 어떤 사람인지(REL_PIECE·REL_DESC, 방향 그대로).
+   저장하지 않는다 — 다른 그룹·은하로 나가면 풀린다(selectGroup). 헤더 띠(#cvbar)로 "보는 중"을 늘 알린다. */
+function cvEase(o,dt){if(o.rs===undefined)o.rs=o.radius;else if(o.rs!==o.radius){o.rs+=(o.radius-o.rs)*Math.min(1,dt*3.5);if(Math.abs(o.radius-o.rs)<.01)o.rs=o.radius;}}
+function cvScale(mesh,sc,dt){if(cvAnim>0){const c=mesh.scale.x;mesh.scale.setScalar(c+(sc-c)*Math.min(1,dt*5));}else mesh.scale.setScalar(sc);}
+function setCenterView(g,node){
+  const top=topSystemOf(g),me=nodes.find(x=>x.isMe);
+  const next=(g&&node&&me&&node!==me&&top&&top!==UNCLASSIFIED_GROUP)?{top,g,node}:null;
+  if((centerView?centerView.node:null)===(next?next.node:null))return;
+  centerView=next;cvCarry=true;cvAnim=1.2;
+  try{layoutGroupOrbits();}finally{cvCarry=false;}
+  if(g)fitGroup(g);
+  renderCvBar();}
+function renderCvBar(){
+  const b=document.getElementById('cvbar');if(!b)return;
+  const cp=cvPivot();b.hidden=!cp;
+  if(cp){ /* 자리: 캔버스 위쪽 가운데. 폰은 헤더(제목) 바로 아래, 데스크톱은 캔버스 위 16px */
+    const r=canvas.getBoundingClientRect(),h=document.querySelector('header').getBoundingClientRect();
+    const narrow=innerWidth<768;b.style.left=(r.left+r.width/2)+'px';b.style.top=(narrow?h.bottom+6:r.top+16)+'px';document.getElementById('cvbar-t').textContent='☀ '+cp.name+' 중심으로 보는 중';
+    document.getElementById('cvbar-x').onclick=()=>{const g=centerView&&centerView.g;setCenterView(g,null);if(g&&activeGroup===g&&panel.classList.contains('open')&&pbody.querySelector('.cvbox'))showGroup(g);};}}
+function cvSectionHtml(A,g){
+  const me=nodes.find(x=>x.isMe);
+  if(!me||g===UNCLASSIFIED_GROUP||A.ms.length<3||!A.ms.includes(me))return '';   /* 두 사람이면 관계 패널이 이미 양쪽을 다 말한다 */
+  const cp=cvPivotFor(topSystemOf(g));
+  const nmOf=n=>n.isMe?'나':bkEsc(n.name);
+  const chips=A.ms.map(n=>`<button type="button" class="cvchip${(cp?n===cp:n.isMe)?' on':''}" data-cv="${n.isMe?'':n.id}">${nmOf(n)}${n.isMe?' (기본)':''}</button>`).join('');
+  let rows='';
+  if(cp){
+    const who=bkEsc(cp.name);
+    const others=A.ms.filter(o=>o!==cp).sort((a,b)=>(b.isMe?1:0)-(a.isMe?1:0));
+    rows=`<div class="cvrows"><p><b>${who} 눈으로 본 ${bkEsc(g.name)}</b> — 궤도도 ${who} 기준으로 바뀌었어요. ${who}${particle(cp.name,'을를')} 북돋는 사람이 안쪽, 다그치는 사람이 바깥이에요.</p>`
+      +others.map(o=>{const gd=relGod(cp,o),d=REL_DESC[gd];
+        return `<p class="gsecp">${who}에게 <b>${o.isMe?'나':bkEsc(o.name)}</b>${o.isMe?'는':particle(o.name,'은는')} <b>${REL_PIECE[gd]}</b> 같은 사람이에요 — ${d.b} <span class="gwhy" style="display:inline">${TEN_GODS[gd]}</span></p>`;}).join('')
+      +`</div>`;}
+  return `<div class="cvbox"><div class="cvh">중심 바꿔 보기<small>${cp?'다시 누르면 나 중심으로':'누구 눈으로 볼까요?'}</small></div><div class="cvchips">${chips}</div>${rows}</div>`;}
 function gReportHtml(A,g){
   const L=luckNow(); if(!L)return '';
   const me=nodes.find(x=>x.isMe);
@@ -5451,6 +5502,10 @@ const virtualMembers=[];
    그보다 먼저 activeGroup을 읽어 **TDZ로 초기화가 통째로 멈췄다** — groups.length가 4에서
    0이 되는 것으로 발견했다(CLAUDE.md "전역 선언 순서" 규칙에 적힌 그 증상 그대로, 다섯 번째다). */
 let activeGroup=null;
+/* [2026-09-20 U27] 중심 바꿔 보기 — {top:최상위 성계, g:연 그룹, node:가운데 세울 사람} | null. **저장하지 않는다**(보기 전용).
+   cvMix: 0(나 중심) ↔ 1(그 사람 중심) 전환 진행도 · cvAnim: 전환 중 크기를 부드럽게 바꾸는 남은 초 · cvCarry: 다시 배치할 때 각도·반경을 이어받을지 */
+let centerView=null,cvMix=0,cvAnim=0,cvCarry=false,cvMeS=0;
+const _prevOrb=new Map();
 /* ═══ 화면 이력 [2026-08-31] ═══
    [문제] 뒤로 버튼이 **계층 상위로 가는 링크**였지 직전 화면으로 가는 것이 아니었다.
    그룹 → 인물A → 인물B로 가면 버튼은 계속 "← 그룹"이라 **인물A로 돌아갈 길이 없다.**
@@ -5906,6 +5961,7 @@ const V2_TUNABLES={
   CLOUD_R: 1.24,                  // [2026-09-19] 장신구 구름 조각의 반지름 — 솟은 땅(1.10)보다 높이 떠서 가장자리에서 테두리 밖으로 삐져나온다
   CLOUD_ORBIT: 0.08,              // 구름 조각이 행성 둘레를 도는 속도(rad/s). 약 80초에 한 바퀴              // 변위 최대치(반지름 비). 초상·은하 공통
   GALAXY_LAVA_EM: 0.9,            // [3차] 은하 행성의 용암 발광층 세기(발광은 별도 층이라 성계 선택 시 밝아지는 연출과 안 섞인다)
+  CV_PIVOT_MUL: 0.8,              // [U27] 중심 바꿔 보기 때 가운데 사람 크기 = 항성의 0.8배(나보다 조금 작게 — 진짜 항성은 나 하나라는 §2.1을 흐리지 않게)
   GALAXY_MAP_PX: 1024,            // [3차] ~~512~~ — 은하에서도 가까이 당기면 행성이 화면 60%까지 커져(핀치 수정 후) 512는 흐렸다             // 은하용 지도 폭(px). 은하에서 행성은 수~수십 px라 1024는 GPU 메모리만 쓴다
   PORTRAIT_BUMP: 0.03,            // 지표 굴곡(구 .015)
   PORTRAIT_REFLECT: 0.7,          // 금속·바다가 비추는 배경(스튜디오·하늘)의 세기. 이 배경은 빛 방향과 무관해서, 높으면 금·수 행성의 그늘 쪽도 밝게 남는다(초승달 시안 실측)           // 금 영역만 금속 광택(은은하게). 1이면 크롬처럼 번쩍여 흰 금속으로 돌아간다
@@ -6472,7 +6528,8 @@ function resize(){
      화면 전체가 뿌옇게 늘어난다. bloomPass는 내부에 5단 밉맵 타깃을 따로 들고 있어
      composer.setSize가 pass.setSize를 호출해 함께 갱신한다. */
   if(composer)composer.setSize(w,h);
-  updateLabelLodDistances();} /* [§7-12] 창 크기가 바뀌면 라벨 임계 거리도 따라가야 한다 */
+  updateLabelLodDistances(); /* [§7-12] 창 크기가 바뀌면 라벨 임계 거리도 따라가야 한다 */
+  try{renderCvBar();}catch(e){}} /* [U27] 패널 개폐로 캔버스가 바뀌어도 「보는 중」 띠가 따라간다 */
 addEventListener('resize',resize);resize();
 /* ═══ 겹침 방지 치수 [★ 2026-08-30] ═══
    예시 배지는 **헤더 아래**, 「펼치기」 알약은 **태그바 위**에 둔다. 둘 다 높이가 상황에 따라
@@ -6729,6 +6786,7 @@ function fitGroup(g){
     const o=(n.orbit&&n.orbit.group===top)?n.orbit
       :(groupInstances.get(n.id+'|'+top.id)||{}).orbit;
     if(o)maxR=Math.max(maxR,o.radius);});
+  {const me=nodes.find(x=>x.isMe);if(me&&me.cvOrbit&&cvPivotFor(top))maxR=Math.max(maxR,me.cvOrbit.radius);}   /* [U27] 궤도를 도는 나도 화면에 */
   cam.targetGoal.set(0,0,0);
   cam.rTarget=Math.max(cam.R_MIN,Math.min(cam.R_MAX,
     distanceForRadius(maxR+V2_TUNABLES.PLANET_SCALE,true)));  /* 가장자리 행성이 반쯤 잘리지 않게 반경만큼 더한다 */
@@ -9195,13 +9253,17 @@ function getOrCreateGroupInstance(ref,group){
    같은 폭이다. ~~memberRungRatio(비율)~~ → 이름을 바꿨다: 반환값의 의미가 바뀌었는데 이름이
    그대로면 호출부가 R_g를 곱한 채로 남아도 **조용히 통과**한다(이 코드베이스에서 반복된 사고다). */
 /* [U6 2026-09-19] 그 사람 행성의 반경(월드). 나는 항성이라 STAR_SCALE. 나(isMe)가 없으면 기본값. */
+/* [U27] 이 성계의 지금 중심 사람 — 중심 바꿔 보기 중이면 그 사람, 아니면 null(= 나) */
+function cvPivotFor(top){return centerView&&top&&centerView.top===top?centerView.node:null;}
+function cvPivot(){return activeGroup?cvPivotFor(topSystemOf(activeGroup)):null;}
 function planetRank(n){
-  const me=nodes.find(x=>x.isMe);
-  if(!me||n.isMe)return 'even';
-  const g=tenGod(me.stemIdx,n.stemIdx);  /* 0·1 비겁 · 2·3 식상 · 4·5 재성 · 6·7 관성 · 8·9 인성 */
+  const me=nodes.find(x=>x.isMe),cp=cvPivot(),ref=cp||me;   /* [U27] 크기 위계도 중심 사람 기준 */
+  if(!ref||n===ref||(!cp&&n.isMe))return 'even';
+  const g=tenGod(ref.stemIdx,n.stemIdx);  /* 0·1 비겁 · 2·3 식상 · 4·5 재성 · 6·7 관성 · 8·9 인성 */
   return g<=1?'even':g<=5?'down':'up';}
 function planetScaleOf(n){
-  if(n.isMe)return V2_TUNABLES.STAR_SCALE;
+  {const cp=cvPivot();if(cp&&n===cp)return V2_TUNABLES.STAR_SCALE*V2_TUNABLES.CV_PIVOT_MUL;   /* [U27] 가운데 선 사람은 항성만큼 */
+   if(n.isMe&&!cp)return V2_TUNABLES.STAR_SCALE;}
   let mul=V2_TUNABLES.PLANET_RANK_MUL[planetRank(n)];
   /* [U7] 은하 조망에서는 위계 차이를 절반만 — 행성이 4~9px라 0.8배면 4px대로 떨어져 점처럼 된다(U6 실측).
      성계·포커스 장면에서는 위계 그대로. */
@@ -9260,8 +9322,13 @@ function claimRung(pref,taken){
    제약을 "각 그룹이 orbit을 어디에 쓸지"로 우회한다. usedInstanceKeys는 layoutGroupOrbits가 이번
    패스에서 실제로 쓰인 추가 인스턴스를 추적해, 그룹 탈퇴 등으로 stale해진 것을 정리하는 데 쓴다. */
 function layoutLocalMembers(g,usedInstanceKeys){
-  const me=nodes.find(n=>n.isMe);
+  const realMe=nodes.find(n=>n.isMe);
   const A=g.analysis;
+  /* [U27] 중심 바꿔 보기 — 궤도 기준(me)을 그 사람으로 바꾼다. 아래 사다리 배정은 그대로 "기준 사람과의 관계"로 돈다.
+     진짜 나는 궤도를 도는 쪽이 되지만 n.orbit에는 넣지 않는다(원점 본체 규칙 §2.1 — cvOrbit에 따로). 기준 사람은 반경 0 궤도 = 성계 중심 */
+  let cp=cvPivotFor(g);
+  if(cp&&(!A.ms.includes(cp)||!realMe||!A.ms.includes(realMe))){centerView=null;cp=null;}
+  const me=cp||realMe;
   const ms=A.ms.filter(n=>n!==me);
   /* ═══ [2026-08-27] 1~10칸 사다리 배정 ═══
      (1) 밴드 — 관계 종류로 정한다. 생 1~3 / 비화 4~6 / 극 7~10 (지시받은 경계)
@@ -9311,14 +9378,19 @@ function layoutLocalMembers(g,usedInstanceKeys){
      const need=rawRadius.get(a)+planetScaleOf(a)+planetScaleOf(b)+V2_TUNABLES.MEMBER_MIN_GAP;
      if(rawRadius.get(b)<need)rawRadius.set(b,need);}}
   const M=ms.length;
+  if(cp)ms.push(cp); /* [U27] 기준 사람도 이 성계 안에 놓여야 한다 — 반경 0 */
   ms.forEach((n,j)=>{
     /* [2026-08-27] theta(고정) → theta0(시작각) + omega(각속도). 구 구현은 배치 때 정한 각도를
        그대로 두고 한 번도 안 굴렸다 — 그래서 그룹을 선택하면 화면이 통째로 정지했다.
        **시각은 전역 t를 쓴다** — 성계가 끌려와 멈춰도(F-2의 tOrb 정지) 멤버는 계속 나를 돈다.
        그게 F-2가 요구한 "선택한 그룹의 멤버들이 나를 중심으로 공전한다"이다. */
-    const orbit={center:g.center,radius:rawRadius.get(n), /* [U6] shrink는 위에서 이미 곱했다 */
-      theta0:(j/M)*Math.PI*2,omega:memberOmega(n),group:g,
+    const orbit={center:g.center,radius:n===cp?0:rawRadius.get(n), /* [U6] shrink는 위에서 이미 곱했다 · [U27] 기준 사람은 0 */
+      theta0:(j/Math.max(1,M))*Math.PI*2,omega:memberOmega(n),group:g,
       rung:rungOf.get(n),speedRung:V2_TUNABLES.STEM_SPEED_RUNG[n.stemIdx]};
+    {const pv=_prevOrb.get(n.id+'|'+g.id);   /* [U27] 이어받기 — 각도는 지금 자리 그대로, 반경은 rs에서 새 값으로 풀린다 */
+     if(pv){orbit.theta0=pv.theta0;orbit.rs=pv.rs!==undefined?pv.rs:pv.radius;}
+     else if(cvCarry&&n===realMe)orbit.rs=0;}
+    if(n===realMe){n.cvOrbit=orbit;return;}   /* [U27] 나는 원점 본체 — 궤도는 따로 들고 simulate가 cvMix만큼 옮긴다 */
     if(!n.orbit){n.orbit=orbit;}
     else{
       const inst=getOrCreateGroupInstance(n,g);
@@ -9378,6 +9450,10 @@ function layoutGroupOrbits(){
       if(id===UNCLASSIFIED_GROUP.id)UNCLASSIFIED_GROUP.center=null;}}
   /* 그룹 변동으로 stale해질 수 있는 .orbit을 전부 지우고 최상위 항성계 멤버만 재배정 */
   const me=nodes.find(n=>n.isMe);
+  /* [U27] 다시 배치하기 전 궤도를 적어 둔다 — 중심을 바꿀 때 각도·보이는 반경을 이어받아 행성이 순간이동하지 않게 */
+  _prevOrb.clear();
+  if(cvCarry){nodes.forEach(n=>{if(n.orbit)_prevOrb.set(n.id+'|'+n.orbit.group.id,n.orbit);if(n.cvOrbit)_prevOrb.set(n.id+'|'+n.cvOrbit.group.id,n.cvOrbit);});
+    groupInstances.forEach(i=>{if(i.orbit)_prevOrb.set(i.ref.id+'|'+i.orbit.group.id,i.orbit);});}
   nodes.forEach(n=>{if(n!==me)n.orbit=null;});
   const usedInstanceKeys=new Set(); /* [§7.4] 이번 패스에서 실제로 쓰인 추가 인스턴스만 남긴다 */
   topGroups.forEach(g=>{
@@ -11365,8 +11441,9 @@ function showHome(){
   const ng=document.getElementById('home-newg');
   if(ng)ng.onclick=()=>openGrpSheet();}
 function selectGroup(g){
+  if(centerView&&(!g||topSystemOf(g)!==centerView.top||!effectiveMembers(g).includes(centerView.node)))setCenterView(null,null);   /* [U27] 다른 곳으로 가면 나 중심으로 — 같은 성계의 하위 그룹이라도 가운데 사람이 없으면 푼다(가운데가 비어 보인다) */
   activeVirtual=false; /* [§5.5] 다른 패널로 넘어가므로 가상 성계 패널의 "실시간 반영" 대상에서 빠짐 */
-  activeGroup=g;renderNav();deselect();
+  activeGroup=g;renderNav();deselect();renderCvBar();
   applyStageGoals(); /* [F-2] 끌어당김·표시 목표값 갱신 — simulate가 0.7초에 걸쳐 따라간다 */
   /* [2026-09-17] 은하로 돌아가면 패널 내용을 홈으로 바꿔 둔다 — 다시 열었을 때 옛 그룹 패널이나
      빈 본문이 아니라 홈이 뜨게 */
@@ -11619,6 +11696,7 @@ function showGroup(g){
     <span class="tag">${g.type}</span><span class="tag ${A.dyn==='긴장형'?'warn':''}">${DYN_KO[A.dyn]||A.dyn}</span><span class="tag sun">☀ ${bkEsc(A.sun.name)}</span>
     <h2>${bkEsc(g.name)} — ${total}인 성계</h2>
     <div class="gbar">${barHtml}</div><div class="glegend">${legend}</div>
+    ${cvSectionHtml(A,g)}
     ${gReportHtml(A,g)||(ys=>ys?`<div class="gsecs gyear"><div class="gsec"><div class="gsech">${ys.h}</div>${ys.html}</div></div>`:'')(gSecYear(A.ms))}   <!-- [U17] 보고서 -->
     ${yo(plain(body.map(p=>`<p>${p}</p>`).join('')))}
     ${yo(plain(gSections(A,g.type)))}
@@ -11640,6 +11718,9 @@ function showGroup(g){
   wireHelp(pbody);        /* [2026-08-31] 흐름의 "흐름 읽는 법" */
   wireGSections(pbody);   /* [2026-08-31] 케미 쌍 → 관계 패널 */
   {const gc=document.getElementById('gcard'); if(gc)gc.onclick=()=>openGroupCard(g);}   /* [U26] */
+  pbody.querySelectorAll('[data-cv]').forEach(b=>b.onclick=()=>{   /* [U27] 중심 바꿔 보기 — 켜진 칩을 다시 누르면 나 중심 */
+    const n=b.dataset.cv?nodes.find(x=>x.id===b.dataset.cv):null;
+    setCenterView(g,n&&cvPivotFor(topSystemOf(g))===n?null:n);const top=pbody.scrollTop;showGroup(g);pbody.scrollTop=top;});
   pbody.querySelectorAll('[data-glens]').forEach(b=>b.onclick=()=>{   /* [U19] 그룹 상황 — 다시 누르면 닫힘 */
     gLensPick[g.id]=gLensPick[g.id]===b.dataset.glens?null:b.dataset.glens; const top=pbody.scrollTop; showGroup(g); pbody.scrollTop=top;});
   panel.classList.add('open');
@@ -11769,7 +11850,7 @@ function setMeshVis(mesh,v){
     m.opacity=v*base;}
   mesh.visible=v>0.01;}
 function simulate(){
-  _gClouds.forEach(o=>o.userData.tick(t)); /* [2026-09-19] 은하 장신구 구름 궤도·태풍 회전·번개 */
+  _gClouds.forEach(o=>{o.userData.tick(t);o.visible=cvMix<.5;}); /* [2026-09-19] 은하 장신구 구름 궤도·태풍 회전·번개 · [U27] 구름은 나와의 관계라 중심 바꿔 보기 중엔 숨김 */
   updateLabelDown(); /* [2026-08-24] 이번 프레임의 "화면 아래" 월드 방향 — 모든 라벨이 공유 */
   /* [F-2] 프레임 시간차. t를 밖에서 임의로 바꾸는 측정 스크립트가 있으므로 상수 0.016을
      쓰지 않고 실제 증가분을 쓰되, 음수·과대값은 잘라낸다(탭 복귀 시 한 번에 튀는 것 방지). */
@@ -11792,7 +11873,10 @@ function simulate(){
   virtualMembers.forEach(c=>{placeLabel(c.label,c.mesh.position,V2_TUNABLES.PLANET_SCALE);
     labelLOD(c.label,c.mesh.position);});
   /* Zone A: 나만 원점 고정(§2.2 개정 이후 유일한 Zone A 거주자) */
-  nodes.forEach(n=>{if(n.home)n.mesh.position.lerp(n.home,.05);});
+  /* [U27] 중심 바꿔 보기 진행도 — 0.6초에 걸쳐. 끝까지 돌아오면 나의 임시 궤도를 지운다 */
+  {const cg=cvPivot()?1:0;cvMix=Math.max(0,Math.min(1,cvMix+(cg?1:-1)*dt/.6));cvAnim=Math.max(0,cvAnim-dt);
+   if(!cg&&cvMix===0){const m0=nodes.find(x=>x.isMe);if(m0&&m0.cvOrbit)m0.cvOrbit=null;}}
+  nodes.forEach(n=>{if(n.home&&!(n.isMe&&n.cvOrbit))n.mesh.position.lerp(n.home,.05);});
   /* Zone B: 최상위 그룹 + 미분류 항성계 — 궤도 중심이 §3.2 orbitPoint를 따라 상시 공전(§3.3),
      통과 시 밝기 변화(§3.5). [F-1] "스케일 변화"는 분신(구)의 것이라 함께 사라졌다 */
   const me=nodes.find(n=>n.isMe);
@@ -11889,8 +11973,9 @@ function simulate(){
      지운 은닉 분기의 "on" 값과 동일 — k=0일 때 지금과 정확히 같은 밝기, k가 오를 때만 위로 올라간다. */
   nodes.forEach(n=>{
     if(n.orbit){
+      cvEase(n.orbit,dt);
       n.mesh.position.copy(localOrbitPoint(n.orbit.group,n.orbit.center.mesh.position,
-        n.orbit.radius,n.orbit.theta0+t*n.orbit.omega)); /* [2026-08-27] 전역 t — 성계가 멈춰도 멤버는 돈다 */
+        n.orbit.rs,n.orbit.theta0+t*n.orbit.omega)); /* [2026-08-27] 전역 t — 성계가 멈춰도 멤버는 돈다 */
       const k=n.orbit.group.k||0;
       /* [F-5-3] 바닥값이 일간별로 다르다 — 발광 계열(丙 .85 / 丁 .60)은 처음부터 높고
          무광 계열(戊·己 .03)은 거의 0이다. k가 오르면 §3.5대로 셋 다 1.0으로 수렴한다. */
@@ -11899,26 +11984,27 @@ function simulate(){
       const v=fadeTo(n,'stageP',stageTarget(n.orbit.group,n),dt); /* [F-2] */
       setMeshVis(n.mesh,v);
       n.rings.forEach(r=>{r.material.opacity=(V2_TUNABLES.RING_OPACITY_BASE+
-        (V2_TUNABLES.RING_OPACITY_PEAK-V2_TUNABLES.RING_OPACITY_BASE)*k)*v;
-        r.visible=v>0.01;});
+        (V2_TUNABLES.RING_OPACITY_PEAK-V2_TUNABLES.RING_OPACITY_BASE)*k)*v*(1-cvMix);   /* [U27] 고리는 나 기준 — 중심 바꿔 보기 중엔 걷는다 */
+        r.visible=v*(1-cvMix)>0.01;});
       n.stageVis=v;
     }});
   /* [§7.4] 형제 그룹 다중소속의 추가 인스턴스 — 위 nodes.forEach와 같은 공식(localOrbitPoint,
      k 기반 밝기)을 쓰되 대상이 n.mesh가 아니라 각 인스턴스 자신의 mesh라는 점만 다르다. */
   groupInstances.forEach(inst=>{
     if(!inst.orbit)return; // 다음 layoutGroupOrbits에서 정리될 stale 인스턴스 — 방어적으로 스킵
+    cvEase(inst.orbit,dt);
     inst.mesh.position.copy(localOrbitPoint(inst.orbit.group,inst.orbit.center.mesh.position,
-      inst.orbit.radius,inst.orbit.theta0+t*inst.orbit.omega));
+      inst.orbit.rs,inst.orbit.theta0+t*inst.orbit.omega));
     const k=inst.orbit.group.k||0;
     const ieb=inst.mesh.userData.gEm!==undefined?inst.mesh.userData.gEm:stemEmissive(inst.ref.stemIdx); /* [F-5-3] · [2026-09-19] 지도 행성은 공통 바닥값 */
     inst.mesh.material.emissiveIntensity=ieb+(V2_TUNABLES.MEMBER_EMISSIVE_PEAK-ieb)*k;
     const iv=fadeTo(inst,'stageP',stageTarget(inst.orbit.group,inst.ref),dt); /* [F-2] */
     setMeshVis(inst.mesh,iv);
     inst.rings.forEach(r=>{r.material.opacity=(V2_TUNABLES.RING_OPACITY_BASE+
-      (V2_TUNABLES.RING_OPACITY_PEAK-V2_TUNABLES.RING_OPACITY_BASE)*k)*iv;
-      r.visible=iv>0.01;});
+      (V2_TUNABLES.RING_OPACITY_PEAK-V2_TUNABLES.RING_OPACITY_BASE)*k)*iv*(1-cvMix);   /* [U27] */
+      r.visible=iv*(1-cvMix)>0.01;});
     {const bd=planetBodyOf(inst.ref);inst.mesh.rotation.order='XZY';inst.mesh.rotation.z=bd.tilt;inst.mesh.rotation.x=bd.lean;inst.mesh.rotation.y=spinPhase(inst.ref)+t*bd.rate;} // [U6-2] ref와 같은 속도·기울기 — 같은 사람이라는 인상 강화
-    {const sc=planetScaleOf(inst.ref)*(inst.mesh===selectedMesh?1.18:1);inst.mesh.scale.setScalar(sc);} /* [U6] 위계 크기 */
+    {const sc=planetScaleOf(inst.ref)*(inst.mesh===selectedMesh?1.18:1);cvScale(inst.mesh,sc,dt);} /* [U6] 위계 크기 · [U27] 전환 중엔 부드럽게 */
     placeNodeLabel(inst.label,inst.mesh.position,planetScaleOf(inst.ref),iv);
     inst.link.visible=iv>0.01&&(inst.ref.stageVis===undefined||inst.ref.stageVis>0.01);
     /* [§7.4 6단계] 동일인 점선 — 주 인스턴스(ref.mesh)와 이 추가 인스턴스를 매 프레임 다시 잇는다.
@@ -11927,9 +12013,15 @@ function simulate(){
     inst.link.computeLineDistances();});
   nodes.forEach(n=>{
     {const bd=planetBodyOf(n);n.mesh.rotation.order='XZY';n.mesh.rotation.z=bd.tilt;n.mesh.rotation.x=bd.lean;n.mesh.rotation.y=spinPhase(n)+t*bd.rate;} /* [U6-2] 시간 기준 · 사람마다 속도(신강약)·기울기(계절·띠) — XZY라 자전(Y)이 가장 안쪽: 축이 흔들리지 않고 기운 채로 돈다 */
-    if(!n.isMe)n.mesh.scale.setScalar(planetScaleOf(n)*(n.mesh===selectedMesh?1.18:1)); /* [U6] 위계 크기(선택 시 1.18배는 유지) */
+    if(!n.isMe)cvScale(n.mesh,planetScaleOf(n)*(n.mesh===selectedMesh?1.18:1),dt); /* [U6] 위계 크기(선택 시 1.18배는 유지) · [U27] 전환 중엔 부드럽게 */
     if(n.isMe){ /* §2.1: 본체 항성 — STAR_SCALE, 글로우, 맥동은 유지하되 발광은 [버그 1 수정] 항상 최대 고정 */
-      const p=V2_TUNABLES.STAR_SCALE+Math.sin(t*1.8)*.04*(V2_TUNABLES.STAR_SCALE/1.6);n.mesh.scale.set(p,p,p);
+      let p=V2_TUNABLES.STAR_SCALE+Math.sin(t*1.8)*.04*(V2_TUNABLES.STAR_SCALE/1.6);
+      if(cvPivot())cvMeS=planetScaleOf(n);   /* [U27] 중심 바꿔 보기 중 나는 기준 사람과의 위계 크기로 — 돌아올 때는 마지막 크기에서 풀린다 */
+      if(cvMix>0&&cvMeS)p=p*(1-cvMix)+cvMeS*cvMix;
+      n.mesh.scale.set(p,p,p);
+      if(n.cvOrbit&&cvMix>0){const o=n.cvOrbit;cvEase(o,dt);   /* [U27] 원점(home)과 임시 궤도 사이를 cvMix만큼 */
+        const q=localOrbitPoint(o.group,o.center.mesh.position,o.rs,o.theta0+t*o.omega);
+        n.mesh.position.copy(n.home||new THREE.Vector3()).lerp(q,cvMix);}
       const gs=V2_TUNABLES.STAR_GLOW_PEAK+Math.sin(t*1.8)*.5*(V2_TUNABLES.STAR_GLOW_PEAK/7);n.glow.scale.set(gs,gs,1);
       n.mesh.material.emissiveIntensity=n.mesh.userData.gEm!==undefined?n.mesh.userData.gEm:V2_TUNABLES.STAR_EMISSIVE;} /* [2026-09-19] 지도 입은 항성은 GALAXY_STAR_MAP_EM */ // "꽉 찬 발광" — 펄스 없이 항상 1.0
     /* [버그 2 수정] 지시선 폐기, 라벨을 노드 바로 아래로: 라벨은 scene 직속(mesh 자식이면
@@ -12878,6 +12970,21 @@ async function sajuSelfTest(){
       !!cg&&cg.width===1080&&cg.height>1000&&ci.width===1080&&ci.height===1350&&cardWrap.length===4,
       (cg?cg.width+'x'+cg.height:'그룹 없음')+' · '+ci.width+'x'+ci.height);
   }catch(e){T('shareCards: 그룹 카드·일주 카드',false,'예외 '+e.message);}
+  /* [2026-09-20 U27] 중심 바꿔 보기 — 기준 사람 반경 0·항성 0.8배 · 나는 임시 궤도 · 글 "○○에게" · 풀면 원래대로 · 저장 안 됨 */
+  try{const g0=groups.find(g=>{const A=g.analysis||analyzeGroup(g);return A.ms.length>=3&&A.ms.some(x=>x.isMe)&&!g.parentId;});
+    if(g0){const prevG=activeGroup,A0=g0.analysis||analyzeGroup(g0),X=A0.ms.find(x=>!x.isMe),sv0=JSON.stringify(serializeState().people);
+      selectGroup(g0);setCenterView(g0,X);
+      const top=topSystemOf(g0),ox=(X.orbit&&X.orbit.group===top)?X.orbit:(groupInstances.get(X.id+'|'+top.id)||{}).orbit;
+      const d=document.createElement('div');d.innerHTML=cvSectionHtml(A0,g0);
+      const on=!!ox&&ox.radius===0&&!!me.cvOrbit&&me.cvOrbit.radius>0&&planetScaleOf(X)===V2_TUNABLES.STAR_SCALE*V2_TUNABLES.CV_PIVOT_MUL
+        &&d.querySelectorAll('.cvrows .gsecp').length===A0.ms.length-1&&/에게 <b>나<\/b>는/.test(d.innerHTML)&&!document.getElementById('cvbar').hidden;
+      setCenterView(g0,null);
+      const ox2=(X.orbit&&X.orbit.group===top)?X.orbit:(groupInstances.get(X.id+'|'+top.id)||{}).orbit;
+      const off=!centerView&&ox2&&ox2.radius>0&&planetScaleOf(me)===V2_TUNABLES.STAR_SCALE&&JSON.stringify(serializeState().people)===sv0;
+      selectGroup(null);if(prevG)selectGroup(prevG);
+      T('centerView: 기준 사람 반경 0·0.8배 · 나 임시 궤도 · 글 '+(A0.ms.length-1)+'줄 · 풀면 원래대로 · 저장 불변',on&&off,(on?'켜기 통과':'켜기 실패')+' · '+(off?'끄기 통과':'끄기 실패'));}
+    else T('centerView: 3인 이상 그룹 없음 — 건너뜀',true,'');
+  }catch(e){T('centerView',false,'예외 '+e.message);}
   /* [2026-09-20 U30] 호칭 칸 — v7→v8 title:null · 이름표 아랫줄에 호칭 · 가족 호칭 판정 · 저장에 title */
   { const m=MIGRATIONS['7']({v:7,people:[{key:'t1',name:'갑',isMe:true}]});
     const sub1=nodeSub({title:'엄마',stemIdx:0,el:'mok'}),sub0=nodeSub({title:null,stemIdx:0,el:'mok'});
