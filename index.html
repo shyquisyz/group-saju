@@ -4716,6 +4716,10 @@ const V2_TUNABLES={
   PORTRAIT_LAVA_EM: 0.9,          // [3차] 용암(밝은 주황·노랑)만 스스로 빛나는 세기 — 밤 쪽에서도 살아 있게. 시안 1차 1.3은 가운데 웅덩이가 하얗게 탔다
   PORTRAIT_NORMAL: 1.4,           // [3차] 노멀맵 세기(구 bump .03 대신). 지도 밝기 = 높이, 바다는 낮게
   PORTRAIT_ENV: 0.5,              // [3차] 흙·숲 같은 무광 지형이 받는 주변 반사. 1이면 밤 쪽이 우주 배경빛으로 다시 밝아졌다
+  /* [2026-09-19 4차] 테두리를 지형대로 울퉁불퉁하게 — 사용자 "완전 반듯한 원형인데 테두리를 각지게" → 시안 A(변위) "뚜렷하면서 더 강하게" 확정.
+     노멀맵은 음영만 바꿔 윤곽은 완전한 원으로 남는다. 변위(displacement)는 지도 밝기 = 높이만큼 표면 점을 실제로 밀어낸다.
+     바다 높이 0(해수면), 극지방은 높이를 줄여 뾰족해지지 않게, 3px 번짐으로 계단 없이. 시안: 3.5% 은은 · 7% 뚜렷 → 10% 확정 */
+  PLANET_DISP: 0.10,              // 변위 최대치(반지름 비). 초상·은하 공통
   GALAXY_LAVA_EM: 0.9,            // [3차] 은하 행성의 용암 발광층 세기(발광은 별도 층이라 성계 선택 시 밝아지는 연출과 안 섞인다)
   GALAXY_MAP_PX: 1024,            // [3차] ~~512~~ — 은하에서도 가까이 당기면 행성이 화면 60%까지 커져(핀치 수정 후) 512는 흐렸다             // 은하용 지도 폭(px). 은하에서 행성은 수~수십 px라 1024는 GPU 메모리만 쓴다
   PORTRAIT_BUMP: 0.03,            // 지표 굴곡(구 .015)
@@ -7089,7 +7093,15 @@ function pPrepMapRaw(im,key){
     const ax=(l-r)*SS,ay=(dn-u)*SS,q=Math.hypot(ax,ay,1);
     nd.data[i*4]=(ax/q*.5+.5)*255;nd.data[i*4+1]=(ay/q*.5+.5)*255;nd.data[i*4+2]=(1/q*.5+.5)*255;nd.data[i*4+3]=255;}
   nx2.putImageData(nd,0,0);
-  return {map:c,metal:metal,water:water,lava:lava,normal:nc};}
+  /* [4차] 높이 지도(변위용) — 바다 0, 땅 .25+.9×밝기, 극지방(위도 sin<.35)은 줄인다, 3px 번짐 */
+  const hc=document.createElement('canvas');hc.width=W;hc.height=H;const hx=hc.getContext('2d'),hd=hx.createImageData(W,H);
+  for(let y=0;y<H;y++){const pole=Math.min(1,Math.sin(Math.PI*(y+.5)/H)/.35);
+    for(let xx=0;xx<W;xx++){const i=(y*W+xx)*4,r=d[i],g=d[i+1],b=d[i+2];
+      let v=(b>r+30&&b>=g-10)?0:Math.min(1,.25+.9*((.3*r+.59*g+.11*b)/255));v*=pole;
+      hd.data[i]=hd.data[i+1]=hd.data[i+2]=Math.round(v*255);hd.data[i+3]=255;}}
+  hx.putImageData(hd,0,0);const height=document.createElement('canvas');height.width=W;height.height=H;
+  {const bx=height.getContext('2d');bx.filter='blur(3px)';bx.drawImage(hc,0,0);}
+  return {map:c,metal:metal,water:water,lava:lava,normal:nc,height:height};}
 /* ═══ [2026-09-19] 초상 설명 한 줄 — "나는 수(壬)인데 왜 행성은 토·화·금인가" ═══
    계기(사용자 지적): 일간이 수인데 여덟 글자에서 수가 1글자뿐이면 지도에 수가 안 들어가 주황·회색 행성이 나온다 —
    해설 첫머리("큰물·바다")와 초상이 서로 딴말을 하는 것처럼 보였다.
@@ -7141,14 +7153,15 @@ async function renderPortrait2(info){
   const mp={map:map,normalMap:tex(P.normal),normalScale:new THREE.Vector2(VT.PORTRAIT_NORMAL,VT.PORTRAIT_NORMAL),roughness:.85,metalness:0,color:tint,envMapIntensity:VT.PORTRAIT_ENV};
   if(P.lava)Object.assign(mp,{emissive:new THREE.Color(0xffffff),emissiveMap:tex(P.lava),emissiveIntensity:VT.PORTRAIT_LAVA_EM});
   if(P.metal){const mt=tex(P.metal);Object.assign(mp,{metalnessMap:mt,metalness:VT.GEUM_METALNESS,roughness:.5,envMap:pStudioEnv(),envMapIntensity:VT.PORTRAIT_REFLECT});}
-  const G=new THREE.SphereGeometry(1,160,120),mats=[new THREE.MeshStandardMaterial(mp)];
+  Object.assign(mp,{displacementMap:tex(P.height),displacementScale:VT.PLANET_DISP}); /* [4차] 테두리 변위 — 점이 많아야 매끈하게 솟는다 */
+  const G=new THREE.SphereGeometry(1,256,192),mats=[new THREE.MeshStandardMaterial(mp)];
   const mesh=new THREE.Mesh(G,mats[0]);
   const pass=F.pass&&F.pass.length?F.pass:[[F.pitch,Math.round(F.yaw*180/Math.PI)]];
   const pick=pass[info.seed%pass.length];
   mesh.rotation.set(pick[0],pick[1]*Math.PI/180,.08);ps.add(mesh);
   if(P.water){const wm=new THREE.MeshStandardMaterial({map:map,metalness:.1,roughness:.08,envMap:pSkyEnv(),envMapIntensity:V2_TUNABLES.PORTRAIT_REFLECT,
       alphaMap:tex(P.water),transparent:true,alphaTest:.5,color:tint.clone().multiply(new THREE.Color(.85,.95,1.08))});mats.push(wm); /* [3차] 더 매끈·푸르게 */
-    const w=new THREE.Mesh(G,wm);w.scale.setScalar(1.002);w.rotation.copy(mesh.rotation);ps.add(w);}
+    const w=new THREE.Mesh(new THREE.SphereGeometry(1,160,120),wm);w.scale.setScalar(1.004); /* [4차] 바다는 변위 없는 해수면 */w.rotation.copy(mesh.rotation);ps.add(w);}
   if(info.season){const f=pSeasonFilm(info.season);mats.push(f.material);ps.add(f);}
   const cam=new THREE.PerspectiveCamera(30,1,.1,100);
   cam.position.set(0,.3,1).normalize().multiplyScalar((info.season?1.3:1.12)/Math.tan(15*Math.PI/180));cam.lookAt(0,0,0);
@@ -7169,6 +7182,7 @@ function queuePortrait2(info){
    - 지도는 key마다 한 번만 받아 GALAXY_MAP_PX로 줄여 둔다(여러 사람·다중소속 인스턴스가 같이 쓴다)
    - 늦게 온 응답이 새 생일의 지도를 덮지 않게 gmapId로 확인한다 */
 const _gMapTex=new Map();
+let _gDispGeo=null;function galaxyDispGeo(){return _gDispGeo||(_gDispGeo=new THREE.SphereGeometry(1,128,96));} /* 11명×(본체·용암·바다) ≈ 40만 정점 — 160×120이면 63만이라 폰 부담 */
 function galaxyMapTex(info){
   if(!_gMapTex.has(info.key))_gMapTex.set(info.key,pLoadImg(info.src).then(im=>{
     const P=pPrepMap(im,info.prep),W=V2_TUNABLES.GALAXY_MAP_PX;
@@ -7177,7 +7191,8 @@ function galaxyMapTex(info){
     const map=new THREE.CanvasTexture(shrink(P.map));map.anisotropy=4;
     /* [3차] 요철·용암·바다·금속은 절반 크기로(지도만큼 선명할 필요가 없고 GPU 메모리를 아낀다) */
     return {map,metal:P.metal?new THREE.CanvasTexture(half(P.metal)):null,normal:new THREE.CanvasTexture(half(P.normal)),
-      lava:P.lava?new THREE.CanvasTexture(half(P.lava)):null,water:P.water?new THREE.CanvasTexture(half(P.water)):null};})
+      lava:P.lava?new THREE.CanvasTexture(half(P.lava)):null,water:P.water?new THREE.CanvasTexture(half(P.water)):null,
+    height:new THREE.CanvasTexture(half(P.height))};})
     .catch(e=>{console.warn('[은하 행성 지도] 받지 못했다',info.key,e);_gMapTex.delete(info.key);return null;}));
   return _gMapTex.get(info.key);}
 /** mesh = 은하에 떠 있는 행성(본체·인스턴스·클론), ref = 그 사람, holder = glow/innerTree를 들고 있는 객체(없으면 mesh 자식에서 찾는다) */
@@ -7193,6 +7208,8 @@ function applyGalaxyMap(mesh,ref,holder){
       if(co){mesh.remove(co);if(holder&&holder.glow===co)holder.glow=null;}}
     const m=mesh.material;
     m.map=T.map;m.bumpMap=null;m.normalMap=T.normal;m.normalScale.set(V2_TUNABLES.PORTRAIT_NORMAL,V2_TUNABLES.PORTRAIT_NORMAL); /* [3차] 노멀맵 */
+    /* [4차] 테두리 변위 — 변위는 정점 셰이더에서 재질마다 하므로 촘촘한 구 하나를 모두 같이 쓴다(공용 sphereGeo 96×72는 가까이서 계단이 졌다) */
+    mesh.geometry=galaxyDispGeo();m.displacementMap=T.height;m.displacementScale=V2_TUNABLES.PLANET_DISP;
     m.roughness=T.metal?.55:.85;m.metalness=T.metal?V2_TUNABLES.GEUM_METALNESS:0;m.metalnessMap=T.metal;
     m.color.set(0xffffff);m.envMapIntensity=1;
     m.emissive.set(0xffffff);m.emissiveMap=T.map;
@@ -7205,10 +7222,12 @@ function applyGalaxyMap(mesh,ref,holder){
        본체가 숨으면 자식도 숨고, 반투명 전환 중에는 본체 불투명도를 따라간다(onBeforeRender) */
     (mesh.userData.gLayers||[]).forEach(o=>{mesh.remove(o);o.material.dispose();});mesh.userData.gLayers=[];
     const follow=o=>{o.onBeforeRender=()=>{o.material.opacity=m.opacity;};mesh.add(o);mesh.userData.gLayers.push(o);};
-    if(T.lava){const o=new THREE.Mesh(mesh.geometry,new THREE.MeshBasicMaterial({map:T.lava,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,
-      color:new THREE.Color(1,1,1).multiplyScalar(V2_TUNABLES.GALAXY_LAVA_EM)}));o.scale.setScalar(1.001);follow(o);}
+    /* 용암층도 같은 변위를 따라야 솟은 지형에 붙는다 — MeshBasic은 변위를 못 해서 검은 Standard + 발광으로 */
+    if(T.lava){const o=new THREE.Mesh(mesh.geometry,new THREE.MeshStandardMaterial({color:0x000000,roughness:1,metalness:0,envMapIntensity:0,
+      emissive:new THREE.Color(1,1,1),emissiveMap:T.lava,emissiveIntensity:V2_TUNABLES.GALAXY_LAVA_EM,displacementMap:T.height,displacementScale:V2_TUNABLES.PLANET_DISP,
+      transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));o.scale.setScalar(1.001);follow(o);}
     if(T.water){const o=new THREE.Mesh(mesh.geometry,new THREE.MeshStandardMaterial({map:T.map,metalness:.1,roughness:.08,envMap:pSkyEnv(),envMapIntensity:V2_TUNABLES.PORTRAIT_REFLECT,
-      alphaMap:T.water,transparent:true,alphaTest:.5,depthWrite:false,color:new THREE.Color(.85,.95,1.08)}));o.scale.setScalar(1.0015);follow(o);}
+      alphaMap:T.water,transparent:true,alphaTest:.5,depthWrite:false,color:new THREE.Color(.85,.95,1.08)}));o.scale.setScalar(1.004);follow(o);} /* 해수면 — 변위 없음 */
     });}
 function portraitImg(n,cls){
   const info=planetMapInfo(n);
@@ -7301,7 +7320,7 @@ function limbAurora(tex){const SEG=240;const A0=12*Math.PI/180,A1=168*Math.PI/18
       pos.set([ca*r0,sa*r0,0,ca*r1,sa*r1,0],i*6);}geo.attributes.position.needsUpdate=true;geo.computeBoundingSphere();mat.uniforms.time.value=t;};
   m.userData.update(0);return m;}
 // 윗쪽 윤곽을 따라 행성 표면에 비치는 옅은 초록 기운
-function limbGlow(){return new THREE.Mesh(new THREE.SphereGeometry(1.004,96,64),new THREE.ShaderMaterial({
+function limbGlow(){return new THREE.Mesh(new THREE.SphereGeometry(1.004+V2_TUNABLES.PLANET_DISP,96,64), /* [4차] 솟은 땅 위로 */new THREE.ShaderMaterial({
   vertexShader:'varying vec3 vN;varying vec3 vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',
   fragmentShader:'varying vec3 vN;varying vec3 vV;void main(){float f=pow(1.-abs(dot(vN,vV)),3.);float up=smoothstep(-.1,.7,vN.y);float g=f*up*.55;gl_FragColor=vec4(vec3(.3,1.,.55)*g,g);}',
   transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));}
@@ -7400,23 +7419,24 @@ async function build(n,force){
   const mp={map:map,normalMap:new THREE.CanvasTexture(P.normal),normalScale:new THREE.Vector2(VT.PORTRAIT_NORMAL,VT.PORTRAIT_NORMAL),roughness:.85,metalness:0,color:tint,envMapIntensity:VT.PORTRAIT_ENV};
   if(P.lava){const lt=new THREE.CanvasTexture(P.lava);lt.encoding=THREE.sRGBEncoding;Object.assign(mp,{emissive:new THREE.Color(0xffffff),emissiveMap:lt,emissiveIntensity:VT.PORTRAIT_LAVA_EM});}
   if(P.metal)Object.assign(mp,{metalnessMap:new THREE.CanvasTexture(P.metal),metalness:VT.GEUM_METALNESS,roughness:.5,envMap:pStudioEnv(R),envMapIntensity:VT.PORTRAIT_REFLECT});
+  Object.assign(mp,{displacementMap:new THREE.CanvasTexture(P.height),displacementScale:VT.PLANET_DISP}); /* [4차] 테두리 변위 */
   const mat=new THREE.MeshStandardMaterial(mp);
-  const planet=new THREE.Mesh(new THREE.SphereGeometry(1,160,120),mat);
+  const planet=new THREE.Mesh(new THREE.SphereGeometry(1,200,150),mat);
   const pass=F.pass&&F.pass.length?F.pass:[[F.pitch,Math.round(F.yaw*180/Math.PI)]];
   const pick=pass[info.seed%pass.length];planet.rotation.set(pick[0],pick[1]*Math.PI/180,.08);S.add(planet);
-  if(P.water){const w=new THREE.Mesh(planet.geometry,new THREE.MeshStandardMaterial({map:map,metalness:.1,roughness:.08,envMap:pSkyEnv(R),envMapIntensity:V2_TUNABLES.PORTRAIT_REFLECT,
-      alphaMap:new THREE.CanvasTexture(P.water),transparent:true,alphaTest:.5,color:tint.clone().multiply(new THREE.Color(.85,.95,1.08))}));w.scale.setScalar(1.002);w.rotation.copy(planet.rotation);S.add(w);}
+  if(P.water){const w=new THREE.Mesh(new THREE.SphereGeometry(1,160,120),new THREE.MeshStandardMaterial({map:map,metalness:.1,roughness:.08,envMap:pSkyEnv(R),envMapIntensity:V2_TUNABLES.PORTRAIT_REFLECT,
+      alphaMap:new THREE.CanvasTexture(P.water),transparent:true,alphaTest:.5,color:tint.clone().multiply(new THREE.Color(.85,.95,1.08))}));w.scale.setScalar(1.004); /* [4차] 해수면 */w.rotation.copy(planet.rotation);S.add(w);}
   if(info.season)S.add(pSeasonFilm(info.season));
   const mats=[],bolts=[],upd=[];const N=18,G=new THREE.SphereGeometry(1,96,72);const g=new THREE.Group();S.add(g);
   for(const f of fx){
     if(f==='white'||f==='dark'||f==='storm'){const T=TYPES[f];const tex=await cloudTex(f==='white'?'white':'dark');
-      const sh=new THREE.Mesh(new THREE.SphereGeometry(1.004,96,72),cloudShellMat(tex,.1,0,T,.006,true));g.add(sh);mats.push(sh.material);
-      for(let i=0;i<N;i++){const fr=i/(N-1);const m=new THREE.Mesh(G,cloudShellMat(tex,.03+fr*.92,fr,T,.006,false));m.scale.setScalar(1.03+fr*.11);m.renderOrder=10+i;g.add(m);mats.push(m.material);}
+      const sh=new THREE.Mesh(new THREE.SphereGeometry(1.004+V2_TUNABLES.PLANET_DISP,96,72),cloudShellMat(tex,.1,0,T,.006,true));g.add(sh);mats.push(sh.material); /* [4차] 구름 그림자·구름층을 솟은 만큼 위로 */
+      for(let i=0;i<N;i++){const fr=i/(N-1);const m=new THREE.Mesh(G,cloudShellMat(tex,.03+fr*.92,fr,T,.006,false));m.scale.setScalar(1.03+V2_TUNABLES.PLANET_DISP+fr*.11);m.renderOrder=10+i;g.add(m);mats.push(m.material);}
       if(T.flash)for(const [d,sc] of [[FP1,1],[FP2,.8]]){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:BOLT,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0}));sp.position.copy(d.clone().multiplyScalar(1.08));sp.scale.set(.28*sc,.56*sc,1);sp.renderOrder=40;g.add(sp);bolts.push(sp);}}
     if(f==='typhoon'){if(!hurrT){hurrT=new THREE.Texture(await load(FX+'hurr_a.png'));hurrT.needsUpdate=true;}
       const C=new THREE.Vector3(.35,.32,.88).normalize();
-      const sh=new THREE.Mesh(new THREE.SphereGeometry(1.004,96,72),typhoonShellMat(hurrT,.1,0,C,.35,true));g.add(sh);mats.push(sh.material);
-      for(let i=0;i<N;i++){const fr=i/(N-1);const m=new THREE.Mesh(G,typhoonShellMat(hurrT,.03+fr*.92,fr,C,.35,false));m.scale.setScalar(1.025+fr*.065);m.renderOrder=10+i;g.add(m);mats.push(m.material);}}
+      const sh=new THREE.Mesh(new THREE.SphereGeometry(1.004+V2_TUNABLES.PLANET_DISP,96,72),typhoonShellMat(hurrT,.1,0,C,.35,true));g.add(sh);mats.push(sh.material);
+      for(let i=0;i<N;i++){const fr=i/(N-1);const m=new THREE.Mesh(G,typhoonShellMat(hurrT,.03+fr*.92,fr,C,.35,false));m.scale.setScalar(1.025+V2_TUNABLES.PLANET_DISP+fr*.065);m.renderOrder=10+i;g.add(m);mats.push(m.material);}}
     if(f==='aurora'){if(!aurT){aurT=new THREE.Texture(await load(FX+'aurora_a_band.png'));aurT.needsUpdate=true;aurT.encoding=THREE.sRGBEncoding;aurT.wrapS=THREE.RepeatWrapping;}
       const b=limbAurora(aurT);b.renderOrder=20;S.add(b);S.add(limbGlow());upd.push((t,c)=>{b.userData.update(t);b.quaternion.copy(c.quaternion);});}
     if(f==='ring'){const r=saturnRing();S.add(r);ringShadowOn(mat,r);upd.push(t=>r.userData.upd(t));}
