@@ -4883,7 +4883,7 @@ const V2_TUNABLES={
      패널이 아래 52%를 덮으므로 남는 곳은 위 48%, 그 한가운데가 24%다.
      0.22를 밀면 대상이 정중앙(50%)에서 28%로 올라와 시트 위에 넉넉히 들어온다.
      **카메라가 바라보는 점만 옮긴다 — 궤도·크기 상수는 그대로다.** */
-  MOBILE_FOCUS_BIAS_Y: 0.22,
+  MOBILE_FOCUS_BIAS_Y: 0.22,       // [2026-09-19] 안 쓴다 — 패널 보정은 applyViewInset(투영 중심 이동)으로 옮김
   CENTER_LABEL_TARGET_PX: 15,     // = --fs-sm(최소 토큰). [2026-08-30] 11 → 15, 접근성 개편.
                                   // [F-1] 구 AVATAR_LABEL_TARGET_PX — 이름표를 반지가 이어받았다
   NODE_LABEL_TARGET_PX: 18,       // = --fs-base
@@ -5286,6 +5286,7 @@ function resize(){
   applyCanvasBox();
   const w=canvas.clientWidth,h=canvas.clientHeight;
   renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+  try{applyViewInset(true);}catch(e){} /* [2026-09-19] 크기가 바뀌면 투영 중심 이동도 새 크기로. 첫 resize()는 cam(const) 선언 전이라 TDZ — typeof로도 못 피해 try로 넘긴다 */
   /* 컴포저의 렌더 타깃도 같이 키운다 — 안 하면 창을 키웠을 때 블룸만 저해상도로 남아
      화면 전체가 뿌옇게 늘어난다. bloomPass는 내부에 5단 밉맵 타깃을 따로 들고 있어
      composer.setSize가 pass.setSize를 호출해 함께 갱신한다. */
@@ -5376,7 +5377,7 @@ addEventListener('orientationchange',()=>{viewportResync('orient');setTimeout(()
    불안정해진다. phi>π/2(고도 0° 아래)는 은하를 아래에서 올려다보게 되는데, 라벨이 노드
    기준 -Y로 고정 오프셋(§5.4)이라 라벨이 천체를 가린다. 양끝 모두 기하가 아니라 부수 규칙이
    깨지는 지점이라, 그 앞에서 멈추는 넓은 클램프가 맞다고 판단(실측 근거는 §6 표). */
-const cam={theta:.6,phi:.58,r:170,rTarget:170,target:new THREE.Vector3(),targetGoal:new THREE.Vector3(),
+const cam={inset:0,theta:.6,phi:.58,r:170,rTarget:170,target:new THREE.Vector3(),targetGoal:new THREE.Vector3(),
   /* [F-3, 2026-08-27] R_MIN 8 → 40, R_MAX 200 → 1100 (둘 다 거리 5배 + 가상 성계 여유).
      근거는 위 camera 선언 옆 "딸려 오는 값 한 묶음" 주석에 모아 뒀다.
      R_MIN을 5배로 올리는 이유: 내용물이 5배가 됐으므로 "가장 가까이 갈 수 있는 거리"도 같은 비로
@@ -5402,23 +5403,40 @@ scene.fog.far=camera.far-5;
    폴링인 이유: panel.classList.add('open') 호출부가 10곳이 넘어(showNode/showGroup/showEdge/
    showRelationView/시트들/#panelopen…) 각각에 훅을 다는 것보다, v0.7이 쓰던 "camTick에서 매 프레임
    확인하되 값이 바뀔 때만 실제 작업" 구조를 그대로 물려받는 게 안전하다. */
-/** 모바일에서 인물 패널이 열려 있을 때만 세로 보정. 그 외에는 0(=지금까지와 동일) */
-function mobileFocusBias(){
-  if(innerWidth>=768)return 0;                       /* 데스크톱은 캔버스가 이미 좁혀진다 */
+/* ═══ [2026-09-19] 패널이 덮은 만큼 화면 중심을 위로 — 행성·그룹·은하 모두 ═══
+   사용자: "그룹을 누르든 행성을 눌러도 패널이 생기면 패널 없는 우주 영역의 가운데에 선택한 것이 있어야 함".
+   ~~mobileFocusBias — 행성을 누른 때만 바라보는 점을 패널높이/2만큼 내림~~ → 그룹을 누르면 보정이 없어
+   성계 중심이 패널 윗변 아래에 섰다(실측 375×812: 성계 중심 y 406, 패널 윗변 390, 오른쪽 끝 414 > 화면 375).
+   이제 **투영 자체의 중심**을 보이는 영역(0 ~ 패널 윗변)의 가운데로 옮긴다(camera.setViewOffset).
+   바라보는 점은 그대로라 행성 따라가기·자전축 맞춤·팬과 싸우지 않고, 클릭 판정(raycaster)과 이름표(project)도
+   같은 투영행렬을 쓰므로 저절로 맞는다. 픽셀 축척은 그대로(화면 전체 기준) — 이름표 크기 계산을 건드리지 않는다.
+   맞춤 거리는 distanceForRadius가 보이는 높이로 따로 계산한다. 데스크톱·가로(≥768)는 캔버스 자체가 좁혀지므로 0. */
+/** 모바일에서 패널이 캔버스를 아래에서 덮는 높이(px). 닫혔거나 넓은 화면이면 0 */
+function panelCoverPx(){
+  if(innerWidth>=768)return 0;
   if(!panelEl)panelEl=document.getElementById('panel');
   if(!panelEl||!panelEl.classList.contains('open'))return 0;
-  if(!focusedMesh)return 0;
-  /* [2026-09-19] ~~고정 MOBILE_FOCUS_BIAS_Y(0.22)~~ → **실제 패널 높이의 절반.** 사용자: "패널이 화면 절반이면 남은 반의 가운데에
-     행성이 보여야 하는데 여전히 가운데 반만 보인다". 보이는 영역(0~패널 윗변)의 가운데는 화면 가운데보다 패널높이/2만큼 위다.
-     크게 펼친(tall) 패널이면 그만큼 더 올린다. 실측값(syncPanelH의 --panel-h)이 없을 때만 옛 고정값 */
-  const h=panelHLast>0?panelHLast:0;
-  return h>0?Math.min(.45,h/(2*(innerHeight||1))):V2_TUNABLES.MOBILE_FOCUS_BIAS_Y;}
+  const H=canvas.clientHeight||innerHeight;
+  return Math.max(0,Math.min(H*.8,Math.round(panelEl.getBoundingClientRect().height)));}
+/** 투영 중심을 inset/2만큼 위로. force = 캔버스 크기가 바뀌어 다시 걸어야 할 때(resize) */
+function applyViewInset(force){
+  const k=Math.round(cam.inset*2)/2;
+  if(!force&&k===cam._insetApplied)return;
+  cam._insetApplied=k;
+  const W=canvas.clientWidth||innerWidth,H=canvas.clientHeight||innerHeight;
+  if(k<.5)camera.clearViewOffset();
+  else camera.setViewOffset(W,H,0,k/2,W,H);
+  camera.updateProjectionMatrix();}
 const _followD=new THREE.Vector3();
 function camTick(){
   syncPanelBodyClass();
   syncPanelH();
   syncPanelHead();
   if(panelInsetNow()!==panelInset)resize();
+  /* [2026-09-19] 패널이 올라오는 동안 부드럽게 따라간다(한 번에 뛰면 화면이 튄다) */
+  const insGoal=panelCoverPx();
+  cam.inset+=(insGoal-cam.inset)*.15;if(Math.abs(insGoal-cam.inset)<.5)cam.inset=insGoal;
+  applyViewInset();
   /* [버그 5 안전망] 포커스 대상이 이번 장면에 없으면 즉시 포기하고 원래 프레이밍으로 되돌린다.
      **현재 visible이 아니라 "무대 목표값"으로 판정하는 게 핵심** — 장면 전환 0.7초 동안은
      아직 안 보이는 게 정상이라, visible로 재면 방금 바꿔 들어간 포커스를 스스로 취소해 버린다. */
@@ -5427,22 +5445,8 @@ function camTick(){
     if(activeGroup)fitGroup(activeGroup);else fitGalaxy();}
   if(focusedMesh){
     cam.targetGoal.copy(focusedMesh.position); /* 스냅샷이 아니라 매 프레임 재추적 */
-    /* ═══ [★ 2026-08-31 실기기 결함] 선택한 행성이 바텀시트에 가려졌다 ═══
-       [증상] 모바일에서 행성을 탭하면 카메라가 그 행성을 **화면 정중앙**에 놓는데,
-       인물 패널이 아래 52%를 덮어 그 행성이 시트 뒤로 들어간다.
-       [왜 데스크톱은 멀쩡한가] 데스크톱은 applyCanvasBox()가 **캔버스 자체를 패널 폭만큼
-       좁힌다** — 캔버스 중앙이 곧 보이는 중앙이라 가려질 일이 없다(실측 확인).
-       모바일 패널은 캔버스 위에 겹치는 오버레이라 그 보정이 없다. 그래서 모바일 분기만 손댄다.
-       [방법] 바라보는 점을 화면 위쪽 기준으로 내린다 → 대상이 위로 올라온다.
-       3D 궤도 역학 상수는 건드리지 않는다. 카메라가 무엇을 바라보는지만 바꾼다. */
-    const bias=mobileFocusBias();
-    if(bias>0){
-      /* [2026-09-19] ~~세계 위(0,1,0)에서 만든 up~~ → **지금 카메라의 화면 위쪽**(직전 프레임 행렬). 행성을 누르면 화면이
-         그 행성의 자전축에 맞춰 기운다(U6-3) — 세계 위로 밀면 보정이 비스듬히 들어가 행성이 패널 쪽에 남았다(실측 y 339, 패널 윗변 390) */
-      const up=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,1).normalize();
-      /* 보이는 세로 세계 길이 = 2·r·tan(fov/2). 그 비율만큼 아래로 민다 */
-      const world=2*cam.r*Math.tan(camera.fov*Math.PI/360);
-      cam.targetGoal.addScaledVector(up,-bias*world);}}
+    /* [★ 2026-08-31 실기기 결함 — 행성이 바텀시트에 가려짐] ~~바라보는 점을 패널높이/2만큼 내리는 보정~~
+       → [2026-09-19] 위 applyViewInset(투영 중심 이동)으로 옮겼다. 그룹·은하에도 같이 듣는다. */}
   if(cam.angGoal){ /* [U6] 성계 궤도면을 향해 부드럽게 돈다 — theta는 짧은 쪽으로 */
     let d=cam.angGoal.theta-cam.theta;d=Math.atan2(Math.sin(d),Math.cos(d));
     cam.theta+=d*.08;cam.phi+=(cam.angGoal.phi-cam.phi)*.08;
@@ -5481,9 +5485,17 @@ function camTick(){
    수직 화면의 65%를 채우도록 카메라 거리를 FOV로부터 직접 유도한다. 경험적 상수(구 `*2.2+12`,
    `*2.6+9`)를 걷어냄. */
 const FIT_FILL_RATIO=0.65;
-function distanceForRadius(radius){
+function distanceForRadius(radius,fitVisible){
   const halfFovRad=camera.fov*Math.PI/360;
-  return radius/(FIT_FILL_RATIO*Math.tan(halfFovRad));}
+  /* [2026-09-19] ~~세로 화각만~~ → **보이는 영역의 세로·가로 중 좁은 쪽.** 세로 폰(375×812)에서 가로 화각이
+     세로의 46%라 성계 오른쪽 끝이 화면 밖(414 > 375)으로 나갔고, 패널이 아래를 덮으면 보이는 높이도 줄어든다.
+     투영 축척은 화면 전체 기준 그대로이므로(applyViewInset) 보이는 비율만큼 tan을 줄여 쓴다.
+     **성계(fitGroup)만 이렇게 맞춘다(fitVisible).** 행성 하나를 누를 때(focusNode)는 옛 크기 그대로 —
+     같이 맞추면 폰에서 확대 행성이 지름 약 100px → 46px로 작아졌다(실측). */
+  if(!fitVisible)return radius/(FIT_FILL_RATIO*Math.tan(halfFovRad));
+  const W=canvas.clientWidth||innerWidth,H=canvas.clientHeight||innerHeight;
+  const tv=Math.tan(halfFovRad)*Math.max(.2,(H-panelCoverPx())/H), th=Math.tan(halfFovRad)*W/H;
+  return radius/(FIT_FILL_RATIO*Math.min(tv,th));}
 /* [2026-08-27] ~~fitAll~~ 폐기 — 위 fitGalaxy가 대체한다. 여기 있던 최원점(maxD) 계산은
    **R_MAX(축소 한계)의 근거**로만 의미가 남아 아래 함수에 보존한다. 프레이밍에는 안 쓰인다.
    [C-1, 2026-08-26 기록] 비어 있는 가상 슬롯은 이 계산에서 뺀다 — 실측으로 빈 스텁(거리 50.4)이
@@ -5538,7 +5550,7 @@ function fitGroup(g){
     if(o)maxR=Math.max(maxR,o.radius);});
   cam.targetGoal.set(0,0,0);
   cam.rTarget=Math.max(cam.R_MIN,Math.min(cam.R_MAX,
-    distanceForRadius(maxR+V2_TUNABLES.PLANET_SCALE)));  /* 가장자리 행성이 반쯤 잘리지 않게 반경만큼 더한다 */
+    distanceForRadius(maxR+V2_TUNABLES.PLANET_SCALE,true)));  /* 가장자리 행성이 반쯤 잘리지 않게 반경만큼 더한다 */
   faceOrbitPlane(top);}
 /* ═══ [U6 2026-09-19] 성계를 열면 카메라가 그 궤도면을 거의 위에서 본다 ═══
    [왜] 멤버 궤도는 성계 궤도면을 공유하고 그 면은 tilt 0/45/90/135°로 기운다(§3.2). 비스듬히 보면
@@ -12157,7 +12169,7 @@ function closePanel(){
   /* [★ 2026-08-31] ~~닫으면 무조건 fitGroup/fitGalaxy~~ → **보던 자리를 유지한다.**
      그 둘은 focusedNode/focusedMesh를 지우고 목표를 원점(나)으로 되돌린다 — 그래서
      행성을 골라 놓고 패널을 닫으면 카메라가 나에게 돌아가 **결국 그 행성을 못 봤다**(실기기 확인).
-     포커스가 살아 있으면 그대로 두고, 위 mobileFocusBias가 0이 되면서 대상이
+     포커스가 살아 있으면 그대로 두고, 패널 덮개(panelCoverPx)가 0이 되면서 대상이
      화면 한가운데로 부드럽게 내려온다 — 가리던 것이 사라졌으니 가운데가 맞다.
      포커스가 없을 때(그룹 패널 등)는 종전대로 되돌린다. */
   const keepView=!!focusedMesh;
