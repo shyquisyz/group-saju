@@ -3210,6 +3210,72 @@ function sajuOf(b){
 
 /** 기둥 -> "甲子". 시각 모름이면 null이 들어오므로 호출부가 '미상'을 붙인다 */
 function pillarStr(p){return p?STEMS[p[0]]+BRANCHES[p[1]]:null;}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   운의 흐름 — 대운(10년) · 세운(올해) · 월운(이번 달) [L5 계산, 2026-09-19 U11]
+
+   사용자: "대운까지 다 한 건가? 글이 재밌게 읽혀야 하는데 재미가 하나도 없어" → 추천대로(연운부터, 대운도).
+   ~~로드맵 §4 "대운·연운 — 미룸, 확산 후"~~ → **[2026-09-19] 당김.** 지금 글은 평생 안 바뀌는 성격 설명뿐이라
+   "요즘 왜 이렇지"가 없었다(패널 약 400문장 중 올해·지금·요즘 0회, U10 실측).
+   여기는 **계산만** 한다. 문장은 말투가 정해진 뒤 붙인다.
+
+   [세운·월운] 새 규칙이 없다 — **지금 순간을 sajuOf에 넣으면 연주·월주가 곧 올해·이번 달**이다.
+     입춘에 해가 바뀌고 절입에 달이 바뀐다(태어난 사람의 연·월주를 가르는 것과 같은 절기표).
+   [대운] 양남음녀 순행(연간이 양이고 남자 / 음이고 여자 → 월주에서 앞으로), 나머지는 역행.
+     시작 나이 = 태어난 순간부터 (순행) 다음 절입 / (역행) 지난 절입까지의 날수 ÷ 3 (3일 = 1년).
+     대운 기둥 = 월주에서 60갑자로 한 칸씩(순행 +1, 역행 −1), 각 10년.
+     성별이 없으면 방향을 정할 수 없어 **null** — 입력 화면이 이미 "운의 흐름 방향(대운)에 쓰입니다"라고 받아 두었다.
+     시각을 모르면 그날 정오로 잰다(sajuOf와 같은 규칙) — 시작 나이 오차 최대 반나절 = 2개월.
+   [대조] lunar-javascript 1.7.7 EightChar.getYun(성별) — 외부 구현과 방향·기둥·시작 나이를 맞춰 봤다(보고서 U11).
+   ═════════════════════════════════════════════════════════════════════════ */
+/** 60갑자 번호(0=甲子 … 59=癸亥). 천간·지지 음양이 안 맞는 짝이면 -1 */
+function gzIndex(stem,branch){for(let k=0;k<60;k++)if(k%10===stem&&k%12===branch)return k;return -1;}
+function gzOf(k){k=((k%60)+60)%60;return [k%10,k%12];}
+/** 한국 벽시계로 본 그 순간의 연주·월주(= 세운·월운). atMs 없으면 지금 */
+function luckNow(atMs){
+  const ms=Number.isFinite(atMs)?atMs:Date.now();
+  const w=new Date(ms+540*60000);      /* KST 벽시계 — sajuOf가 벽시계를 받는다 */
+  const r=sajuOf({y:w.getUTCFullYear(),m:w.getUTCMonth()+1,d:w.getUTCDate(),hour:w.getUTCHours(),min:w.getUTCMinutes()});
+  if(!r)return null;
+  /* 세운의 해 = 입춘 기준 연도 — 1월~입춘 전이면 달력 연도보다 하나 작다. 연주 60갑자 번호로 가린다 */
+  const Y=w.getUTCFullYear(), yk=gzIndex(r.year[0],r.year[1]);
+  return {year:r.year,month:r.month,luckYear:(((Y-4)%60+60)%60===yk)?Y:Y-1,atMs:ms};}
+/** 그 사람의 대운. 성별·생일이 없으면 null.
+    {forward, startYears(만 나이, 소수), list:[{k, pillar:[s,b], from, to}], ageNow, cur(지금 대운 또는 null — 시작 전)} */
+function daeunOf(x,atMs){
+  const b=x&&x.birth; if(!b||(b.sex!=='남'&&b.sex!=='여'))return null;
+  let r=null;
+  try{r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});}catch(e){return null;}
+  if(!r||r.minToNextJie==null)return null;
+  const yang=r.year[0]%2===0;
+  const forward=(yang&&b.sex==='남')||(!yang&&b.sex==='여');
+  const days=(forward?r.minToNextJie:r.minSinceJie)/1440;
+  const startYears=days/3;
+  const m0=gzIndex(r.month[0],r.month[1]);
+  const list=[];
+  for(let k=1;k<=10;k++)list.push({k,pillar:gzOf(m0+(forward?k:-k)),from:startYears+10*(k-1),to:startYears+10*k});
+  const now=Number.isFinite(atMs)?atMs:Date.now();
+  const ageNow=(now-r.utcMs)/(365.2425*86400000);
+  const cur=list.find(d=>ageNow>=d.from&&ageNow<d.to)||null;
+  return {forward,startYears,list,ageNow,cur};}
+/** 운 기둥 하나(대운·세운·월운)가 그 사람에게 무엇인가 — 문장 없이 재료만.
+    stemGod/branchGod: 일간 기준 십신(지지는 정기로) · groups: 갈래(비겁·식상·재성·관성·인성)
+    hits: 그 사람 네 기둥과의 합·충(기둥별, hapChungOf 우선순위 그대로) · helps: 신강약으로 본 도움/부담 */
+function luckTouch(x,pil){
+  const b=x&&x.birth; if(!b||!pil)return null;
+  let r=null;
+  try{r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule});}catch(e){return null;}
+  if(!r)return null;
+  const ds=r.day[0];
+  const stemGod=tenGod(ds,pil[0]), branchGod=tenGod(ds,mainStem(pil[1]));
+  const hits=[];
+  [['year',r.year],['month',r.month],['day',r.day],['hour',r.hour]].forEach(([pos,pp])=>{
+    if(!pp)return;const hc=hapChungOf(pp[0],pil[0],pp[1],pil[1]);if(hc)hits.push({pos,kind:hc.kind});});
+  /* 억부로 본 도움 — 약하면 비겁·인성이 힘, 세면 식상·재성·관성이 숨통. [권장] 단순화: 조후·격국은 안 본다(로드맵 §4) */
+  const v=gangyak(r), weak=v&&(v.verdict==='극약'||v.verdict==='신약');
+  const helpful=g=>{const grp=TEN_GOD_GROUP[g];return weak?(grp==='비겁'||grp==='인성'):(grp!=='비겁'&&grp!=='인성');};
+  return {stemGod,branchGod,groups:[TEN_GOD_GROUP[stemGod],TEN_GOD_GROUP[branchGod]],hits,
+    verdict:v?v.verdict:'',helps:[helpful(stemGod),helpful(branchGod)]};}
 /** 인물의 일간(천간 index). **앱 전체가 이 값을 쓴다** — 행성 표면·해설·관계선이 전부 여기서 나온다.
     [2026-08-29] `dayStem(y,m,d)`(날짜만 봄) → `sajuOf`(진태양시·야자시 반영)로 바꿨다.
     달라지는 사람은 **자정~새벽 1시에 태어났다고 정확히 입력한 경우뿐**이다(실측: 그 외 전
@@ -11032,6 +11098,15 @@ async function sajuSelfTest(){
     const x=hapChungOf(sa,sb,ba,bb), y=hapChungOf(sb,sa,bb,ba);
     if(JSON.stringify(x)!==JSON.stringify(y)){asym++; if(!sample)sample=[sa,sb,ba,bb];}}
   T('hcSymmetry: A↔B와 B↔A가 같다 (14,400조합)', asym===0, asym?('불일치 '+asym+'건, 예 '+sample):'0건');
+  /* [2026-09-19 U11] 운의 흐름 — 외부 구현(lunar-javascript 1.7.7)과 맞춘 값을 고정한다. 이 셋이 깨지면 절기표·60갑자 셈이 틀어진 것 */
+  {const L=luckNow(Date.UTC(2026,8,19,3)), L2=luckNow(Date.UTC(2026,1,3,3)); /* 입춘(2/4) 전날 — 아직 乙巳년 */
+   T('luckNow: 2026-09-19 = 丙午년 丁酉월 · 입춘 전날은 전년도',
+     pillarStr(L.year)==='丙午'&&pillarStr(L.month)==='丁酉'&&L.luckYear===2026&&pillarStr(L2.year)==='乙巳'&&L2.luckYear===2025,
+     pillarStr(L.year)+pillarStr(L.month)+' '+L.luckYear+' / '+pillarStr(L2.year)+' '+L2.luckYear);
+   const D=daeunOf({birth:{y:1991,m:4,d:18,hour:null,sex:'여'}},Date.UTC(2026,8,19)), D0=daeunOf({birth:{y:1991,m:4,d:18,hour:null,sex:null}});
+   T('daeunOf: 음년 여 = 순행, 첫 대운 癸巳, 시작 약 6세 · 성별 없으면 null',
+     D&&D.forward&&pillarStr(D.list[0].pillar)==='癸巳'&&Math.abs(D.startYears-5.96)<.05&&D0===null,
+     D?(D.forward?'순행':'역행')+' '+D.list.slice(0,3).map(z=>pillarStr(z.pillar)).join('·')+' 시작 '+D.startYears.toFixed(2):'null');}
   /* 7. 우선순위 — 충과 천간합이 동시에 걸리는 합성 입력(갑·기 + 자·오) */
   const both=hapChungOf(0,5,0,6);
   T('hcPriority: 충 > 천간합', both&&both.kind==='chung', both?both.kind+' / '+both.tag:'null');
