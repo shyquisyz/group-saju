@@ -3554,10 +3554,12 @@ function lensHtml(me,o){
       +`<p>${LENS_LINE[cur][g].replace(/이 사람/g,bkEsc(o.name))}</p>${hc?`<p>${HC_LENS[hc]}</p>`:''}${both?`<p>${both}</p>`:''}${lensDeepHtml(me,o,cur)}</div>`;}   /* [U18] 더 깊게 */
   /* [2026-09-19 U20] 여덟 글자 전체로 본 한 줄 — 사용자: 권장대로(R4 ②). 관계 문단은 두 사람 일간 하나(relGod)로 정해져 거칠었다.
      상대의 여덟(여섯) 글자를 내 일간 기준으로 세어 가장 많은 갈래가 일간 관계와 다르면 그 결을 덧붙인다 */
+  return `<div class="lens"><div class="lensq">만약 ${bkEsc(o.name)}${particle(o.name,'이가')} 나의 …라면?</div><div class="lenschips">${chips}</div>${body}</div>`;}
+/** [U22] 여덟 글자 전체로 본 한 줄 — 「서로에게」 블록 뒤에 따로 둔다(버튼 밑에 묻히지 않게) */
+function lensWholeHtml(me,o){
   const sp=relSpread(me,o), dg=TEN_GOD_GROUP[relGod(me,o)];
-  const whole=sp&&sp.max>=2&&sp.tops.length===1&&sp.tops[0]!==dg
-    ?`<p class="nowhint">여덟 글자 전체로 보면 — ${bkEsc(o.name)}의 글자 중엔 나에게 <b>${GROUP_TOWARD[sp.tops[0]]}</b>이 가장 많아요. 겉보기(태어난 날)보다 그 결이 오래 사귈수록 드러나요.</p>`:'';
-  return `<div class="lens"><div class="lensq">만약 ${bkEsc(o.name)}${particle(o.name,'이가')} 나의 …라면?</div><div class="lenschips">${chips}</div>${body}</div>${whole}`;}
+  return sp&&sp.max>=2&&sp.tops.length===1&&sp.tops[0]!==dg
+    ?`<p class="nowhint">여덟 글자 전체로 보면 — ${bkEsc(o.name)}의 글자 중엔 나에게 <b>${GROUP_TOWARD[sp.tops[0]]}</b>이 가장 많아요. 겉보기(태어난 날)보다 그 결이 오래 사귈수록 드러나요.</p>`:'';}
 /* ═══ [2026-09-19 U18] 내 패널 — 평생 흐름 그래프 · 일주 캐릭터 ═══ 사용자: 권장대로(내 패널 → 타인 → 그룹).
    평생 흐름: 대운 10개마다 돈(재성)·일(관성·식상)·사랑(남 재성/여 관성)이 천간·지지에 몇 번 드는지 + 신약·신강이면 도움 반 점 → 0~3.
    일주 캐릭터: 일간 형용사 + 일지 동물("단단한 원숭이") · 키워드 셋(일간 물상 · 가까운 사람 앞 · 기세) — 60일주를 조각으로 조립한다(손으로 60장을 쓰지 않았다). */
@@ -3574,7 +3576,7 @@ function iljuHtml(n,isMe){
   const c=ilju(n); if(!c)return '';
   return `<div class="iljucard" style="--pc:${EL_INFO[c.el].css}"><div class="iljut">${isMe?'나는':bkEsc(n.name)+particle(n.name,'은는')}</div>`
     +`<div class="ijname">${c.name}</div><div class="ijgz">${c.gz}</div>`
-    +`<div class="ijkeys">${c.keys.map(k=>`<span>#${k}</span>`).join('')}</div><p>${c.line}</p></div>`;}
+    +`<div class="ijkeys">${c.keys.map(k=>`<span>#${k}</span>`).join('')}</div></div>`;}   /* [U22] ~~한 줄 문장~~ — 바로 아래 「어떤 사람인가」·「자리마다」와 글자까지 같았다 */
 /** 평생 흐름 — 대운별 {from,to,money,work,love,cur} (성별 없으면 null) */
 function lifeFlow(n){
   const du=daeunOf(n); if(!du)return null;
@@ -3966,7 +3968,7 @@ function gReportHtml(A,g){
   /* 이번 달 */
   const mSharp=R.filter(o=>dayC(o.m)), mGood=R.filter(o=>!dayC(o.m)&&((o.m.helps&&o.m.helps.every(Boolean))||dayH(o.m)));
   const monthL=(mSharp.length?`이번 달 예민한 사람은 <b>${mSharp.map(nm).join('·')}</b> — 말 한마디 조심. `:'')
-    +(mGood.length?`컨디션 좋은 사람은 <b>${mGood.map(nm).join('·')}</b> — 부탁할 일은 이 사람에게.`:'')
+    +(mGood.length?`컨디션 좋은 사람은 <b>${mGood.map(nm).join('·')}</b> — 부탁할 일은 ${mGood.length>1?'이 사람들':'이 사람'}에게.`:'')
     ||'이번 달은 다들 무난한 달이에요.';
   /* 챙김 짝 — 올해 챙겨 줘야 할 사람에게 기운을 대 주는 사람(오행 상생), 없으면 같은 오행 */
   const pairs=[];
@@ -3993,7 +3995,7 @@ function gReportHtml(A,g){
     +`<div class="gsub">우리의 12달</div><p class="gsecp">${mSum}.</p><div class="mgrid">${mg}</div>`
     +gRoleHtml(A.ms,x=>x===me?'나':bkEsc(x.name))   /* [U18] 우리 역할 · 짝 */
     +gSceneHtml(A,g,x=>x===me?'나':bkEsc(x.name))   /* [U19] 만약 우리가 ○○한다면 */
-    +`<div class="gsub">사람별 올해</div><div class="gcards">${cards}</div></div>`;}
+    +`</div>`;}   /* [U22] ~~사람별 올해 카드~~ — 맨 위 「올해 과제」·12달과 같은 내용이었다 */
 /** 그룹 「올해 우리는」 */
 function gSecYear(ms){
   const L=luckNow(); if(!L)return null;
@@ -4005,7 +4007,7 @@ function gSecYear(ms){
   const byW={};rows.forEach(o=>{const w=o.t.groups[0];(byW[w]=byW[w]||[]).push(o);});
   const big=Object.keys(byW).sort((a,b)=>byW[b].length-byW[a].length)[0];
   let t;
-  if(Object.keys(byW).length===rows.length)t='과제가 전부 달라서 "왜 저래?"가 늘어나는 해예요. 서로 뭘 받았는지 알아 두면 덜 부딪혀요.';
+  if(Object.keys(byW).length===rows.length)t=rows.length===2?'둘의 과제가 달라요 — 상대가 뭘 받았는지 알아 두면 "왜 저래?"가 줄어요.':'과제가 전부 달라서 "왜 저래?"가 늘어나는 해예요. 서로 뭘 받았는지 알아 두면 덜 부딪혀요.';
   else if(byW[big].length*2>=rows.length)t=`${KO_CNT(byW[big].length)} 명이 '${NOW_WORD[big]}'${particle(NOW_WORD[big],'을를')} 같이 받았어요 — 한 방향으로 같이 밀기 좋은 해예요.`;
   else t='겹치는 과제도, 다른 과제도 있어요. 같은 과제끼리 짝을 지어 보세요.';
   const shake=rows.filter(o=>o.t.hits.some(h=>h.pos==='day'&&h.kind==='chung')).map(nm);
@@ -5136,7 +5138,7 @@ function personReading(n){
      : mN===3 ? ' 그 마음이 세 겹이라, 뭘 해도 결국 그쪽으로 돌아와요.'
      : mN===2 ? ' 그 마음이 두 겹이라 쉽게 안 흔들려요.'
      :          ' 다만 그 마음이 한 줄기라, 여러 개를 벌이기보다 하나를 깊게 파는 쪽이에요.';
-  out.push({h:'관심이 향하는 곳',t:t2});
+  out.push({h:'관심이 향하는 곳',t:t2,hide:true});   /* [2026-09-19 U22] 화면엔 안 그린다 — 「어울리는 일」 앞머리로 합쳤다(사용자: 겹치면 합쳐 달라). 시각 추정이 번호로 쓰므로 항목은 남긴다 */
 
   /* ── ③ 기운의 세기 — 신강약 ── */
   /* 득령·득지·득세를 일상어로. "월지·일지·천간"은 처음 보는 사람에게 아무 뜻도 없다 */
@@ -5235,7 +5237,7 @@ function personReading(n){
     out.push({h:'자리마다 놓인 기운',t:s.join(' ')}); }
 
   /* ══ 코너 넷 [2026-08-31] ══ 전부 이층식(해설 + 해석 층). 계산은 순수 함수가 한다 */
-  out.push(cornerJob(cnt,gy.verdict,d,mGrp));   /* [2026-09-17 A6-3] 세기 꼬리 · [U16] 일간 → 직업 목록 · [U20] 격(월지 갈래) */
+  { const cj=cornerJob(cnt,gy.verdict,d,mGrp); cj.t=cj.t.replace('<span class="nicktake-t">','<span class="nicktake-t">'+t2+' '); out.push(cj); }   /* [U22] 관심 문장을 앞머리로 */
   out.push(cornerMoney(cnt10,gy.verdict));  /* [2026-09-17 A6-3] 강/약 표 */
   out.push(cornerTie(d));
   out.push(cornerPower(sajuElements(r),d,gy.verdict));
@@ -8239,7 +8241,7 @@ function portraitNoteHtml(n,isMe){
     +`<p>${cnt}${w.noHour?' (태어난 시각을 몰라 '+total+'글자로 셉니다)':''}</p>`
     +(info.season?`<p>${info.season==='winter'?'겨울(12~2월)':'한여름(7~8월)'}에 태어나 행성 가장자리에 ${info.season==='winter'?'푸른':'붉은'} 계절막이 씌워져 있습니다.</p>`:'');
   const label=`왜 이런 모습일까 — ${who}(${EL_KO[w.de]})${w.env.length?' + '+envKo:''}`;
-  return `<div class="phero-note">${sjHelp('pnote',label,body,null,false)}</div>`;}
+  return `<div class="phero-note">${sjHelp('pnote',label,yo(body),null,false)}</div>`;}   /* [U22] 말투 통일 */
 async function renderPortrait2(info){
   const F=(await pFacing())[info.key];if(!F)return '';
   const im=await pLoadImg(info.src);
@@ -11296,7 +11298,7 @@ function gSecEl(A,gtype){   /* [2026-09-17 A6-4] gtype(선택) — 있으면 결
         ?GTYPE_MISS[gtype][missing[0]]+(missing.length>1?` ${nm(missing.slice(1))} 기운도 없습니다.`:'')
         :`${nm(missing)} 기운을 가진 사람이 들어오면 이 그룹의 판이 더 넉넉해집니다.`)
     :`다섯 기운이 고루 있어 어느 쪽으로도 기울지 않는 판입니다.`;
-  return {h:'기운 분포', html:`<p class="gsecp">${txt}</p><div class="gsecgloss">${gloss}</div>`
+  return {h:'기운 분포', gloss, html:`<p class="gsecp">${txt}</p>`   /* [U22] 오행 풀이(gloss)는 공통 설명 — 근거 층으로 뺀다 */
     +`<div class="nicktake"><span class="nicktake-h">${NICK_TAKE_H}</span>`
     +`<span class="nicktake-t">${take}</span></div>`};}
 
@@ -11332,7 +11334,7 @@ function gSecFlow(A){
 
 /** 상성란 전체. 확장은 이 배열에 한 줄 더하는 것으로 끝난다 */
 function gSections(A,gtype){   /* [2026-09-17 A6-4] gtype(선택)은 gSecEl로만 간다 */
-  const secs=[gSecChem(A.ms), gSecEl(A,gtype), gSecFlow(A)].filter(function(x){return !!x;}); /* [U11] 「올해 우리는」은 showGroup이 머리 바로 아래에 따로 둔다 */
+  const secs=[gSecChem(A.ms), gSecEl(A,gtype)].filter(function(x){return !!x;}); /* [U11] 「올해 우리는」은 showGroup이 머리 바로 아래에 따로 둔다 · [U22] 흐름(오행 생극 자리)은 근거 층으로 */
   if(!secs.length)return '';
   return `<div class="gsecs">`+secs.map(x=>
     `<div class="gsec"><div class="gsech">${x.h}</div>${x.html}</div>`).join('')+`</div>`;}
@@ -11468,6 +11470,8 @@ function showGroup(g){
     ${yo(plain(gSections(A,g.type)))}
     <div class="tip"><b>${g.type} · ${DYN_KO[A.dyn]||A.dyn} — 한마디</b>${yo(plain(g3+gtypeCloser(g.type,A.dyn)))}</div>
     <div class="basis">${sjHelp('gbasis','사주로 보면',
+      (fl=>fl?`<div class="basisrow"><div class="basish">기운이 도는 자리(오행 생극)</div>${fl.html}</div>`:'')(gSecFlow(A))
+      +(el=>el&&el.gloss?`<div class="basisrow"><div class="basish">오행 풀이</div><p>${el.gloss}</p></div>`:'')(gSecEl(A,g.type))+
       `<div class="basisrow"><div class="basish">안에서 오가는 기운</div><p>북돋음(생) ${A.saeng} · 다그침(극) ${A.geuk} · 같은 기운(비화) ${A.bi} — ${A.dyn}.`
       +` 중심 ${bkEsc(A.sun.name)}: 북돋음 ${A.saengGive[A.sun.id]||0}회 · 다그침 ${A.geukGive[A.sun.id]||0}회.</p></div>`
       +`<div class="legendrow">
@@ -12730,7 +12734,7 @@ async function sajuSelfTest(){
     const meN=nodes.find(x=>x.isMe), sc=nodes.filter(x=>!x.isMe&&x.birth).flatMap(o=>LENS_KEYS.map(k=>lensScore(meN,o,k)));
     const cells=LENS_KEYS.every(k=>GROUP5.every(g=>!!LENS_LINE[k][g]));
     T('groupReportLens: 보고서(12달·카드) · 렌즈 점수 45~97 · 25문단',
-      !!d.querySelector('.grep')&&d.querySelectorAll('.mrow').length===12&&d.querySelectorAll('.gcard').length>=2&&sc.every(v=>v>=45&&v<=97)&&cells,
+      !!d.querySelector('.grep')&&d.querySelectorAll('.mrow').length===12&&sc.every(v=>v>=45&&v<=97)&&cells,   /* [U22] 사람별 카드 없앰 */
       '12달 '+d.querySelectorAll('.mrow').length+' · 카드 '+d.querySelectorAll('.gcard').length+' · 점수 '+Math.min(...sc)+'~'+Math.max(...sc)); }
   /* [2026-09-19 U16] 신살 — 합성 사주로 규칙 고정: 申子辰 일지 子 + 酉 = 도화, 寅 = 역마, 辰 = 화개 · 甲일 丑 = 천을귀인 */
   { const nm=r=>shinsalOf(r).map(x=>x.name).sort().join(',');
@@ -12865,7 +12869,7 @@ function egoRelLine(node){
    배선도 wireHelp 하나면 된다(새 자바스크립트 없음). */
 function readingHtml(blocks,collapse){
   const set=new Set(collapse||[]);
-  return `<div class="reading">`+blocks.map(x=>{
+  return `<div class="reading">`+blocks.filter(x=>!x.hide).map(x=>{   /* [U22] hide 항목은 안 그린다 */
     const inner=x.raw?x.t:'<p>'+x.t+'</p>';
     if(x.key&&set.has(x.key))
       return `<div class="rdblk rdfold">${sjHelp('rd:'+x.key,x.h,inner,null,false)}</div>`;
@@ -13229,17 +13233,14 @@ function showNode(n,groupContext,targetMesh){
     +sajuTableHtml(n);
   const basisSec=n.birth?`<div class="basis">${sjHelp('basis','사주로 보면',basisBody,null,false)}</div>`:'';
   /* 관계 구역 — 서로에게 무엇인가(펼침) → 카드로 저장 → 접힌 둘. ~~근거·고리(egoRelLine)~~ 는 근거 층으로 */
-  const relSec=isMe
-    ? `<div class="psec">나와 사람들</div>`
-      /* [2026-09-19] ~~"이 은하의 항성입니다 — 아래 관계는 모두 당신을 기준으로 계산됩니다."~~ 바로 아래 relHead
-         "아래는 모두 나 기준입니다 — 누르면 …"와 같은 말이 두 줄 연달아 나왔다(사용자: 같은 게 반복되는 건 피해야 함) */
-      +relHead+`<div class="rel-list">${rels}</div>`
-    : `<div class="psec">나와의 관계</div>${lensHtml(meNode,n)}${yo(plain(PB.reading))}${PB.card}`;   /* [U17] 만약 ○○라면 */
+  /* [U22] ~~나 패널은 관계 목록을 위(요즘 바로 아래)에~~ → 다른 패널처럼 「이런 사람」 뒤로. 요즘·궁금한 것이 생겨 그 자리가 더 값지다 */
+  const relSec=isMe?''
+    : `<div class="psec">나와의 관계</div>${lensHtml(meNode,n)}${yo(plain(PB.reading))}${lensWholeHtml(meNode,n)}${PB.card}`;   /* [U17] 만약 ○○라면 · [U22] 여덟 글자 한 줄은 「서로에게」 뒤 */
   /* 이 사람 자체 — 나 패널은 관계 목록을 위로 올렸으므로 여기서 뺀다. [U11] ~~sajuTableHtml(n)+main~~ → 이야기(main2)만, 표는 근거 층 */
   void main;
   const selfSec=`<div class="psec">${isMe?'나는 이런 사람':josa(n.name,'은는')+' 이런 사람'}</div>`
     +iljuHtml(n,isMe)+main2   /* [U18] 일주 캐릭터 */
-    +(isMe?'':relHead+`<div class="rel-list">${rels}</div>`);
+    +(isMe?`<div class="psec">나와 사람들</div>`:'')+relHead+`<div class="rel-list">${rels}</div>`;
   /* ═══ 뒤로 가기 [★ 2026-08-28] ═══
      그룹을 보다 그 안의 사람을 누르면 인물 카드로 넘어가는데, 그룹 정보로 돌아가려면
      그룹을 다시 눌러야 했다(사용자 지적).
@@ -14441,7 +14442,11 @@ function testsSectionHtml(n){
     +`<p class="tnote">알려 줄수록 「요즘」과 「궁금한 것」이 ${n.isMe?'나':'이 사람'}한테 맞춰져요. 답은 사주 계산을 바꾸지 않아요.</p>`
     +`<div class="testlist">`+TEST_IDS.map(id=>`<div class="testrow"><div class="testt">${T[id]?'✓ ':''}${TEST_DEFS[id].title}</div>`
       +(T[id]?`<div class="testr">${bkEsc(line(id))}</div>`:'')
-      +`<button type="button" class="estnotebtn" data-test="${id}" data-n="${n.id}">${T[id]?'다시 하기':'하기 →'}</button></div>`).join('')+`</div>`;}
+      +`<button type="button" class="estnotebtn" data-test="${id}" data-n="${n.id}">${T[id]?'다시 하기':'하기 →'}</button></div>`).join('')
+    /* [U22] 성향 10문항(스스로 본 모습)도 같은 목록의 한 줄로 — 따로 구역·안내를 두면 "4개 중 1개"가 딴 데 있었다 */
+    +`<div class="testrow"><div class="testt">${n.self?'✓ ':''}스스로 본 모습 <span class="gwhy" style="display:inline">10문항 · 사주와 나란히</span></div>`
+    +`<button type="button" class="estnotebtn" data-selfstart="${n.id}">${n.self?'다시 하기':'하기 →'}</button>${n.self?`<button type="button" class="estnotebtn" data-selfclear="${n.id}">지우기</button>`:''}</div>`
+    +`</div>`;}
 let testFlow=null;
 function testStart(n,id){
   testFlow={node:n,id,i:0,picks:[]};
@@ -14463,15 +14468,10 @@ function renderTestStep(){
   body.querySelectorAll('[data-tp]').forEach(b=>b.onclick=()=>{f.picks.push(b.dataset.tp||null);f.i++;renderTestStep();});}
 /** 인물 패널 「스스로 본 모습」 덩이 — personReading 뒤, 기본 펼침(설계 §1-ⓑ "표시"). */
 function selfSectionHtml(n){
-  if(!n.self)
-    return `<div class="psec">스스로 본 모습</div><div class="selfsec">`
-      +`<p class="tnote">${bkEsc(n.isMe?SELF_COMMON.introMe:SELF_COMMON.introOther)}</p>`
-      +`<button type="button" class="pbtn" data-selfstart="${n.id}">스스로 본 모습 테스트 하기</button></div>`;
+  /* [U22] 손잡이는 「더 알려 주기」 목록에 있다 — 여기는 결과가 있을 때만 그 문단 */
+  if(!n.self)return '';
   const pg=personGroupCounts(n),cmp=pg?selfCompare(n.self.counts,pg.cnt):null;
-  return `<div class="psec">스스로 본 모습</div><div class="selfsec">`
-    +selfBlocksHtml(n.self.counts,n.self.situation,cmp)
-    +`<div class="panelbtns"><button class="pbtn" data-selfstart="${n.id}">다시 하기</button>`
-    +`<button class="pbtn" data-selfclear="${n.id}">지우기</button></div></div>`;}
+  return `<div class="selfsec">${yo(plain(selfBlocksHtml(n.self.counts,n.self.situation,cmp)))}</div>`;}
 
 /* [2026-08-28 제거] ~~updMoreSummary~~ — 접힘(#f-more) 헤더에 시각·도시 값을 요약해 주던
    함수다. **접힘을 없애 칸이 상시 보이므로 요약할 것이 없다.** 값이 화면에 그대로 있는데
