@@ -3643,6 +3643,28 @@ function lifeFlow(n){
   return du.list.slice(0,9).map(d=>{const t=luckTouch(n,d.pillar);const c=k=>t.groups.filter(g=>k.indexOf(g)>=0).length;
     const h=t.helps?t.helps.filter(Boolean).length*.5:0;
     return {from:Math.round(d.from),to:Math.round(d.to),money:c(['재성'])+h,work:c(['관성','식상'])+h,love:c([sg])+h,cur:!!du.cur&&du.cur.k===d.k};});}
+/* ═══ [2026-09-20 U31] 대운이 사주와 합을 이루면 그 10년의 판이 바뀐다 — 지금·다음 10년 두 줄 ═══
+   대운 지지 + 사주 지지로 삼합(셋)·방합(셋)이 새로 완성되거나, 반합(왕지 포함 둘)이 생기면 그 오행이 이 사람에게 어떤 갈래인지와,
+   세기(약하면 비겁·인성이 도움, 세면 나머지가 도움)로 좋고 나쁨을 한 줄로 */
+function daeunCombo(r,pillar){
+  const P=[['year',r.year],['month',r.month],['day',r.day],['hour',r.hour]].filter(x=>x[1]).map(([pos,p])=>({pos,b:p[1]}));
+  const withD=branchCombos(P.concat([{pos:'daeun',b:pillar[1]}])).filter(c=>c.members.some(m=>m.pos==='daeun'));
+  if(!withD.length)return null;
+  const c=withD.sort((a,b)=>b.share-a.share)[0];
+  return {kind:c.kind,el:c.el,others:[...new Set(c.members.filter(m=>m.pos!=='daeun').map(m=>m.b))]};}
+function daeunLines(n,isMe){
+  const du=daeunOf(n);if(!du||!du.cur)return '';
+  const b=n.birth,r=sajuOf({y:b.y,m:b.m,d:b.d,hour:Number.isInteger(b.hour)?b.hour:null,min:b.min,lon:b.lon,dayRule:b.dayRule,est:b.est});if(!r)return '';
+  const gy=gangyak(r),weak=gy.verdict==='신약'||gy.verdict==='극약',me=STEM_EL[r.day[0]];
+  const i=du.list.indexOf(du.cur),rows=[];
+  [[du.cur,'지금 10년'],[du.list[i+1],'다음 10년']].forEach(([d,lab])=>{if(!d)return;
+    const t=luckTouch(n,d.pillar),c=daeunCombo(r,d.pillar);
+    const gw=[...new Set(t.groups)].map(k=>DAEUN_WORD[k]).join('·');   /* 둘이 같으면 한 번만 */
+    let line=`<b>${lab}</b>(${STEMS[d.pillar[0]]}${BRANCHES[d.pillar[1]]}, ${Math.round(d.from)}~${Math.round(d.to)}살) — ${gw} 흐름이에요.`;
+    if(c){const g=elGroupOf(me,c.el),good=weak?(g==='비겁'||g==='인성'):(g!=='비겁'&&g!=='인성');
+      line+=` 게다가 대운의 ${BRANCHES[d.pillar[1]]} 글자가 사주 속 ${c.others.map(x=>BRANCHES[x]).join('·')} 글자와 만나 ${EL_PLAIN[c.el]} 기운 판(${c.kind==='samhap'?'삼합':c.kind==='banghap'?'방합':'반합'})을 이뤄요 — ${EL_PLAIN[c.el]}${particle(EL_PLAIN[c.el],'은는')} ${isMe?'당신':'이 사람'}에게 ${GROUP_POWER[g]}이라, ${good?'모자란 힘을 채워 주는 10년이에요.':'그쪽 일이 커지는 만큼 힘 조절이 필요한 10년이에요.'}`;}
+    rows.push(`<p>${line}</p>`);});
+  return rows.join('');}
 function lifeFlowHtml(n,isMe){
   const F=lifeFlow(n); if(!F)return '';
   const W=320,H=130,px=i=>18+i*(W-30)/(F.length-1),py=v=>H-18-v*(H-36)/3;
@@ -3658,6 +3680,7 @@ function lifeFlowHtml(n,isMe){
   const who=isMe?'내':bkEsc(n.name)+'의';
   return `<div class="lifebox">${svg}<div class="lifelg"><span style="color:#e8c66a">● 돈</span><span style="color:#7fb6ff">● 일</span><span style="color:#ff8fb0">● 사랑</span>${ci>=0?'<span>▯ 지금</span>':''}</div>`
     +`<p>${who} 평생에서 ${bm?`돈이 크게 도는 때는 <b>${bm}</b>`:''}${bw?`, 일이 가장 바쁜 때는 <b>${bw}</b>`:''}${bl?`, 인연이 무르익는 때는 <b>${bl}</b>`:''}이에요.</p>`
+    +daeunLines(n,isMe)   /* [U31] 지금·다음 10년 + 대운 합 */
     +`<p class="nowhint">10년 단위 큰 흐름(대운)으로 본 그림이에요 — 해마다의 오르내림은 「궁금한 것」에.</p></div>`;}
 /* ═══ [U18] 만약 ○○라면 — 더 깊게: 둘의 12달 · 싸움 포인트와 화해법 · 상대 오행에 맞춘 추천 ═══ */
 const FIGHT={비겁:['누가 더 옳은지','이긴 사람이 먼저 밥 사기'],식상:['내가 한 만큼 몰라줄 때','"고마워" 한마디를 먼저 달라고 하기'],
@@ -4272,6 +4295,7 @@ function unseong(dayStem,branch){
    그건 유파마다 달라 §2.9가 금지한 "그럴듯한 숫자"가 된다.
    ═════════════════════════════════════════════════════════════════════════ */
 const GANGYAK=['극약','신약','신강','극왕'];   // 성립 개수 0·1·2·3
+const GY_CUT=[.2,.4,.62];   /* [U31] 점수 문턱 — 아래 gangyak 주석. 표본으로 다시 잡는다 */
 /* ═══ 용어 풀이 [2026-08-31] ═══
    [왜] 이 영역은 화면에서 가장 전문용어가 빽빽한 자리인데 **한 마디도 안 풀어 주고 있었다** —
    "신약 1/3 · 득령 ✕ 득지 ○ 득세 ✕"를 처음 보는 사람은 읽을 수가 없다.
@@ -4284,6 +4308,64 @@ const GY_TERM_DEF='<b>득령</b> 태어난 달이 내 기운을 밀어주는 계
   +'<b>득세</b> 나머지 글자 중 내 편이 수적으로 많은가';
 /** 십신 index가 일간을 돕는 쪽(비겁·인성)인가 */
 function isAlly(g){return g===0||g===1||g===8||g===9;}
+/* ═══ [2026-09-20 U31] 세력 — 합을 반영한 오행 무게 ═══ 사용자: "직업 관련 내용이 안 맞는다" → 기준 사례(구성원A, 여덟 글자 전부)로 점검하니
+   ① 합(寅午 반합·丙辛합)을 전혀 안 셈 ② 지지를 정기 하나로만 봄(丑 = 己 100%, 속의 癸·辛 무시) ③ "壬수가 丑월 = 겨울에 핀 꽃"처럼 계절 비유가 거꾸로였다.
+   [무게] 자리 무게는 U20 그대로(월지 3 · 일지 1.5 · 나머지 1). 지지는 **지장간 날수 비율**로 나눈다(丑 = 癸 9 · 辛 3 · 己 18일).
+   [합] 널리 쓰는 규칙만 — 지지: 삼합(셋 다) 100% · 반합(왕지 子午卯酉 + 생지 또는 고지) 50% · 방합(셋 다) 100%가 합의 오행으로 옮겨 간다.
+        천간: 붙어 있는 두 천간이 합이면(甲己·乙庚·丙辛·丁壬·戊癸) 월지 오행이 합의 오행과 같을 때만 그 오행으로 바뀌고(합화), 아니면 둘 다 반으로 묶인다(일간은 묶여도 그대로).
+   육합은 뺐다 — 바뀌는지 유파마다 갈린다. 세기·직업·대운 문장이 모두 이 값을 쓴다 */
+const SAMHAP3=[[8,0,4,'su'],[2,6,10,'hwa'],[5,9,1,'geum'],[11,3,7,'mok']];   /* 생지·왕지·고지 → 이루는 오행 */
+const BANGHAP3=[[11,0,1,'su'],[2,3,4,'mok'],[5,6,7,'hwa'],[8,9,10,'geum']];
+const GANHAP_EL=['to','geum','su','mok','hwa'];   /* 甲己 토 · 乙庚 금 · 丙辛 수 · 丁壬 목 · 戊癸 화 — (작은 천간 %5) */
+const POS_W={year:1,month:3,day:1.5,hour:1};
+const POS_IX={year:0,month:1,day:2,hour:3,daeun:1.5};   /* [U31] 자리 순서 — 대운은 어느 자리와도 붙어 있는 것으로 본다(1.5 → 거리 ≤1.5) */
+const EL_PLAIN={mok:'나무',hwa:'불',to:'흙',geum:'쇠',su:'물'};
+function elGroupOf(me,el){return el===me?'비겁':GEN[me]===el?'식상':OVR[me]===el?'재성':OVR[el]===me?'관성':'인성';}
+/** 지지 목록 [{pos,b}] 안의 삼합·반합·방합 */
+function branchCombos(brs){
+  const out=[],has=b=>brs.filter(x=>x.b===b);
+  SAMHAP3.forEach(([a,w,g,el])=>{const A=has(a),W=has(w),G=has(g);
+    if(A.length&&W.length&&G.length)out.push({kind:'samhap',el,share:1,members:[...A,...W,...G]});
+    else if(W.length&&(A.length||G.length)){
+      /* [U31] 반합은 **붙어 있는 자리**일 때만 제 힘(50%) — 사이에 한 자리가 끼면(년·일, 월·시) 격위합이라 약하게(20%), 년·시처럼 셋 떨어지면 안 본다.
+         실측: 기준 사례의 寅(년)·午(일), 酉(시)·丑(월)이 둘 다 격위인데 50%로 셌더니 쇠(인성)가 37%로 불어 판정이 신강으로 뒤집혔다 */
+      const ms=[...A,...W,...G],ix=m=>POS_IX[m.pos];
+      const dist=Math.min(...W.flatMap(w0=>[...A,...G].map(o=>Math.abs(ix(w0)-ix(o)))));
+      if(dist<=2)out.push({kind:'banhap',el,share:dist<=1?.5:.2,far:dist>1,members:ms});}});
+  BANGHAP3.forEach(([a,b,c,el])=>{const A=has(a),B=has(b),C=has(c);
+    if(A.length&&B.length&&C.length)out.push({kind:'banghap',el,share:1,members:[...A,...B,...C]});});
+  return out;}
+/** 세력 — {el:오행별 무게, grp:갈래별 무게, total, notes:[합 기록], me} */
+function forcesOf(r){
+  if(!r)return null;
+  const d=r.day[0],me=STEM_EL[d],w={mok:0,hwa:0,to:0,geum:0,su:0},notes=[];
+  const P=[['year',r.year],['month',r.month],['day',r.day],['hour',r.hour]].filter(x=>x[1]);
+  const sw={};P.forEach(([pos,p])=>{if(pos!=='day')sw[pos]={el:STEM_EL[p[0]],w:1};});
+  [['year','month'],['month','day'],['day','hour']].forEach(([a,b])=>{
+    if(!r[a]||!r[b])return;const s1=r[a][0],s2=r[b][0];if(Math.abs(s1-s2)!==5)return;
+    const el=GANHAP_EL[Math.min(s1,s2)%5],hwa=BRANCH_EL[r.month[1]]===el;
+    [a,b].forEach(pos=>{const x=sw[pos];if(!x)return;if(hwa)x.el=el;else x.w*=.5;});
+    notes.push({kind:hwa?'ganhapHwa':'ganhap',el,pos:[a,b],stems:[s1,s2]});});
+  Object.keys(sw).forEach(k=>{w[sw[k].el]+=sw[k].w;});
+  const brs=P.map(([pos,p])=>({pos,b:p[1]})),shift={};
+  branchCombos(brs).forEach(c=>{
+    c.members.forEach(m=>{const cur=shift[m.pos];if(!cur||cur.share<c.share)shift[m.pos]={el:c.el,share:c.share};});
+    notes.push({kind:c.kind,el:c.el,far:!!c.far,pos:c.members.map(m=>m.pos),branches:c.members.map(m=>m.b)});});
+  brs.forEach(({pos,b})=>{const W=POS_W[pos],sh=shift[pos],keep=sh?1-sh.share:1;
+    const hs=HIDDEN_STEMS[b],tot=hs.reduce((a,x)=>a+x[1],0);
+    hs.forEach(([st,days])=>{w[STEM_EL[st]]+=W*keep*days/tot;});
+    if(sh)w[sh.el]+=W*sh.share;});
+  const grp={비겁:0,식상:0,재성:0,관성:0,인성:0};Object.keys(w).forEach(el=>{grp[elGroupOf(me,el)]+=w[el];});
+  const total=Object.keys(w).reduce((a,k)=>a+w[k],0);
+  return {el:w,grp,total,notes,me};}
+/** 합 기록 → 사람 말 한 문장씩 */
+function comboLines(F){
+  return F.notes.map(nt=>{
+    if(nt.kind==='ganhap')return `${STEMS[nt.stems[0]]}·${STEMS[nt.stems[1]]} 두 글자가 서로 묶여(천간합) 둘 다 힘이 반으로 줄어요.`;
+    if(nt.kind==='ganhapHwa')return `${STEMS[nt.stems[0]]}·${STEMS[nt.stems[1]]} 두 글자가 묶여 ${EL_PLAIN[nt.el]} 기운으로 바뀌어요(합화).`;
+    const bs=[...new Set(nt.branches)].map(b=>BRANCHES[b]).join('·');
+    return nt.kind==='banhap'?(nt.far?`${bs} 글자가 사이를 두고 손을 뻗어 ${EL_PLAIN[nt.el]} 기운이 조금 뭉쳐요(떨어진 반합이라 약해요).`:`${bs} 글자가 손을 잡아 ${EL_PLAIN[nt.el]} 기운으로 뭉쳐요(반합).`)
+      :`${bs} 글자가 모여 ${EL_PLAIN[nt.el]} 기운 판을 이뤄요(${nt.kind==='samhap'?'삼합':'방합'}).`;});}
 
 function gangyak(r){
   if(!r)return null;
@@ -4310,17 +4392,34 @@ function gangyak(r){
      점수제 = 일간 뺀 모든 글자를 자리별 무게(월지 3 · 일지 1.5 · 나머지 천간·지지 1, 지지는 정기 십신)로 세어 내 편(비겁·인성) 비율.
      중립점이 약 0.4(다섯 갈래 중 둘)라 0.2 / 0.4 / 0.62에서 가른다 → 극약 18.9 · 신약 31.2 · 신강 27.6 · 극왕 22.4%(약·강 반반).
      옛 세 조건은 oldVerdict로 남겨 근거 층에 "전통 세 조건"으로 보여 준다. 가중치는 널리 쓰는 경향 [권장] — 유파마다 다르다 */
-  const WS=[];const addW=(god,w)=>WS.push([isAlly(god),w]);
-  [r.year,r.month,r.hour].forEach(p=>{if(p)addW(tenGod(d,p[0]),1);});
-  if(r.year)addW(branchTenGod(d,r.year[1]),1); addW(mGod,3); addW(branchTenGod(d,r.day[1]),1.5); if(r.hour)addW(branchTenGod(d,r.hour[1]),1);
-  const wTot=WS.reduce((a,x)=>a+x[1],0), score=wTot?WS.filter(x=>x[0]).reduce((a,x)=>a+x[1],0)/wTot:0;
-  const verdict=score<.2?'극약':score<.4?'신약':score<.62?'신강':'극왕';
+  /* [2026-09-20 U31] ~~정기 십신만 세던 WS~~ → 세력(forcesOf: 지장간 비율 + 합). 자리 무게는 같다. 문턱은 무작위 표본으로 다시 잡았다(GY_CUT 주석) */
+  const F=forcesOf(r), score=F.total?(F.grp.비겁+F.grp.인성)/F.total:0;
+  const verdict=score<GY_CUT[0]?'극약':score<GY_CUT[1]?'신약':score<GY_CUT[2]?'신강':'극왕';
   return {deukRyeong:deukRyeong,deukJi:deukJi,deukSe:deukSe,count:cnt,
     verdict:verdict, oldVerdict:GANGYAK[cnt], score:score, hasTime:r.hasTime,
     mGod:mGod, mBranch:mBranch, dUn:dUn,
     allyStems:allyStems, stemCount:others.length,
     ally:ally, total:total};}
 
+/* ═══ [2026-09-20 U31] 기운의 세기 사연 — ~~"겨울에 핀 꽃처럼 계절이 밀어주지 않는다"~~(壬수 丑월에도 나왔다 — 물에게 겨울은 제철이다).
+   ① 계절: 월지가 속한 계절(亥子丑 겨울 · 寅卯辰 봄 · 巳午未 여름 · 申酉戌 가을)이 내 오행의 제철이거나 나를 낳는 때인데 월지 중심(정기)은 다른 편이면 "도움을 반쯤만"
+   ② 왜 약한가/센가: 식상·재성·관성 중 세력이 가장 큰 쪽이 기운을 빼는 곳 ③ 합이 있으면 한 줄씩 */
+const SEASON_OF=[ 'su','su','mok','mok','mok','hwa','hwa','hwa','geum','geum','geum','su'];   /* 子丑=겨울 … 亥=겨울 */
+const SEASON_KO={su:'겨울',mok:'봄',hwa:'여름',geum:'가을'};
+const WEAK_WHY={식상:'재주와 말로 기운을 계속 쏟아내기(식상)',재성:'돈과 일을 벌이느라 기운이 새기(재성)',관성:'책임과 규칙이 위에서 누르기(관성)'};
+const DRAIN_KO={식상:'재주와 말로 기운을 쏟아내는 쪽(식상)',재성:'돈과 일을 벌이는 쪽(재성)',관성:'책임과 규칙이 누르는 쪽(관성)'};
+function strengthStory(r,gy){
+  const F=forcesOf(r),me=F.me,mb=r.month[1],se=SEASON_OF[mb],own=se===me,feed=GEN[se]===me;
+  let s;
+  if(gy.deukRyeong)s=`태어난 달이 같은 편이라 계절이 뒤에서 밀어 줘요 — 힘을 안 들여도 자라는 때에 태어났어요.`;
+  else if(own||feed)s=`${SEASON_KO[se]}에 태어나 계절은 ${EL_PLAIN[me]}${own?'의 제철':particle(EL_PLAIN[me],'을를')+' 키우는 때'}인데, 태어난 달 글자의 중심은 ${EL_PLAIN[BRANCH_EL[mb]]} 기운이라 계절의 도움을 반쯤만 받아요.`;
+  else s=`태어난 달 기운이 이 사람과 다른 편이라, 계절이 밀어주지는 않아요.`;
+  const top=['식상','재성','관성'].sort((a,b)=>F.grp[b]-F.grp[a])[0],weak=gy.verdict==='신약'||gy.verdict==='극약';
+  if(weak){s+=` 약한 진짜 이유는 ${WEAK_WHY[top]} 때문이에요.`;   /* 관성은 빠져나가는 게 아니라 누른다 — 갈래마다 말을 달리 */
+    if(top==='재성'&&F.grp.재성>=F.total*.3)s+=' 돈이 눈에 보이는데 혼자 쥐기엔 힘이 부치는, 명리에서 말하는 재다신약 쪽이에요.';}
+  else s+=` 힘이 남는 만큼 ${DRAIN_KO[top]}으로 흘려보낼 곳이 있어야 좋아요.`;
+  const cl=comboLines(F);if(cl.length)s+=' 여덟 글자 안에서는 '+cl.join(' ');
+  return s;}
 /** 지장간까지 포함한 오행 개수. 가중치는 주지 않는다 — 여기·중기·정기에 몇 점씩 줄지가
     곧 유파 선택이라, 그냥 **글자 수**를 센다. */
 function sajuElementsDeep(r){
@@ -5029,7 +5128,28 @@ function workStyle(cnt,verdict,top){
   return WORK_STYLE.회사;}
 /** [2026-09-19 U20] 갈래가 가리키는 오행 — 일간 오행 기준(비겁 같은 오행 · 식상 내가 낳는 · 재성 내가 다루는 · 관성 나를 다스리는 · 인성 나를 낳는) */
 function groupEl(myEl,grp){return grp==='비겁'?myEl:grp==='식상'?GEN[myEl]:grp==='재성'?OVR[myEl]:grp==='관성'?elRuled(myEl):elBorn(myEl);}
-function cornerJob(cnt,verdict,dayStem,mGrp){   /* [2026-09-17 A6-3] verdict(선택) — 있으면 세기 꼬리를 붙인다 · [U16] dayStem(선택) — 있으면 직업 목록·일하는 방식
+/* ═══ [2026-09-20 U31] 직업 — 격 하나로만 보던 것에 **세력의 연결 구조**를 더한다 ═══
+   널리 쓰는 짜임 다섯: 식신생재(재주→돈) · 재생관(돈→자리) · 관인상생(자리→배움·인정) · 재다신약(돈은 센데 내가 약함) · 군겁쟁재(내 편은 많고 돈은 적음).
+   문턱은 세력 비율(전체 대비) — 식상 10% · 재성·관성 20% · 인성 15% 이상이면 "있다"로 본다 [권장, 근거는 비율상 한 글자 반 이상].
+   격과 다른 갈래가 세력으로 1.2배 넘게 세면 "형식상 격은 ○○지만 실제로 센 힘은 ○○"를 붙인다 */
+const JOB_FORM={
+  식신생재:'재주를 꺼내 돈으로 바꾸는 짜임(식신생재)이에요 — 내가 만든 기획·상품·콘텐츠가 매출로 이어지는 일에서 힘이 나요.',
+  재생관:'돈과 자리가 이어진 짜임(재생관)이에요 — 벌어들인 실적이 직함과 자리로 돌아와요. 사업을 맡아 키우는 운영·책임자 쪽이 잘 맞아요.',
+  관인상생:'자리가 배움과 인정으로 이어지는 짜임(관인상생)이에요 — 맡은 자리에서 쌓은 경험이 자격·전문성이 되어 다시 나를 받쳐 줘요.',
+  재다신약:'돈 기회는 많이 보이는데 혼자 다 쥐기엔 힘이 부치는 짜임(재다신약)이에요 — 동업·팀으로 나눠 가질 때 오히려 크게 벌어요.',
+  군겁쟁재:'내 편은 많은데 나눌 몫이 적은 짜임(군겁쟁재)이에요 — 같이 하는 일은 몫을 처음부터 숫자로 적어 두세요.'};
+function jobForms(F,verdict){
+  if(!F||!F.total)return [];
+  const s={};Object.keys(F.grp).forEach(k=>s[k]=F.grp[k]/F.total);
+  const weak=verdict==='신약'||verdict==='극약',out=[];
+  const maxG=Object.keys(s).sort((a,b)=>s[b]-s[a])[0];
+  if(weak&&maxG==='재성'&&s.재성>=.3)out.push(['재다신약',s.재성]);
+  if(s.식상>=.1&&s.재성>=.2)out.push(['식신생재',s.식상+s.재성]);
+  if(s.재성>=.2&&s.관성>=.2)out.push(['재생관',s.재성+s.관성]);
+  if(s.관성>=.2&&s.인성>=.15)out.push(['관인상생',s.관성+s.인성]);
+  if(s.비겁>=.35&&s.재성<.12)out.push(['군겁쟁재',s.비겁]);
+  return out.slice(0,2).map(x=>x[0]);}
+function cornerJob(cnt,verdict,dayStem,mGrp,F){   /* [2026-09-17 A6-3] verdict(선택) — 있으면 세기 꼬리를 붙인다 · [U16] dayStem(선택) — 있으면 직업 목록·일하는 방식
    · [U20] mGrp(선택) — 월지 갈래(격). 있으면 직업 방향을 격으로 잡는다 */
   const mx=Math.max.apply(null,CNR_GRP5.map(k=>cnt[k]));
   const top=CNR_GRP5.filter(k=>cnt[k]===mx);
@@ -5056,7 +5176,12 @@ function cornerJob(cnt,verdict,dayStem,mGrp){   /* [2026-09-17 A6-3] verdict(선
     const sec=top.find(k=>k!==prim&&k!=='비겁')||null;
     const t1=(JOB_BRIDGE[prim]?JOB_BRIDGE[prim][dayStem]:JOB_LINE[prim])+(verdict?' '+JOB_TAIL[prim][STRONG_SET.has(verdict)?'강':'약']:'');
     const fact2=`${counts} · 태어난 달의 갈래(격) <b>${mGrp}</b> — 직업은 격을 먼저, 업종은 그 갈래가 가리키는 오행(${EL_KO[groupEl(me,prim)]})으로 봅니다.`;
-    return {h:'어울리는 일',t:cornerBlk(fact2,`${t1} ${JOB_DIR[prim]}${sec?` 가장 많은 기운은 ${GROUP_POWER[sec]}이라 ${JOB_SIDE[sec]}도 어색하지 않아요.`:''} ${workStyle(cnt,verdict,[prim])}`),raw:true};}
+    /* [U31] 세력 — 격과 다른 쪽이 실제로 더 세면 밝히고, 짜임(식신생재 등)을 붙인다. sec(가장 많은 글자) 문장은 세력 문장이 있으면 뺀다(같은 말 두 번) */
+    let force='';
+    if(F&&F.total){const fTop=['식상','재성','관성','인성'].sort((a,b)=>F.grp[b]-F.grp[a])[0];
+      if(fTop!==prim&&F.grp[fTop]>=F.grp[prim]*1.2)force=` 형식상 격은 ${prim}이지만, 합까지 셈하면 실제로 가장 센 힘은 ${GROUP_POWER[fTop]}이라 ${JOB_SIDE[fTop]}에서 더 크게 쓰여요.`;
+      const fm=jobForms(F,verdict);if(fm.length)force+=' '+fm.map(k=>JOB_FORM[k]).join(' ');}
+    return {h:'어울리는 일',t:cornerBlk(fact2,`${t1} ${JOB_DIR[prim]}${force||(sec?` 가장 많은 기운은 ${GROUP_POWER[sec]}이라 ${JOB_SIDE[sec]}도 어색하지 않아요.`:'')} ${workStyle(cnt,verdict,[prim])}`),raw:true};}
   const tail=(top.length===1&&verdict)?(' '+JOB_TAIL[top[0]][STRONG_SET.has(verdict)?'강':'약']):'';
   let jobs='';
   if(Number.isInteger(dayStem)){
@@ -5319,7 +5444,8 @@ function personReading(n){
   /* [U20] ~~backing(세 조건 이름)·CNT_KO·STORY 셋~~ — 판정이 점수제로 바뀌어 "하나도 못 갖춘 상태"와 "센 편"이 한 문단에 같이 나올 수 있다.
      점수(내 편 %)와 가장 무게가 큰 태어난 달 한 문장만 남긴다 */
   void backing; void CNT_KO;
-  let t3=`여덟 글자에서 이 사람 편이 되는 기운이 <b>${Math.round(gy.score*100)}%</b>예요(보통은 40% 안팎). ${STORY[0]} ${CONC[gy.verdict]}`;
+  void STORY;
+  let t3=`여덟 글자에서 이 사람 편이 되는 기운이 <b>${Math.round(gy.score*100)}%</b>예요(보통은 40% 안팎). ${strengthStory(r,gy)} ${CONC[gy.verdict]}`;   /* [U31] 계절 비유 → 계절 + 무엇이 기운을 빼는지 + 합 */
   /* [2026-09-19 U11] ~~if(!r.hasTime)t3+=' 출생 시각을 모르고 본 결과라…'~~ — 시각 모름 안내가 한 패널에 여섯 번 나왔다(U10).
      이제 머리 날짜 줄 옆 한 번(「시간 모름 · 추정해 보기」)과 근거 층에만 둔다. */
   out.push({h:'기운의 세기',t:t3});
@@ -5389,7 +5515,7 @@ function personReading(n){
     out.push({h:'자리마다 놓인 기운',t:S.map(x=>`<p>${x}</p>`).join(''),raw:true}); }
 
   /* ══ 코너 넷 [2026-08-31] ══ 전부 이층식(해설 + 해석 층). 계산은 순수 함수가 한다 */
-  { const cj=cornerJob(cnt,gy.verdict,d,mGrp); cj.t=cj.t.replace('<span class="nicktake-t">','<span class="nicktake-t">'+t2+' '); out.push(cj); }   /* [U22] 관심 문장을 앞머리로 */
+  { const cj=cornerJob(cnt,gy.verdict,d,mGrp,forcesOf(r));   /* [U31] 세력 */ cj.t=cj.t.replace('<span class="nicktake-t">','<span class="nicktake-t">'+t2+' '); out.push(cj); }   /* [U22] 관심 문장을 앞머리로 */
   out.push(cornerMoney(cnt10,gy.verdict,cnt));  /* [2026-09-17 A6-3] 강/약 표 · [U23] 새는 곳·굴리는 법 */
   out.push(cornerTie(d,cnt,gy.verdict));   /* [U23] 다툴 때·맞는 사람 */
   out.push(cornerPower(sajuElements(r),d,gy.verdict));
@@ -12999,6 +13125,17 @@ async function sajuSelfTest(){
       !!cg&&cg.width===1080&&cg.height>1000&&ci.width===1080&&ci.height===1350&&cardWrap.length===4,
       (cg?cg.width+'x'+cg.height:'그룹 없음')+' · '+ci.width+'x'+ci.height);
   }catch(e){T('shareCards: 그룹 카드·일주 카드',false,'예외 '+e.message);}
+  /* [2026-09-20 U31] 세력 — 가상의 여덟 글자로(실제 인물 생일은 코드에 안 둔다): 삼합 · 천간합 묶임 · 떨어진 반합 20% · 년·시 반합 무시 · 壬수 丑월 계절 문장 */
+  { const R=(y,m,d,h)=>({year:y,month:m,day:d,hour:h,hasTime:!!h});
+    const f1=forcesOf(R([2,0],[7,1],[8,8],[5,4]));   /* 丙子 辛丑 壬申 己辰 — 申子辰 삼합 · 丙辛 붙음(월지 丑=토 → 묶임) */
+    const f2=forcesOf(R([0,2],[2,1],[8,6],[5,3]));   /* 甲寅 丙丑 壬午 己卯 — 寅(년)·午(일) 떨어진 반합 */
+    const f3=forcesOf(R([0,2],[2,1],[8,1],[5,6]));   /* 甲寅 丙丑 壬丑 己午 — 寅(년)·午(시) 셋 떨어짐 → 없음 */
+    const k1=f1.notes.map(n=>n.kind),n2=f2.notes.find(n=>n.kind==='banhap');
+    const ss=strengthStory(R([2,0],[7,1],[8,8],[5,4]),{verdict:'신약',deukRyeong:false});
+    T('forces: 삼합·천간합 묶임 · 떨어진 반합 약하게 · 년·시 반합 없음 · 壬 丑월 = 겨울 제철',
+      k1.includes('samhap')&&k1.includes('ganhap')&&Object.keys(f1.el).every(e=>e==='su'||f1.el.su>f1.el[e])
+      &&!!n2&&n2.far&&!f3.notes.some(n=>n.kind==='banhap')&&/겨울에 태어나 계절은 물의 제철/.test(ss)&&!/겨울에 핀 꽃/.test(ss),
+      k1.join('·')+' / 떨어진 반합 '+(n2?'있음':'없음')+' / '+ss.slice(0,40)); }
   /* [2026-09-20 U28] 운에 따른 행성 변화 — 이름표 표시·금빛이 12달 표의 이번 달 판정과 같은지(사람 전원) */
   { let bad=0,cnt={good:0,warn:0,none:0};
     nodes.forEach(n=>{const lk=luckMarkOf(n),m=n.birth?yearMonths(n).find(x=>x.now):null,exp=m?(m.warn?'warn':m.good?'good':null):null;
